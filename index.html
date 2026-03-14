@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>McGill Тренер</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface: #1e1e1e;
+            --surface-light: #2c2c2c;
+            --text-main: #ffffff;
+            --text-sec: #aaaaaa;
+            --accent-work: #4caf50;
+            --accent-rest: #ff9800;
+            --accent-prep: #2196f3;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 15px 20px;
+            text-align: center;
+            background-color: var(--surface);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-text {
+            text-align: left;
+        }
+
+        .exercise-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .phase-title {
+            font-size: 0.9rem;
+            color: var(--text-sec);
+        }
+
+        .btn-info {
+            background-color: var(--surface-light);
+            border: 1px solid var(--text-sec);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .timer-circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 8px solid var(--surface);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+            transition: border-color 0.3s ease;
+            position: relative;
+        }
+
+        .time-display {
+            font-size: 4.5rem;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        .time-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 5px;
+            color: var(--text-sec);
+        }
+
+        .volume-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            background-color: var(--surface);
+            padding: 8px 15px;
+            border-radius: 12px;
+        }
+
+        .volume-container span { font-size: 1.2rem; }
+        input[type="range"] { flex: 1; accent-color: var(--accent-prep); }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+        }
+
+        button.control-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: white;
+            background-color: var(--surface);
+            cursor: pointer;
+            transition: transform 0.1s, filter 0.2s;
+        }
+
+        button.control-btn:active { transform: scale(0.95); }
+        #btn-main { background-color: var(--accent-work); }
+        #btn-next { background-color: var(--surface); border: 1px solid var(--text-sec); }
+
+        .info-card {
+            background-color: var(--surface-light);
+            border-left: 4px solid var(--accent-prep);
+            border-radius: 8px;
+            padding: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+            text-align: left;
+            transition: border-color 0.3s ease;
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .info-card b { color: var(--text-main); }
+        .info-card div { margin-bottom: 8px; color: var(--text-sec); }
+        .info-card .step-desc { 
+            padding-top: 8px; 
+            border-top: 1px solid var(--surface); 
+            color: var(--accent-prep); 
+            font-weight: bold; 
+            margin-bottom: 0;
+        }
+
+        .timeline {
+            width: 100%;
+            max-width: 400px;
+            border-top: 1px solid var(--surface);
+            padding-top: 10px;
+            flex-shrink: 0;
+        }
+
+        .timeline-item {
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            color: var(--text-sec);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .timeline-item.active {
+            color: var(--text-main);
+            font-weight: bold;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 5px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: var(--surface);
+            position: fixed;
+            top: 0; left: 0; z-index: 20;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--accent-work);
+            width: 0%;
+            transition: width 0.3s linear;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(--surface);
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .modal-content h2 { margin-bottom: 15px; font-size: 1.2rem; color: var(--accent-prep); }
+        .modal-content h3 { margin-top: 15px; margin-bottom: 5px; font-size: 1rem; }
+        .modal-content p { margin-bottom: 10px; color: var(--text-sec); }
+        .modal-content ul { padding-left: 20px; margin-bottom: 15px; color: var(--text-sec); }
+        .modal-content li { margin-bottom: 5px; }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px; right: 15px;
+            background: none; border: none;
+            color: var(--text-main); font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        body.state-work .timer-circle { border-color: var(--accent-work); }
+        body.state-work .time-label { color: var(--accent-work); }
+        body.state-work .info-card { border-left-color: var(--accent-work); }
+        body.state-work .info-card .step-desc { color: var(--accent-work); }
+        
+        body.state-rest .timer-circle { border-color: var(--accent-rest); }
+        body.state-rest .time-label { color: var(--accent-rest); }
+        body.state-rest .info-card { border-left-color: var(--accent-rest); }
+        body.state-rest .info-card .step-desc { color: var(--accent-rest); }
+        
+        body.state-prep .timer-circle { border-color: var(--accent-prep); }
+        body.state-prep .time-label { color: var(--accent-prep); }
+        body.state-prep .info-card { border-left-color: var(--accent-prep); }
+        body.state-prep .info-card .step-desc { color: var(--accent-prep); }
+
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+    <header>
+        <div class="header-text">
+            <div class="exercise-title" id="ex-title">Ожидание запуска</div>
+            <div class="phase-title" id="ph-title">Протокол 5-3-1</div>
+        </div>
+        <button class="btn-info" id="btn-show-desc">Схема</button>
+    </header>
+
+    <main>
+        <div class="timer-circle" id="circle">
+            <div class="time-display" id="time">00</div>
+            <div class="time-label" id="label">ГОТОВ</div>
+        </div>
+
+        <div class="volume-container">
+            <span>🔊</span>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.8">
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="btn-main">Старт</button>
+            <button class="control-btn" id="btn-next">Пропуск</button>
+        </div>
+
+        <div class="info-card" id="info-card">
+            <!-- Динамический контент -->
+            <div style="color: var(--text-main);">Ожидание инициализации протокола. Нажмите "Старт".</div>
+        </div>
+
+        <div class="timeline" id="timeline">
+            <!-- Заполняется JS -->
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <button class="close-modal" id="btn-close-desc">×</button>
+            <h2>Расчет времени (Протокол 5-3-1)</h2>
+            <p>Убывающая пирамида: удержание — 10 сек, микропауза — 3 сек, отдых между подходами — 30 сек. Смена стороны — 5 сек.</p>
+            <h3>1. Кошка-верблюд (Разминка)</h3>
+            <ul><li>5–8 непрерывных циклов по 3–4 сек. Итого: ~30–40 сек.</li></ul>
+            <h3>2. Скручивания Макгилла</h3>
+            <ul>
+                <li>Подход 1 (5 повт.): 62 сек.</li>
+                <li>Подход 2 (3 повт.): 36 сек.</li>
+                <li>Подход 3 (1 повт.): 10 сек.</li>
+                <li>Итого (с учетом отдыха): 168 секунд (2 мин 48 сек).</li>
+            </ul>
+            <h3>3. Боковая планка</h3>
+            <ul>
+                <li>Подход 1 (5 повт. × 2 стороны): 129 сек.</li>
+                <li>Подход 2 (3 повт. × 2 стороны): 77 сек.</li>
+                <li>Подход 3 (1 повт. × 2 стороны): 25 сек.</li>
+                <li>Итого: 291 секунда (4 мин 51 сек).</li>
+            </ul>
+            <h3>4. Охотничья собака</h3>
+            <ul><li>Тайминг полностью идентичен расчету для Боковой планки. Итого: 291 секунда.</li></ul>
+            <h3>Общие затраты</h3>
+            <ul><li>Чистое время: ~13 мин 10 сек. Переходы: 2 мин. Всего: ~15–16 минут.</li></ul>
+        </div>
+    </div>
+
+    <script>
+        // --- ДЕТАЛИЗИРОВАННАЯ БИОМЕХАНИКА ---
+        const exDetails = {
+            'Кошка-Верблюд': {
+                goal: 'Снижение гидравлического сопротивления и вязкости спинномозговой жидкости, подготовка связочного аппарата.',
+                start: 'Квадропедальная позиция. Ладони строго под плечевыми суставами, колени — под тазобедренными.',
+                move: 'Плавное сгибание (вверх) и разгибание (вниз) позвоночника. Строго 70-80% амплитуды (крайние точки запрещены).'
+            },
+            'Скручивания Макгилла': {
+                goal: 'Активация прямой мышцы живота без сгибания поясничного отдела.',
+                start: 'Лежа на спине. Одна нога выпрямлена, вторая согнута. Кисти под поясницей для контроля нейтрального лордоза.',
+                move: 'Отрыв головы, шеи и грудного отдела на 1-2 см от пола как единого жесткого блока. Шея зафиксирована.'
+            },
+            'Боковая Планка': {
+                goal: 'Изометрическая активация квадратной мышцы поясницы и косых мышц живота.',
+                start: 'На боку, опора на предплечье и латеральную часть стопы (или колени). Исключить ротацию таза.',
+                move: 'Подъем таза до формирования прямой векторальной линии от головы до стоп/колен.'
+            },
+            'Охотничья собака': {
+                goal: 'Активация разгибателей спины и многораздельных мышц.',
+                start: 'Квадропедальная позиция. Спина жестко зафиксирована в нейтральном положении.',
+                move: 'Одновременное вытяжение противоположной руки и ноги назад, не выше уровня ягодицы. Стопа натянута на себя.'
+            },
+            'Переход': {
+                goal: 'Оптимизация реоксигенации тканей.',
+                start: '-',
+                move: 'Смена позиции без потери контроля нейтрального положения позвоночника.'
+            },
+            'Финиш': {
+                goal: 'Протокол успешно завершен.',
+                start: '-',
+                move: 'Нейромышечный контроль активирован. Осевая компрессия минимизирована.'
+            }
+        };
+
+        // --- АУДИО И ГОЛОС ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        let globalVolume = 0.8;
+
+        document.getElementById('volume-slider').addEventListener('input', (e) => globalVolume = parseFloat(e.target.value));
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTone(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            const vol = globalVolume;
+
+            if (type === 'work') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
+                gain.gain.setValueAtTime(vol, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                osc.start(now); osc.stop(now + 0.6);
+            } else if (type === 'rest') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now);
+                gain.gain.setValueAtTime(vol, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
+            } else if (type === 'prep') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(660, now);
+                gain.gain.setValueAtTime(vol * 0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+                const osc2 = audioCtx.createOscillator(), gain2 = audioCtx.createGain();
+                osc2.type = 'square'; osc2.frequency.setValueAtTime(660, now + 0.2);
+                gain2.gain.setValueAtTime(vol * 0.5, now + 0.2); gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc2.connect(gain2); gain2.connect(audioCtx.destination);
+                osc2.start(now + 0.2); osc2.stop(now + 0.35);
+            } else if (type === 'tick') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1000, now);
+                gain.gain.setValueAtTime(vol * 0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'finish') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(554, now + 0.2); osc.frequency.setValueAtTime(659, now + 0.4); osc.frequency.setValueAtTime(880, now + 0.6);
+                gain.gain.setValueAtTime(vol, now); gain.gain.linearRampToValueAtTime(0.01, now + 1.2);
+                osc.start(now); osc.stop(now + 1.2);
+            }
+        }
+
+        function speak(text) {
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ru-RU'; utterance.rate = 1.1; utterance.volume = globalVolume;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- ГЕНЕРАТОР ПРОГРАММЫ ---
+        const protocol = [];
+
+        function addStep(ex, phase, type, time, voiceTxt, toneType, stepDesc) {
+            protocol.push({ ex, phase, type, time, voiceTxt, toneType, stepDesc });
+        }
+
+        addStep('Кошка-Верблюд', 'Подготовка', 'prep', 5, 'Приготовьтесь. Кошка-Верблюд. 8 циклов.', 'prep', 'Подготовка к выполнению 8 циклов.');
+        for(let i = 1; i <= 8; i++) {
+            addStep('Кошка-Верблюд', `Цикл ${i}`, 'work', 4, i === 1 ? 'Начали' : '', 'work', `Цикл ${i} из 8. Непрерывное движение, 3-4 секунды на цикл.`);
+        }
+        addStep('Переход', 'Смена позиции', 'rest', 30, 'Разминка окончена. Скручивания Макгилла.', 'rest', 'Смена позиции. Следующее упражнение: Скручивания Макгилла.');
+
+        const buildSet = (exName, reps, hasSides, setNum) => {
+            const sides = hasSides ? ['Левая сторона (Диагональ 1)', 'Правая сторона (Диагональ 2)'] : ['Центр'];
+            sides.forEach((side, sIdx) => {
+                if(hasSides && sIdx === 1) addStep(exName, 'Смена стороны', 'prep', 5, 'Смена стороны.', 'prep', 'Смена стороны/диагонали (0-5 секунд).');
+                for(let i = 1; i <= reps; i++) {
+                    let startVoice = i === 1 ? (hasSides ? `${side}. Начали.` : 'Начали удержание.') : 'Вверх';
+                    addStep(exName, `${side} - Повтор ${i}/${reps}`, 'work', 10, startVoice, 'work', `Подход ${setNum}: ${reps} повторений. Текущее: ${i}. Фиксация 10 секунд.`);
+                    if(i < reps) addStep(exName, 'Микропауза', 'rest', 3, 'Вниз', 'rest', `Расслабление тканей (3 секунды) перед повтором ${i+1}.`);
+                }
+            });
+        };
+
+        const addExercise = (name, hasSides) => {
+            addStep(name, 'Подготовка', 'prep', 10, `Приготовьтесь. ${name}. Подход на 5 повторений.`, 'prep', 'Подготовка к Подходу 1 (5 повторений). Создайте внутрибрюшное давление.');
+            buildSet(name, 5, hasSides, 1);
+            addStep(name, 'Отдых', 'rest', 30, 'Отдых 30 секунд. Следующий подход: 3 повторения.', 'rest', 'Отдых 30 секунд. Смените согнутую ногу (для скручиваний). Готовность к Подходу 2.');
+            buildSet(name, 3, hasSides, 2);
+            addStep(name, 'Отдых', 'rest', 30, 'Отдых 30 секунд. Последний подход: 1 повторение.', 'rest', 'Отдых 30 секунд. Смените согнутую ногу. Готовность к Подходу 3.');
+            buildSet(name, 1, hasSides, 3);
+        };
+
+        addExercise('Скручивания Макгилла', false);
+        addStep('Переход', 'Смена позиции', 'rest', 60, 'Скручивания завершены. Отдых минута. Боковая планка.', 'rest', 'Отдых 60 секунд. Следующее упражнение: Боковая планка.');
+        addExercise('Боковая Планка', true);
+        addStep('Переход', 'Смена позиции', 'rest', 60, 'Планка завершена. Отдых минута. Охотничья собака.', 'rest', 'Отдых 60 секунд. Следующее упражнение: Охотничья собака.');
+        addExercise('Охотничья собака', true);
+        addStep('Финиш', 'Окончание', 'prep', 5, 'Тренировка успешно завершена.', 'finish', 'Окончание комплекса.');
+
+        // --- ЛОГИКА ТАЙМЕРА И UI ---
+        let currentStepIdx = 0;
+        let timeLeft = 0;
+        let isRunning = false;
+        let timerInterval = null;
+        let wakeLock = null;
+
+        const uiTime = document.getElementById('time'), uiLabel = document.getElementById('label'),
+              uiExTitle = document.getElementById('ex-title'), uiPhTitle = document.getElementById('ph-title'),
+              infoCard = document.getElementById('info-card'), btnMain = document.getElementById('btn-main'),
+              timeline = document.getElementById('timeline'), progressFill = document.getElementById('progress');
+
+        function renderTimeline() {
+            timeline.innerHTML = '';
+            const endIdx = Math.min(currentStepIdx + 4, protocol.length);
+            for(let i = currentStepIdx; i < endIdx; i++) {
+                const s = protocol[i];
+                const div = document.createElement('div');
+                div.className = `timeline-item ${i === currentStepIdx ? 'active' : ''}`;
+                div.innerHTML = `<span>${s.ex} - ${s.phase}</span> <span>${s.time}с</span>`;
+                timeline.appendChild(div);
+            }
+        }
+
+        function buildInfoCard(exName, stepDesc) {
+            const d = exDetails[exName] || exDetails['Переход'];
+            return `
+                <div><b>Цель:</b> ${d.goal}</div>
+                ${d.start !== '-' ? `<div><b>Исходное положение:</b> ${d.start}</div>` : ''}
+                <div><b>Движение:</b> ${d.move}</div>
+                <div class="step-desc">${stepDesc}</div>
+            `;
+        }
+
+        async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
+        function releaseWakeLock() { if (wakeLock) wakeLock.release().then(() => wakeLock = null); }
+
+        function updateUI() {
+            if(currentStepIdx >= protocol.length) {
+                resetTimer();
+                uiExTitle.textContent = "Тренировка завершена";
+                uiPhTitle.textContent = "Успешно";
+                uiTime.textContent = "00";
+                infoCard.innerHTML = buildInfoCard('Финиш', 'Комплекс завершен.');
+                return;
+            }
+
+            const step = protocol[currentStepIdx];
+            uiExTitle.textContent = step.ex;
+            uiPhTitle.textContent = step.phase;
+            uiTime.textContent = timeLeft;
+            
+            infoCard.innerHTML = buildInfoCard(step.ex, step.stepDesc);
+            
+            let labelMap = { 'work': 'УДЕРЖАНИЕ', 'rest': 'ОТДЫХ', 'prep': 'ОЖИДАНИЕ' };
+            uiLabel.textContent = labelMap[step.type];
+
+            document.body.className = `state-${step.type}`;
+            progressFill.style.width = `${((currentStepIdx) / protocol.length) * 100}%`;
+            renderTimeline();
+        }
+
+        function loadStep() {
+            if(currentStepIdx >= protocol.length) return updateUI();
+            const step = protocol[currentStepIdx];
+            timeLeft = step.time;
+            if(step.voiceTxt) speak(step.voiceTxt);
+            if(step.toneType) playTone(step.toneType);
+            updateUI();
+        }
+
+        function nextStep() { currentStepIdx++; loadStep(); }
+
+        function tick() {
+            timeLeft--;
+            if (timeLeft <= 0) nextStep();
+            else {
+                updateUI();
+                if(timeLeft <= 3 && protocol[currentStepIdx].time > 5) playTone('tick');
+            }
+        }
+
+        function startTimer() {
+            initAudio(); requestWakeLock();
+            if(currentStepIdx === 0 && timeLeft === 0) { speak("Инициализация протокола."); loadStep(); }
+            isRunning = true;
+            btnMain.textContent = "Пауза"; btnMain.style.backgroundColor = "var(--accent-rest)";
+            timerInterval = setInterval(tick, 1000);
+        }
+
+        function stopTimer() {
+            isRunning = false;
+            btnMain.textContent = "Продолжить"; btnMain.style.backgroundColor = "var(--accent-work)";
+            clearInterval(timerInterval); releaseWakeLock(); window.speechSynthesis.cancel();
+        }
+
+        function resetTimer() {
+            stopTimer(); currentStepIdx = 0; timeLeft = 0;
+            btnMain.textContent = "Старт"; btnMain.style.backgroundColor = "var(--accent-work)";
+            progressFill.style.width = '0%'; document.body.className = '';
+            uiTime.textContent = "00"; uiLabel.textContent = "ГОТОВ";
+            infoCard.innerHTML = `<div style="color: var(--text-main);">Ожидание инициализации протокола. Нажмите "Старт".</div>`;
+            renderTimeline();
+        }
+
+        btnMain.addEventListener('click', () => isRunning ? stopTimer() : startTimer());
+        document.getElementById('btn-next').addEventListener('click', () => { if(currentStepIdx < protocol.length) nextStep(); });
+
+        const modal = document.getElementById('modal');
+        document.getElementById('btn-show-desc').addEventListener('click', () => modal.style.display = 'flex');
+        document.getElementById('btn-close-desc').addEventListener('click', () => modal.style.display = 'none');
+        window.addEventListener('click', (e) => { if(e.target === modal) modal.style.display = 'none'; });
+
+        renderTimeline();
+    </script>
+</body>
+</html>
