@@ -1,6 +1,12 @@
 {
-  "short_name": "App Name",
-  "name": "Full Application Name",
+  "name": "McGill Тренер",
+  "short_name": "McGill",
+  "description": "Таймер для реабилитационного протокола Макгилла (Большая тройка).",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
@@ -12,9 +18,5 @@
       "type": "image/png",
       "sizes": "512x512"
     }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  ]
 }
