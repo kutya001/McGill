@@ -37,6 +37,7 @@
       "id": "other",
       "label": "🎯 Другое",
       "games": [
+	    { "id": "tpb",  "name": "Конструктор Тренировочной Программы", "icon": "🤾", "desc": "Собирай линии, не переполняй.",            "file": "TrainingProgramBuilder.htnl"  },
         { "id": "tetris",  "name": "Тетрис", "icon": "🟦", "desc": "Собирай линии, не переполняй.",            "file": "tetris.html"  },
         { "id": "clicker", "name": "Атлет",  "icon": "💪", "desc": "Кликер: качай атлета, прокачивай навыки.", "file": "clicker.html" }
       ]
