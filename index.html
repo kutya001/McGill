@@ -550,14 +550,26 @@ function applyIntensity() {
 // ═══════════════════════════════════════════════════════════════════
 //  RAF-ТАЙМЕР
 // ═══════════════════════════════════════════════════════════════════
+function _scheduleRaf() {
+    // Единая точка запуска RAF — никогда не запускаем второй параллельный цикл
+    if (rafId) { cancelAnimationFrame(rafId); rafId=null; }
+    if (state.isRunning) rafId = requestAnimationFrame(_rafLoop);
+}
+
 function _rafLoop() {
-    if (!state.isRunning) return;
+    if (!state.isRunning) { rafId=null; return; }
     const step = protocol[state.stepIdx];
     if (!step) { handleFinish(); return; }
     const newLeft = Math.max(0, step.time - Math.floor((performance.now() - stepStartTs) / 1000));
     if (newLeft !== state.timeLeft) {
         state.timeLeft = newLeft;
-        if (state.timeLeft <= 0) { state.stepIdx++; loadStep(); return; }
+        if (state.timeLeft <= 0) {
+            // БАГ 2: явно отменяем текущий RAF перед переходом к следующему шагу
+            rafId = null;
+            state.stepIdx++;
+            loadStep();
+            return;
+        }
         updateUI();
         if (state.timeLeft <= 3 && step.time > 5) playTone('tick');
     }
@@ -586,9 +598,20 @@ function resetUI() {
 function startTimer() {
     if (!protocol.length) return;
     initAudio(); requestWakeLock();
-    if (state.stepIdx===0&&state.timeLeft===0) { speak('Инициализация протокола.'); loadStep(); }
-    state.isRunning=true; btnMain.textContent='Пауза'; btnMain.style.background='var(--c-rest)'; btnNext.disabled=false;
-    rafId=requestAnimationFrame(_rafLoop);
+    if (state.stepIdx===0&&state.timeLeft===0) {
+        // Первый старт: loadStep сам запустит RAF через _scheduleRaf
+        speak('Инициализация протокола.');
+        state.isRunning=true;
+        btnMain.textContent='Пауза'; btnMain.style.background='var(--c-rest)'; btnNext.disabled=false;
+        loadStep();
+        return;
+    }
+    // БАГ 3: возобновление после паузы — пересчитываем stepStartTs
+    // чтобы RAF не считал прошедшее время с момента паузы
+    stepStartTs = performance.now() - ((protocol[state.stepIdx]?.time - state.timeLeft) * 1000);
+    state.isRunning=true;
+    btnMain.textContent='Пауза'; btnMain.style.background='var(--c-rest)'; btnNext.disabled=false;
+    _scheduleRaf();
 }
 
 function pauseTimer() { _hardStop(); btnMain.textContent='Продолжить'; btnMain.style.background='var(--c-work)'; btnNext.disabled=true; }
@@ -600,7 +623,8 @@ function loadStep() {
     if (step.voiceTxt) speak(step.voiceTxt);
     if (step.toneType) playTone(step.toneType);
     vibrate(step.type); updateUI();
-    if (state.isRunning) rafId=requestAnimationFrame(_rafLoop);
+    // БАГ 1: не запускаем RAF здесь напрямую — только через _scheduleRaf
+    _scheduleRaf();
 }
 
 function nextStep() { if (state.stepIdx<protocol.length) { state.stepIdx++; loadStep(); } }
@@ -885,8 +909,10 @@ $('btn-ai').addEventListener('click',      ()=>openModal('modal-ai'));
 btnMain.addEventListener('click', ()=>state.isRunning?pauseTimer():startTimer());
 btnNext.addEventListener('click', ()=>{ if(!btnNext.disabled) nextStep(); });
 btnReset.addEventListener('click', ()=>{
-    if((state.isRunning||state.stepIdx>0)&&!confirm('Начать тренировку заново?')) return;
-    if(state.stepIdx>0&&!state.isRunning) saveHistory({done:false});
+    const inProgress = state.isRunning || state.stepIdx > 0 || (state.stepIdx === 0 && state.timeLeft > 0 && state.timeLeft < (protocol[0]?.time || 0));
+    if (inProgress && !confirm('Начать тренировку заново?')) return;
+    // Записываем прерванную тренировку если хоть что-то прошло
+    if ((state.stepIdx > 0 || state.timeLeft < (protocol[0]?.time || 0)) && protocol.length) saveHistory({done:false});
     _hardStop(); resetUI();
 });
 wSelect.addEventListener('change', e=>{
@@ -896,18 +922,30 @@ wSelect.addEventListener('change', e=>{
     loadProgram(idx);
 });
 
-// Свайп вверх = пропуск
+// Свайп, длинное нажатие и двойной тап — единый обработчик касаний
 (()=>{
-    const w=$('timer-wrap'); let sy=0;
-    w.addEventListener('touchstart',e=>{ sy=e.touches[0].clientY; },{passive:true});
-    w.addEventListener('touchend',e=>{ if(sy-e.changedTouches[0].clientY>55&&state.isRunning) nextStep(); },{passive:true});
-})();
-
-// Длинное нажатие +5с / двойной тап -5с
-(()=>{
-    const w=$('timer-wrap'); let pt=null,lt=0;
-    w.addEventListener('touchstart',()=>{ pt=setTimeout(()=>{ if(state.isRunning&&state.stepIdx<protocol.length){ protocol[state.stepIdx].time+=5; totalTime+=5; stepStartTs-=5000; showToast('+5с'); }},600); },{passive:true});
-    w.addEventListener('touchend',e=>{ clearTimeout(pt); const now=Date.now(); if(now-lt<300&&state.isRunning&&state.stepIdx<protocol.length&&state.timeLeft>6){ protocol[state.stepIdx].time=Math.max(1,protocol[state.stepIdx].time-5); totalTime=Math.max(0,totalTime-5); stepStartTs+=5000; showToast('-5с'); } lt=now; },{passive:true});
+    const w=$('timer-wrap');
+    let sy=0, pt=null, lt=0, didLongPress=false;
+    w.addEventListener('touchstart',e=>{
+        sy=e.touches[0].clientY; didLongPress=false;
+        pt=setTimeout(()=>{
+            if(state.isRunning&&state.stepIdx<protocol.length){
+                didLongPress=true; protocol[state.stepIdx].time+=5; totalTime+=5; stepStartTs-=5000; showToast('+5с');
+            }
+        },600);
+    },{passive:true});
+    w.addEventListener('touchend',e=>{
+        clearTimeout(pt);
+        const deltaY=sy-e.changedTouches[0].clientY;
+        if(deltaY>55&&state.isRunning){ lt=0; nextStep(); return; }
+        if(didLongPress){ lt=0; return; }
+        const now=Date.now();
+        if(now-lt<300&&state.isRunning&&state.stepIdx<protocol.length&&state.timeLeft>6){
+            protocol[state.stepIdx].time=Math.max(1,protocol[state.stepIdx].time-5);
+            totalTime=Math.max(0,totalTime-5); stepStartTs+=5000; showToast('-5с');
+        }
+        lt=now;
+    },{passive:true});
 })();
 
 function showToast(msg) {
