@@ -1,160 +1,1203 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Баскетбол</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0a0f;display:flex;flex-direction:column;align-items:center;height:100dvh;overflow:hidden;user-select:none;font-family:'JetBrains Mono',monospace;color:#f0f0f8}
-#hdr{display:flex;justify-content:space-between;width:100%;max-width:380px;padding:8px 16px 4px;font-size:.75rem;color:#8888aa}
-#score{font-size:1.1rem;font-weight:700;color:#f0f0f8}
-canvas{display:block;touch-action:none;border-radius:8px}
-#aim-hint{font-size:.62rem;color:#44445a;text-align:center;padding:3px 0}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Basketball Pro - Physics & Levels</title>
+    <style>
+        :root {
+            --bg-color: #0d0e15;
+            --text-main: #f0f0f8;
+            --text-muted: #8888aa;
+            --accent: #5b8cff;
+            --accent-hover: #4671d5;
+            --success: #00e5a0;
+            --danger: #ff4d4d;
+            --ui-bg: rgba(20, 21, 30, 0.9);
+            --font-main: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* UI Overlays */
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            flex-grow: 1;
+            z-index: 1;
+        }
+
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .hud-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .hud-stat-item {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hud-stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .level-indicator {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(91, 140, 255, 0.5);
+        }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--ui-bg);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-align: center;
+            background: linear-gradient(45deg, #ff8c42, #ff4d4d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: var(--text-main);
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 10px 0;
+            box-shadow: 0 4px 15px rgba(91, 140, 255, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover, button:active {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(91, 140, 255, 0.4);
+        }
+
+        button.secondary {
+            background: transparent;
+            border: 2px solid var(--text-muted);
+            color: var(--text-main);
+            box-shadow: none;
+        }
+
+        /* Level Grid */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 80%;
+            max-width: 400px;
+            margin-bottom: 30px;
+        }
+
+        .level-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 20px 0;
+            font-size: 1.2rem;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .level-btn.unlocked {
+            border-color: var(--accent);
+            background: rgba(91, 140, 255, 0.1);
+        }
+
+        .level-btn.unlocked:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .level-btn.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(255, 0, 0, 0.05);
+        }
+
+        .floating-text {
+            position: absolute;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+            z-index: 15;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(1.5); }
+        }
+
+        #wind-indicator {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .wind-arrow {
+            width: 30px;
+            height: 2px;
+            background: var(--text-muted);
+            position: relative;
+        }
+        .wind-arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -4px;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 5px solid var(--text-muted);
+        }
+    </style>
 </head>
 <body>
-<div id="hdr"><span>🏀 <span id="score">0</span></span><span>⏱ <span id="timer">30</span>с</span><span>Рекорд: <span id="best">0</span></span></div>
-<canvas id="c"></canvas>
-<div id="aim-hint">Тяни снизу вверх для броска</div>
+
+<div id="game-container">
+    <div class="hud">
+        <div class="hud-stats">
+            <div class="hud-stat-item">Счет <span class="hud-stat-value" id="hud-score">0</span></div>
+            <div class="hud-stat-item">Цель <span class="hud-stat-value" id="hud-target">0</span></div>
+        </div>
+        <div class="hud-stats" style="align-items: flex-end;">
+            <div class="level-indicator">Уровень <span id="hud-level">1</span></div>
+            <div class="hud-stat-item">Попытки <span class="hud-stat-value" id="hud-balls">3</span></div>
+        </div>
+    </div>
+
+    <div id="wind-indicator">
+        Ветер <div class="wind-arrow" id="wind-arrow"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Main Menu -->
+    <div class="screen active" id="screen-menu">
+        <h1>BASKETBALL PRO</h1>
+        <p class="subtitle">Аналитика траекторий и физика бросков</p>
+        <button onclick="GameApp.showLevelSelect()">Играть</button>
+    </div>
+
+    <!-- Level Select -->
+    <div class="screen" id="screen-levels">
+        <h2>Выбор уровня</h2>
+        <div class="level-grid" id="level-grid">
+            <!-- Dynamic generation -->
+        </div>
+        <button class="secondary" onclick="GameApp.showMenu()">Назад</button>
+    </div>
+
+    <!-- Level Complete -->
+    <div class="screen" id="screen-win">
+        <h2 style="color: var(--success)">Уровень пройден!</h2>
+        <p class="subtitle" id="win-stats">Счет: 0</p>
+        <button onclick="GameApp.nextLevel()">Следующий уровень</button>
+        <button class="secondary" onclick="GameApp.showLevelSelect()">В меню</button>
+    </div>
+
+    <!-- Game Over -->
+    <div class="screen" id="screen-lose">
+        <h2 style="color: var(--danger)">Попытки исчерпаны</h2>
+        <p class="subtitle">Анализ показал неэффективность бросков.</p>
+        <button onclick="GameApp.retryLevel()">Повторить</button>
+        <button class="secondary" onclick="GameApp.showLevelSelect()">В меню</button>
+    </div>
+</div>
 
 <script>
-const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
-const W=Math.min(window.innerWidth,380),H=window.innerHeight-60;
-canvas.width=W;canvas.height=H;
-
-const GND=H-40,BALL_R=18;
-let ball,hoop,drag,score,best=+localStorage.getItem('bball_best')||0,timer,running=false,raf;
-let hoopAnim=0,streak=0;
-
-document.getElementById('best').textContent=best;
-
-function newHoop(){
-  hoop={x:60+Math.random()*(W-120),y:80+Math.random()*(H/2-80),w:56,h:8,rimR:5};
+/**
+ * Векторная математика (2D)
+ * Необходима для физического движка.
+ */
+class Vec2 {
+    constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+    add(v) { return new Vec2(this.x + v.x, this.y + v.y); }
+    sub(v) { return new Vec2(this.x - v.x, this.y - v.y); }
+    mult(n) { return new Vec2(this.x * n, this.y * n); }
+    div(n) { return new Vec2(this.x / n, this.y / n); }
+    magSq() { return this.x * this.x + this.y * this.y; }
+    mag() { return Math.sqrt(this.magSq()); }
+    normalize() { const m = this.mag(); return m === 0 ? new Vec2() : this.div(m); }
+    dot(v) { return this.x * v.x + this.y * v.y; }
+    cross(v) { return this.x * v.y - this.y * v.x; }
+    dist(v) { return this.sub(v).mag(); }
+    clone() { return new Vec2(this.x, this.y); }
+    set(x, y) { this.x = x; this.y = y; return this; }
 }
 
-function init(){
-  ball={x:W/2+(Math.random()*60-30),y:GND,vx:0,vy:0,flying:false};
-  drag=null;score=0;streak=0;running=true;
-  clearInterval(timer);let t=30;
-  document.getElementById('timer').textContent=t;
-  document.getElementById('score').textContent=0;
-  timer=setInterval(()=>{t--;document.getElementById('timer').textContent=t;if(t<=0){clearInterval(timer);running=false;}},1000);
-  newHoop();
-  if(raf) cancelAnimationFrame(raf);
-  raf=requestAnimationFrame(loop);
-}
-
-function loop(){raf=requestAnimationFrame(loop);update();draw();}
-
-function update(){
-  if(!running) return;
-  hoopAnim=Math.max(0,hoopAnim-.05);
-  if(!ball.flying) return;
-  ball.vy+=0.45;ball.x+=ball.vx;ball.y+=ball.vy;
-
-  // Попадание в кольцо
-  const cx=hoop.x+hoop.w/2;
-  if(Math.abs(ball.x-cx)<18&&Math.abs(ball.y-hoop.y)<14&&ball.vy>0){
-    streak++;score+=streak>1?3:2;
-    document.getElementById('score').textContent=score;
-    if(score>best){best=score;localStorage.setItem('bball_best',best);document.getElementById('best').textContent=best;}
-    hoopAnim=1;
-    newHoop();
-    setTimeout(()=>{if(running){ball={x:W/2+(Math.random()*60-30),y:GND,vx:0,vy:0,flying:false};}},300);
-    ball.flying=false;return;
-  }
-
-  // Отскок от стен
-  if(ball.x-BALL_R<0||ball.x+BALL_R>W) ball.vx=-ball.vx*0.7;
-  // Выход за экран — промах
-  if(ball.y>H+50||ball.x<-100||ball.x>W+100){
-    streak=0;
-    ball={x:W/2+(Math.random()*60-30),y:GND,vx:0,vy:0,flying:false};
-  }
-}
-
-function draw(){
-  ctx.fillStyle='#111118';ctx.fillRect(0,0,W,H);
-  // Фон-корт
-  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.arc(W/2,H/2,80,0,Math.PI*2);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,GND+2);ctx.lineTo(W,GND+2);ctx.stroke();
-
-  // Штанга
-  ctx.strokeStyle='#333';ctx.lineWidth=3;
-  ctx.beginPath();ctx.moveTo(hoop.x-20,hoop.y);ctx.lineTo(hoop.x-20,0);ctx.stroke();
-
-  // Сетка
-  if(hoopAnim>0){
-    ctx.strokeStyle=`rgba(0,229,160,${hoopAnim})`;ctx.lineWidth=2;
-    for(let i=0;i<4;i++){
-      ctx.beginPath();
-      ctx.moveTo(hoop.x+i*(hoop.w/3),hoop.y+hoop.h);
-      ctx.lineTo(hoop.x+hoop.w/2,hoop.y+hoop.h+30);
-      ctx.stroke();
+/**
+ * Процедурный аудио движок (Web Audio API)
+ * Генерирует звуки без внешних ассетов.
+ */
+class AudioEngine {
+    constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.3;
+        this.masterGain.connect(this.ctx.destination);
     }
-  }
 
-  // Кольцо
-  const rimColor=hoopAnim>0?`rgba(0,229,160,${.5+hoopAnim*.5})`:'#ff8c42';
-  ctx.strokeStyle=rimColor;ctx.lineWidth=5;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(hoop.x,hoop.y);ctx.lineTo(hoop.x+hoop.w,hoop.y);ctx.stroke();
+    resume() { if (this.ctx.state === 'suspended') this.ctx.resume(); }
 
-  // Мяч
-  const gr=ctx.createRadialGradient(ball.x-5,ball.y-5,2,ball.x,ball.y,BALL_R);
-  gr.addColorStop(0,'#ff9a3c');gr.addColorStop(1,'#c25000');
-  ctx.fillStyle=gr;ctx.beginPath();ctx.arc(ball.x,ball.y,BALL_R,0,Math.PI*2);ctx.fill();
-  // Линии мяча
-  ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(ball.x-BALL_R,ball.y);ctx.lineTo(ball.x+BALL_R,ball.y);ctx.stroke();
-  ctx.beginPath();ctx.arc(ball.x,ball.y,BALL_R*.6,0,Math.PI);ctx.stroke();
-
-  // Прицел при перетаскивании
-  if(drag&&!ball.flying){
-    const dx=ball.x-drag.x,dy=ball.y-drag.y;
-    ctx.strokeStyle='rgba(91,140,255,.4)';ctx.lineWidth=2;ctx.setLineDash([5,5]);
-    ctx.beginPath();ctx.moveTo(ball.x,ball.y);
-    let tx=ball.x+dx*2,ty=ball.y+dy*2;
-    for(let i=0;i<12;i++){
-      ty+=0.45*(i*.5);tx+=dx*.2;
-      ctx.lineTo(tx,ty);
+    playTone(freq, type, duration, vol=1) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
     }
-    ctx.stroke();ctx.setLineDash([]);
-  }
 
-  // HUD финиш
-  if(!running&&timer===undefined||(!running)){
-    ctx.fillStyle='rgba(10,10,15,.8)';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#f0f0f8';ctx.font='bold 1.2rem JetBrains Mono,monospace';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('🏀 Время вышло!',W/2,H/2-30);
-    ctx.font='.8rem JetBrains Mono,monospace';ctx.fillStyle='#8888aa';
-    ctx.fillText(`Счёт: ${score}  Рекорд: ${best}`,W/2,H/2);
-    ctx.fillStyle='#5b8cff';
-    ctx.beginPath();ctx.roundRect(W/2-60,H/2+25,120,40,10);ctx.fill();
-    ctx.fillStyle='#fff';ctx.font='bold .9rem JetBrains Mono,monospace';
-    ctx.fillText('Ещё раз',W/2,H/2+45);
-  }
+    playNoise(duration, vol=1) {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        
+        // Filter for "swish" sound
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1000;
+        
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        noise.start();
+    }
+
+    bounce() { this.playTone(150, 'sine', 0.2, 0.8); }
+    rim() { this.playTone(800, 'triangle', 0.1, 0.5); this.playTone(1200, 'sine', 0.1, 0.3); }
+    swish() { this.playNoise(0.4, 1.5); }
+    score() { this.playTone(440, 'sine', 0.1); setTimeout(()=>this.playTone(660, 'sine', 0.2), 100); }
+    error() { this.playTone(200, 'sawtooth', 0.3, 0.5); }
 }
 
-canvas.addEventListener('mousedown',e=>{const r=canvas.getBoundingClientRect();drag={x:e.clientX-r.left,y:e.clientY-r.top};});
-canvas.addEventListener('touchstart',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),t=e.touches[0];drag={x:t.clientX-r.left,y:t.clientY-r.top};},{passive:false});
-canvas.addEventListener('mouseup',shoot);
-canvas.addEventListener('touchend',e=>{e.preventDefault();shoot(e.changedTouches[0]);},{passive:false});
+/**
+ * Система частиц для визуальных эффектов (искры, конфетти).
+ */
+class ParticleSystem {
+    constructor() { this.particles = []; }
+    
+    emit(x, y, count, color, speed, life) {
+        for(let i=0; i<count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const v = Math.random() * speed;
+            this.particles.push({
+                pos: new Vec2(x, y),
+                vel: new Vec2(Math.cos(angle) * v, Math.sin(angle) * v),
+                color: color,
+                life: life,
+                maxLife: life,
+                size: Math.random() * 3 + 1
+            });
+        }
+    }
 
-function shoot(e){
-  if(!running||ball.flying||!drag) return;
-  const r=canvas.getBoundingClientRect();
-  const ex=e.clientX-r.left,ey=e.clientY-r.top;
-  const dx=(ball.x-ex)*0.22,dy=(ball.y-ey)*0.22;
-  if(dy<-1){ball.vx=dx;ball.vy=dy;ball.flying=true;}
-  drag=null;
+    update(dt) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            let p = this.particles[i];
+            p.pos = p.pos.add(p.vel.mult(dt * 60));
+            p.vel.y += 0.1 * dt * 60; // Gravity
+            p.life -= dt;
+            if (p.life <= 0) this.particles.splice(i, 1);
+        }
+    }
+
+    draw(ctx) {
+        this.particles.forEach(p => {
+            ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.pos.x, p.pos.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1.0;
+    }
 }
-canvas.addEventListener('click',e=>{if(!running){const r=canvas.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;if(x>W/2-60&&x<W/2+60&&y>H/2+25&&y<H/2+65) init();}});
-canvas.addEventListener('touchstart',e=>{if(!running){e.preventDefault();init();}},{passive:false});
 
-init();
+/**
+ * Симуляция мягкого тела (Soft Body / Verlet Integration) для сетки.
+ */
+class NetNode {
+    constructor(x, y, isFixed = false) {
+        this.pos = new Vec2(x, y);
+        this.oldPos = new Vec2(x, y);
+        this.isFixed = isFixed;
+    }
+}
+
+class NetLink {
+    constructor(n1, n2, distance) {
+        this.n1 = n1;
+        this.n2 = n2;
+        this.targetDist = distance;
+    }
+    solve() {
+        const axis = this.n1.pos.sub(this.n2.pos);
+        const dist = axis.mag();
+        if (dist === 0) return;
+        const diff = (this.targetDist - dist) / dist;
+        const offset = axis.mult(0.5 * diff);
+        if (!this.n1.isFixed) this.n1.pos = this.n1.pos.add(offset);
+        if (!this.n2.isFixed) this.n2.pos = this.n2.pos.sub(offset);
+    }
+}
+
+class BasketballNet {
+    constructor(x, y, width) {
+        this.nodes = [];
+        this.links = [];
+        this.width = width;
+        this.buildNet(x, y);
+    }
+
+    buildNet(rx, ry) {
+        const rows = 5;
+        const cols = 6;
+        const wStep = this.width / (cols - 1);
+        const hStep = 12;
+
+        for (let r = 0; r < rows; r++) {
+            // Tapering the net
+            const currentWidth = this.width - (r * 4);
+            const startX = rx - currentWidth / 2;
+            const cwStep = currentWidth / (cols - 1);
+
+            for (let c = 0; c < cols; c++) {
+                const isFixed = (r === 0);
+                this.nodes.push(new NetNode(startX + c * cwStep, ry + r * hStep, isFixed));
+            }
+        }
+
+        // Horizontal links
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols - 1; c++) {
+                const i1 = r * cols + c;
+                const i2 = r * cols + c + 1;
+                this.links.push(new NetLink(this.nodes[i1], this.nodes[i2], this.nodes[i1].pos.dist(this.nodes[i2].pos)));
+            }
+        }
+        // Vertical links
+        for (let r = 0; r < rows - 1; r++) {
+            for (let c = 0; c < cols; c++) {
+                const i1 = r * cols + c;
+                const i2 = (r + 1) * cols + c;
+                this.links.push(new NetLink(this.nodes[i1], this.nodes[i2], this.nodes[i1].pos.dist(this.nodes[i2].pos)));
+            }
+        }
+        // Diagonal links (structural integrity)
+        for (let r = 0; r < rows - 1; r++) {
+            for (let c = 0; c < cols - 1; c++) {
+                const i1 = r * cols + c;
+                const i2 = (r + 1) * cols + c + 1;
+                this.links.push(new NetLink(this.nodes[i1], this.nodes[i2], this.nodes[i1].pos.dist(this.nodes[i2].pos)));
+                
+                const i3 = r * cols + c + 1;
+                const i4 = (r + 1) * cols + c;
+                this.links.push(new NetLink(this.nodes[i3], this.nodes[i4], this.nodes[i3].pos.dist(this.nodes[i4].pos)));
+            }
+        }
+    }
+
+    updatePosition(rx, ry) {
+        const cols = 6;
+        for (let c = 0; c < cols; c++) {
+            const node = this.nodes[c];
+            const cwStep = this.width / (cols - 1);
+            node.pos.set(rx - this.width/2 + c * cwStep, ry);
+            node.oldPos.set(node.pos.x, node.pos.y);
+        }
+    }
+
+    update(dt) {
+        // Verlet integration
+        for (let node of this.nodes) {
+            if (!node.isFixed) {
+                const vel = node.pos.sub(node.oldPos);
+                node.oldPos = node.pos.clone();
+                // Gravity & slight damping
+                node.pos = node.pos.add(vel.mult(0.98)).add(new Vec2(0, 0.5));
+            }
+        }
+        // Relaxation steps for stiffness
+        for (let i = 0; i < 5; i++) {
+            for (let link of this.links) link.solve();
+        }
+    }
+
+    interactWithBall(ballPos, ballRadius) {
+        for (let node of this.nodes) {
+            if (node.isFixed) continue;
+            const dist = node.pos.dist(ballPos);
+            if (dist < ballRadius) {
+                const dir = node.pos.sub(ballPos).normalize();
+                node.pos = ballPos.add(dir.mult(ballRadius));
+            }
+        }
+    }
+
+    draw(ctx) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let link of this.links) {
+            ctx.moveTo(link.n1.pos.x, link.n1.pos.y);
+            ctx.lineTo(link.n2.pos.x, link.n2.pos.y);
+        }
+        ctx.stroke();
+    }
+}
+
+/**
+ * Игровые сущности
+ */
+class Ball {
+    constructor(x, y, radius) {
+        this.pos = new Vec2(x, y);
+        this.vel = new Vec2(0, 0);
+        this.radius = radius;
+        this.mass = 1;
+        this.restitution = 0.7; // Отскок
+        this.isFlying = false;
+        this.rotation = 0;
+        this.angularVel = 0;
+    }
+
+    shoot(startVec, endVec, powerScale) {
+        const dir = startVec.sub(endVec);
+        this.vel = dir.mult(powerScale);
+        this.isFlying = true;
+        this.angularVel = (Math.random() - 0.5) * 0.5; // Spin
+    }
+
+    update(dt, windVec) {
+        if (!this.isFlying) return;
+        
+        // Gravity
+        this.vel.y += 0.4 * dt * 60;
+        
+        // Wind & Air resistance
+        if (windVec) this.vel = this.vel.add(windVec.mult(dt));
+        this.vel = this.vel.mult(0.995); 
+
+        this.pos = this.pos.add(this.vel.mult(dt * 60));
+        this.rotation += this.angularVel * dt * 60;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.pos.x, this.pos.y);
+        ctx.rotate(this.rotation);
+
+        // Shadow/glow
+        ctx.shadowColor = 'rgba(255, 140, 66, 0.4)';
+        ctx.shadowBlur = 15;
+
+        // Base gradient
+        const gr = ctx.createRadialGradient(-this.radius*0.3, -this.radius*0.3, 0, 0, 0, this.radius);
+        gr.addColorStop(0, '#ffac62');
+        gr.addColorStop(1, '#c25000');
+        
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 0; // Reset for lines
+
+        // Basketball lines
+        ctx.strokeStyle = '#2a1200';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-this.radius, 0); ctx.lineTo(this.radius, 0);
+        ctx.moveTo(0, -this.radius); ctx.lineTo(0, this.radius);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(this.radius*0.8, 0, this.radius*0.7, Math.PI/2, Math.PI*1.5);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(-this.radius*0.8, 0, this.radius*0.7, -Math.PI/2, Math.PI/2);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
+class Hoop {
+    constructor(x, y) {
+        this.basePos = new Vec2(x, y);
+        this.pos = new Vec2(x, y);
+        this.width = 60;
+        this.rimRadius = 4;
+        this.net = new BasketballNet(x, y, this.width);
+        this.scoreBox = { x: x - this.width/2 + 10, y: y, w: this.width - 20, h: 20 };
+        this.scored = false;
+        
+        // Movement params
+        this.moveType = 'none'; // none, horizontal, vertical
+        this.moveSpeed = 0;
+        this.moveRange = 0;
+        this.time = 0;
+    }
+
+    update(dt) {
+        if (this.moveType === 'horizontal') {
+            this.time += dt;
+            this.pos.x = this.basePos.x + Math.sin(this.time * this.moveSpeed) * this.moveRange;
+        } else if (this.moveType === 'vertical') {
+            this.time += dt;
+            this.pos.y = this.basePos.y + Math.sin(this.time * this.moveSpeed) * this.moveRange;
+        }
+        
+        this.scoreBox.x = this.pos.x - this.width/2 + 10;
+        this.scoreBox.y = this.pos.y;
+        this.net.updatePosition(this.pos.x, this.pos.y);
+        this.net.update(dt);
+    }
+
+    draw(ctx) {
+        // Backboard
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.strokeStyle = '#f0f0f8';
+        ctx.lineWidth = 3;
+        ctx.fillRect(this.pos.x - 40, this.pos.y - 70, 80, 60);
+        ctx.strokeRect(this.pos.x - 40, this.pos.y - 70, 80, 60);
+        
+        // Inner square
+        ctx.strokeStyle = '#ff4d4d';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.pos.x - 15, this.pos.y - 35, 30, 25);
+
+        // Stand (behind)
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(this.pos.x, this.pos.y - 40);
+        ctx.lineTo(this.pos.x, 0); // Goes off top screen usually
+        ctx.stroke();
+
+        // Net (drawn before front rim)
+        this.net.draw(ctx);
+
+        // Rim Nodes
+        const leftRim = new Vec2(this.pos.x - this.width/2, this.pos.y);
+        const rightRim = new Vec2(this.pos.x + this.width/2, this.pos.y);
+
+        // Front Rim
+        ctx.strokeStyle = '#ff4d4d';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(leftRim.x, leftRim.y);
+        ctx.lineTo(rightRim.x, rightRim.y);
+        ctx.stroke();
+    }
+}
+
+class Obstacle {
+    constructor(x, y, w, h, type='static') {
+        this.basePos = new Vec2(x, y);
+        this.pos = new Vec2(x, y);
+        this.w = w;
+        this.h = h;
+        this.type = type; // static, moving
+        this.time = 0;
+    }
+
+    update(dt) {
+        if (this.type === 'moving') {
+            this.time += dt;
+            this.pos.x = this.basePos.x + Math.sin(this.time * 2) * 50;
+        }
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = '#22222a';
+        ctx.strokeStyle = '#5b8cff';
+        ctx.lineWidth = 2;
+        
+        // Futuristic tech-block look
+        ctx.beginPath();
+        ctx.rect(this.pos.x, this.pos.y, this.w, this.h);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(this.pos.x + 5, this.pos.y + 5);
+        ctx.lineTo(this.pos.x + this.w - 5, this.pos.y + this.h - 5);
+        ctx.strokeStyle = 'rgba(91, 140, 255, 0.3)';
+        ctx.stroke();
+    }
+}
+
+/**
+ * Данные Уровней.
+ * Аналитический подход к прогрессии сложности.
+ */
+const LEVELS = [
+    { id: 1, target: 1, balls: 3, desc: "Основы траектории", hoopY: 0.3, hoopMove: 'none' },
+    { id: 2, target: 2, balls: 4, desc: "Увеличенная дистанция", hoopY: 0.2, hoopMove: 'none' },
+    { id: 3, target: 2, balls: 5, desc: "Латеральное движение", hoopY: 0.25, hoopMove: 'horizontal', speed: 1.5, range: 60 },
+    { id: 4, target: 3, balls: 5, desc: "Ветровая нагрузка", hoopY: 0.3, hoopMove: 'none', wind: 0.08 },
+    { id: 5, target: 3, balls: 5, desc: "Статичный блок", hoopY: 0.2, hoopMove: 'none', obs: [{x: 0.5, y: 0.5, w: 100, h: 20}] },
+    { id: 6, target: 3, balls: 6, desc: "Комплексная задача", hoopY: 0.25, hoopMove: 'horizontal', speed: 2, range: 80, wind: -0.05, obs: [{x: 0.5, y: 0.6, w: 80, h: 20, type:'moving'}] }
+];
+
+/**
+ * Главный Игровой Движок и Менеджер Состояний.
+ */
+const GameApp = (function() {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let cw = window.innerWidth;
+    let ch = window.innerHeight;
+    
+    // Core systems
+    let audio = null;
+    let particles = new ParticleSystem();
+    
+    // Game state
+    let state = 'MENU'; // MENU, LEVELS, PLAYING, WIN, LOSE
+    let currentLevelIdx = 0;
+    let unlockedLevel = parseInt(localStorage.getItem('bball_unlocked')) || 1;
+    
+    // Level specific
+    let score = 0;
+    let ballsLeft = 0;
+    let targetScore = 0;
+    
+    // Entities
+    let ball = null;
+    let hoop = null;
+    let obstacles = [];
+    let windForce = new Vec2(0, 0);
+    
+    // Input
+    let dragStart = null;
+    let dragCurrent = null;
+    let isDragging = false;
+    
+    // Loop
+    let lastTime = 0;
+    let animFrame = null;
+
+    function resize() {
+        // Contain within max-width for logic consistency
+        const container = document.getElementById('game-container');
+        cw = container.clientWidth;
+        ch = container.clientHeight;
+        canvas.width = cw;
+        canvas.height = ch;
+    }
+
+    function initAudio() {
+        if (!audio) audio = new AudioEngine();
+        audio.resume();
+    }
+
+    function buildLevelGrid() {
+        const grid = document.getElementById('level-grid');
+        grid.innerHTML = '';
+        LEVELS.forEach((lvl, idx) => {
+            const btn = document.createElement('div');
+            btn.className = `level-btn ${lvl.id <= unlockedLevel ? 'unlocked' : 'locked'}`;
+            btn.textContent = lvl.id;
+            if (lvl.id <= unlockedLevel) {
+                btn.onclick = () => loadLevel(idx);
+            }
+            grid.appendChild(btn);
+        });
+    }
+
+    function switchState(newState) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        state = newState;
+        if (state === 'MENU') document.getElementById('screen-menu').classList.add('active');
+        if (state === 'LEVELS') {
+            buildLevelGrid();
+            document.getElementById('screen-levels').classList.add('active');
+        }
+        if (state === 'WIN') {
+            document.getElementById('win-stats').textContent = `Счет: ${score} / ${targetScore}`;
+            document.getElementById('screen-win').classList.add('active');
+            particles.emit(cw/2, ch, 100, '#00e5a0', 15, 3); // Confetti
+        }
+        if (state === 'LOSE') document.getElementById('screen-lose').classList.add('active');
+    }
+
+    function spawnBall() {
+        ball = new Ball(cw / 2, ch - 80, 16);
+        isDragging = false;
+        dragStart = null;
+    }
+
+    function loadLevel(idx) {
+        initAudio();
+        currentLevelIdx = idx;
+        const lvl = LEVELS[idx];
+        
+        score = 0;
+        ballsLeft = lvl.balls;
+        targetScore = lvl.target;
+        
+        // Setup HUD
+        document.getElementById('hud-level').textContent = lvl.id;
+        document.getElementById('hud-target').textContent = targetScore;
+        updateHUD();
+
+        // Setup Entities
+        hoop = new Hoop(cw / 2, ch * lvl.hoopY);
+        hoop.moveType = lvl.hoopMove;
+        hoop.moveSpeed = lvl.speed || 0;
+        hoop.moveRange = lvl.range || 0;
+
+        obstacles = [];
+        if (lvl.obs) {
+            lvl.obs.forEach(o => {
+                obstacles.push(new Obstacle(cw * o.x - o.w/2, ch * o.y, o.w, o.h, o.type));
+            });
+        }
+
+        // Environment
+        windForce = new Vec2(lvl.wind || 0, 0);
+        const windInd = document.getElementById('wind-indicator');
+        if (windForce.x !== 0) {
+            windInd.style.opacity = 1;
+            const arrow = document.getElementById('wind-arrow');
+            arrow.style.transform = windForce.x > 0 ? 'scaleX(1)' : 'scaleX(-1)';
+            arrow.style.width = `${Math.abs(windForce.x) * 500}px`;
+        } else {
+            windInd.style.opacity = 0;
+        }
+
+        spawnBall();
+        switchState('PLAYING');
+        if(!animFrame) animFrame = requestAnimationFrame(loop);
+    }
+
+    function updateHUD() {
+        document.getElementById('hud-score').textContent = score;
+        document.getElementById('hud-balls').textContent = ballsLeft;
+    }
+
+    function createFloatingText(text, x, y, color) {
+        const el = document.createElement('div');
+        el.className = 'floating-text';
+        el.textContent = text;
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.style.color = color;
+        document.getElementById('game-container').appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+    }
+
+    // Физика столкновений (Circle vs Line segment)
+    function lineCircleCollide(circle, p1, p2) {
+        const ac = circle.pos.sub(p1);
+        const ab = p2.sub(p1);
+        const ab2 = ab.magSq();
+        if (ab2 === 0) return p1.dist(circle.pos) < circle.radius;
+        
+        let t = ac.dot(ab) / ab2;
+        t = Math.max(0, Math.min(1, t));
+        const closest = p1.add(ab.mult(t));
+        
+        const distSq = circle.pos.sub(closest).magSq();
+        if (distSq < circle.radius * circle.radius) {
+            const dist = Math.sqrt(distSq);
+            let normal = circle.pos.sub(closest).normalize();
+            if(normal.magSq() === 0) normal = new Vec2(0, -1);
+            return { hit: true, normal: normal, penetration: circle.radius - dist };
+        }
+        return { hit: false };
+    }
+
+    // Circle vs Point
+    function pointCircleCollide(circle, p) {
+        const dist = circle.pos.dist(p);
+        if (dist < circle.radius) {
+            const normal = circle.pos.sub(p).normalize();
+            return { hit: true, normal: normal, penetration: circle.radius - dist };
+        }
+        return { hit: false };
+    }
+
+    // AABB vs Circle (for obstacles)
+    function rectCircleCollide(circle, rectPos, rectW, rectH) {
+        let testX = circle.pos.x;
+        let testY = circle.pos.y;
+
+        if (circle.pos.x < rectPos.x) testX = rectPos.x;
+        else if (circle.pos.x > rectPos.x + rectW) testX = rectPos.x + rectW;
+        if (circle.pos.y < rectPos.y) testY = rectPos.y;
+        else if (circle.pos.y > rectPos.y + rectH) testY = rectPos.y + rectH;
+
+        const distX = circle.pos.x - testX;
+        const distY = circle.pos.y - testY;
+        const distance = Math.sqrt((distX*distX) + (distY*distY));
+
+        if (distance <= circle.radius) {
+            const normal = new Vec2(distX, distY).normalize();
+            return { hit: true, normal: normal, penetration: circle.radius - distance };
+        }
+        return { hit: false };
+    }
+
+    function resolveCollision(normal, penetration) {
+        // Separation
+        ball.pos = ball.pos.add(normal.mult(penetration));
+        // Bounce
+        const relVel = ball.vel.dot(normal);
+        if (relVel < 0) {
+            ball.vel = ball.vel.sub(normal.mult(relVel * (1 + ball.restitution)));
+            if (Math.abs(relVel) > 2) {
+                if(audio) audio.bounce();
+                particles.emit(ball.pos.x - normal.x*ball.radius, ball.pos.y - normal.y*ball.radius, 5, '#ffac62', Math.abs(relVel)*0.5, 0.5);
+            }
+        }
+    }
+
+    function checkCollisions() {
+        if (!ball.isFlying) return;
+
+        // Walls
+        if (ball.pos.x - ball.radius < 0) {
+            ball.pos.x = ball.radius;
+            ball.vel.x *= -ball.restitution;
+            if(audio) audio.bounce();
+        } else if (ball.pos.x + ball.radius > cw) {
+            ball.pos.x = cw - ball.radius;
+            ball.vel.x *= -ball.restitution;
+            if(audio) audio.bounce();
+        }
+
+        // Floor (Fail condition usually, or bounce)
+        if (ball.pos.y - ball.radius > ch) {
+            ballLost();
+            return;
+        }
+
+        // Obstacles
+        for (let obs of obstacles) {
+            const col = rectCircleCollide(ball, obs.pos, obs.w, obs.h);
+            if (col.hit) resolveCollision(col.normal, col.penetration);
+        }
+
+        // Hoop components
+        const leftRim = new Vec2(hoop.pos.x - hoop.width/2, hoop.pos.y);
+        const rightRim = new Vec2(hoop.pos.x + hoop.width/2, hoop.pos.y);
+        
+        // Backboard
+        const bbCol = lineCircleCollide(ball, new Vec2(hoop.pos.x - 40, hoop.pos.y - 70), new Vec2(hoop.pos.x - 40, hoop.pos.y + 10));
+        if (bbCol.hit) resolveCollision(bbCol.normal, bbCol.penetration);
+
+        // Rims (Points)
+        const lCol = pointCircleCollide(ball, leftRim);
+        if (lCol.hit) resolveCollision(lCol.normal, lCol.penetration);
+        
+        const rCol = pointCircleCollide(ball, rightRim);
+        if (rCol.hit) resolveCollision(rCol.normal, rCol.penetration);
+
+        // Scoring Logic
+        if (ball.vel.y > 0 && !hoop.scored) {
+            // Check if passed through score box from top
+            if (ball.pos.x > hoop.scoreBox.x && ball.pos.x < hoop.scoreBox.x + hoop.scoreBox.w &&
+                ball.pos.y > hoop.scoreBox.y && ball.pos.y < hoop.scoreBox.y + hoop.scoreBox.h) {
+                
+                hoop.scored = true;
+                score++;
+                updateHUD();
+                createFloatingText('+1', cw/2, hoop.pos.y - 20, '#00e5a0');
+                if(audio) { audio.swish(); audio.score(); }
+                particles.emit(hoop.pos.x, hoop.pos.y + 20, 20, '#f0f0f8', 5, 1);
+            }
+        }
+
+        // Net interaction
+        hoop.net.interactWithBall(ball.pos, ball.radius * 1.2);
+    }
+
+    function ballLost() {
+        ballsLeft--;
+        updateHUD();
+        
+        if (score >= targetScore) {
+            // Level Win
+            const nextLvl = currentLevelIdx + 2;
+            if (nextLvl > unlockedLevel && nextLvl <= LEVELS.length) {
+                unlockedLevel = nextLvl;
+                localStorage.setItem('bball_unlocked', unlockedLevel);
+            }
+            setTimeout(() => switchState('WIN'), 500);
+        } else if (ballsLeft <= 0) {
+            // Level Lose
+            if(audio) audio.error();
+            setTimeout(() => switchState('LOSE'), 500);
+        } else {
+            // Next ball
+            hoop.scored = false;
+            spawnBall();
+        }
+    }
+
+    function update(dt) {
+        if (state !== 'PLAYING') return;
+
+        hoop.update(dt);
+        obstacles.forEach(o => o.update(dt));
+        ball.update(dt, windForce);
+        particles.update(dt);
+        
+        checkCollisions();
+    }
+
+    function draw() {
+        // Clear
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color');
+        ctx.fillRect(0, 0, cw, ch);
+
+        if (state !== 'PLAYING') return;
+
+        // Draw Court Elements (Background)
+        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cw/2, ch, 150, 0, Math.PI, true);
+        ctx.stroke();
+
+        obstacles.forEach(o => o.draw(ctx));
+        hoop.draw(ctx);
+        particles.draw(ctx);
+        ball.draw(ctx);
+
+        // Drag Aim UI
+        if (isDragging && !ball.isFlying && dragStart && dragCurrent) {
+            const dragVector = dragStart.sub(dragCurrent);
+            const power = Math.min(dragVector.mag() / 150, 1.5); // Cap power
+            
+            ctx.beginPath();
+            ctx.moveTo(ball.pos.x, ball.pos.y);
+            // Draw predictive trajectory
+            let simPos = ball.pos.clone();
+            let simVel = dragVector.mult(0.15); // Power scale matches logic
+            ctx.strokeStyle = `rgba(91, 140, 255, ${0.2 + power*0.5})`;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            
+            for(let i=0; i<15; i++) {
+                simVel.y += 0.4 * (1/60) * 60; // Gravity sim
+                if (windForce) simVel = simVel.add(windForce.mult(1/60));
+                simPos = simPos.add(simVel.mult(1));
+                ctx.lineTo(simPos.x, simPos.y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        let dt = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
+        
+        // Cap dt to prevent physics explosions on lag
+        if (dt > 0.05) dt = 0.05;
+
+        update(dt);
+        draw();
+
+        animFrame = requestAnimationFrame(loop);
+    }
+
+    // Input Handlers
+    function getPointerPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return new Vec2(clientX - rect.left, clientY - rect.top);
+    }
+
+    function handleDown(e) {
+        if (state !== 'PLAYING' || ball.isFlying) return;
+        const pos = getPointerPos(e);
+        // Only start drag if near bottom half or near ball
+        if (pos.y > ch/2) {
+            isDragging = true;
+            dragStart = pos;
+            dragCurrent = pos;
+            if(audio) audio.resume(); // Ensure context is awake
+        }
+    }
+
+    function handleMove(e) {
+        if (!isDragging) return;
+        dragCurrent = getPointerPos(e);
+    }
+
+    function handleUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        if (dragStart && dragCurrent) {
+            const dragVector = dragStart.sub(dragCurrent);
+            if (dragVector.mag() > 20 && dragVector.y > 0) { // Require minimum drag upwards
+                ball.shoot(dragStart, dragCurrent, 0.18); // Синхронизировано с powerMultiplier
+                if(audio) audio.playTone(300, 'sine', 0.1, 0.4); // Shoot sound
+            }
+        }
+        dragStart = null;
+        dragCurrent = null;
+    }
+
+    // Event Listeners setup
+    window.addEventListener('resize', resize);
+    
+    canvas.addEventListener('mousedown', handleDown);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleDown(e); }, {passive: false});
+    window.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
+    window.addEventListener('touchend', handleUp);
+
+    return {
+        init: () => {
+            resize();
+            switchState('MENU');
+            requestAnimationFrame(loop); // Start idle loop for background drawing
+        },
+        showMenu: () => switchState('MENU'),
+        showLevelSelect: () => switchState('LEVELS'),
+        retryLevel: () => loadLevel(currentLevelIdx),
+        nextLevel: () => loadLevel(Math.min(currentLevelIdx + 1, LEVELS.length - 1))
+    };
+
+})();
+
+// Initialize on load
+window.onload = GameApp.init;
+
 </script>
 </body>
 </html>
