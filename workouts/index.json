@@ -3,6 +3,12 @@
   "shoulder_rehab_p1.json",
   "shoulder_rehab_p2.json",
   "shoulder_rehab_p3.json",
-  "shoulder_rehab_p4.json", 
-  "home_hiit_fatloss_001.json"
+  "shoulder_rehab_p4.json",
+  "home_hiit_fatloss_001.json",
+  {
+    "id": "swt2d4g9",
+    "title": "Домашняя HIIT — сжигание жира123",
+    "file": "home_hiit_fatloss_001.json",
+    "description": "Интенсивная круговая тренировка для похудения дома без оборудования. 3 круга, 6 упражнений в круге, короткие переходы. Подойдёт для веса 80 кг, рост 170 см, возраст 24 года (мужчина). Акцент на частом пульсе и задействовании больших групп мышц."
+  }
 ]
