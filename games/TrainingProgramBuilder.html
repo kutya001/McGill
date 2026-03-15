@@ -32,7 +32,7 @@
 
         // Шаблоны
         const createEmptyProgram = () => ({ id: generateId(), title: 'Новая программа', filename: `program_${generateId()}.json`, description: '', exercises: [] });
-        const createEmptyExercise = () => ({ id: generateId(), name: '', sets: '', reps: '', rest: '', voiceText: '' });
+        const createEmptyExercise = () => ({ id: generateId(), name: '', sets: '1', reps: '60', rest: '40', voiceText: '' });
 
         // --- ИКОНКИ ---
         const Icon = ({ name, size = 20, className = "" }) => {
@@ -138,7 +138,8 @@
                 }
                 try {
                     const res = await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}`, {
-                        headers: getAuthHeaders()
+                        headers: getAuthHeaders(),
+                        cache: 'no-store'
                     });
                     
                     if (res.ok) {
@@ -151,8 +152,8 @@
                             setTestStatus({ loading: false, message: 'Репозиторий найден (публичный). Для сохранения нужен Токен.', isError: true });
                         }
                     } else {
-                        const err = await res.json();
-                        setTestStatus({ loading: false, message: `Ошибка: ${err.message || res.statusText}`, isError: true });
+                        const err = await res.json().catch(() => ({}));
+                        setTestStatus({ loading: false, message: `Ошибка API: ${err.message || res.statusText}`, isError: true });
                     }
                 } catch (e) {
                     setTestStatus({ loading: false, message: `Ошибка сети: ${e.message}`, isError: true });
@@ -169,53 +170,57 @@
                 setSyncStatus(s => ({ ...s, loadingList: true, error: null }));
                 try {
                     const baseUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents`;
-                    const res = await fetch(`${baseUrl}/workouts/index.json`, { headers: getAuthHeaders() });
                     
-                    if (res.status === 404) {
-                        setPrograms([]);
-                        showSuccess("Реестр пуст (index.json не найден)");
-                        return;
-                    }
-                    if (!res.ok) throw new Error("Не удалось загрузить реестр программ.");
+                    const dirRes = await fetch(`${baseUrl}/workouts`, { 
+                        headers: getAuthHeaders(),
+                        cache: 'no-store'
+                    });
                     
-                    const data = await res.json();
-                    let parsed = [];
-                    try {
-                        parsed = JSON.parse(b64DecodeUnicode(data.content));
-                    } catch (e) {
-                        throw new Error("Файл index.json поврежден (некорректный JSON).");
-                    }
+                    if (!dirRes.ok) throw new Error("Не удалось прочитать директорию workouts/");
                     
-                    if (!Array.isArray(parsed)) parsed = [];
+                    const dirData = await dirRes.json();
+                    if (!Array.isArray(dirData)) throw new Error("Директория недоступна или имеет неверный формат");
 
-                    // Нормализуем данные и защищаем от "undefined" файлов
-                    const normalizedPrograms = parsed.map(p => {
-                        const validId = p.id || generateId();
-                        // Ищем имя файла в разных полях, иначе генерируем безопасное запасное
-                        const validFilename = p.file || p.filename || `program_${validId}.json`;
+                    const realJsonFiles = dirData.filter(f => f.type === 'file' && f.name.endsWith('.json') && f.name !== 'index.json');
+
+                    let indexData = [];
+                    try {
+                        const indexRes = await fetch(`${baseUrl}/workouts/index.json`, { 
+                            headers: getAuthHeaders(), cache: 'no-store'
+                        });
+                        if (indexRes.ok) {
+                            const indexJson = await indexRes.json();
+                            const parsed = JSON.parse(b64DecodeUnicode(indexJson.content));
+                            if (Array.isArray(parsed)) indexData = parsed;
+                        }
+                    } catch (e) {
+                        console.warn("index.json отсутствует или поврежден.");
+                    }
+
+                    const normalizedPrograms = realJsonFiles.map(fileObj => {
+                        const meta = indexData.find(item => item.file === fileObj.name || item.filename === fileObj.name) || {};
                         return {
-                            id: validId,
-                            title: p.title || 'Без названия',
-                            filename: validFilename,
-                            description: p.description || '',
-                            // exercises отсутствуют - это флаг для ленивой загрузки
+                            id: meta.id || generateId(),
+                            title: meta.title || fileObj.name.replace('.json', '').replace(/_/g, ' '),
+                            filename: fileObj.name,
+                            description: meta.description || '',
+                            fileSha: fileObj.sha 
                         };
                     });
                     
                     setPrograms(normalizedPrograms);
                     setActiveId(null);
                     setSyncStatus(s => ({ ...s, loadingList: false }));
-                    showSuccess("Список успешно загружен");
+                    showSuccess(`Найдено файлов: ${normalizedPrograms.length}`);
                 } catch (error) {
                     setSyncStatus(s => ({ ...s, loadingList: false, error: error.message }));
                 }
             };
 
-            // --- 2. ВЫБОР ПРОГРАММЫ (с ленивой загрузкой) ---
+            // --- 2. ВЫБОР ПРОГРАММЫ (ИНТЕЛЛЕКТУАЛЬНЫЙ ПАРСИНГ PROTOCOL) ---
             const selectProgram = async (prog) => {
                 setActiveId(prog.id);
                 
-                // Если упражнения уже есть (локальная программа или уже загруженная), пропускаем
                 if (prog.exercises) return;
 
                 if (!ghConfig.token) {
@@ -232,28 +237,84 @@
                 setSyncStatus(s => ({ ...s, loadingProgram: true, error: null }));
                 try {
                     const baseUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents`;
-                    const res = await fetch(`${baseUrl}/workouts/${prog.filename}`, { headers: getAuthHeaders() });
+                    const res = await fetch(`${baseUrl}/workouts/${prog.filename}`, { 
+                        headers: getAuthHeaders(),
+                        cache: 'no-store'
+                    });
                     
                     if (!res.ok) {
-                        if (res.status === 404) throw new Error(`Файл ${prog.filename} не найден на сервере!`);
-                        throw new Error(`Не удалось загрузить файл ${prog.filename}`);
+                        if (res.status === 404) {
+                            setPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, exercises: [] } : p));
+                            throw new Error(`Файл ${prog.filename} не найден (404). Инициализирован пустой шаблон.`);
+                        }
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(`Ошибка загрузки: ${err.message || res.statusText}`);
                     }
                     
                     const data = await res.json();
                     const fullProgram = JSON.parse(b64DecodeUnicode(data.content));
                     
-                    // Обеспечиваем наличие базовых полей, даже если они пустые в скачанном JSON
-                    if (!fullProgram.exercises) fullProgram.exercises = [];
+                    let extractedExercises = [];
+                    let legacyDetails = {};
+                    let parsedTitle = prog.title;
+                    let parsedDesc = prog.description;
+
+                    // АДАПТЕР: Парсим линейный protocol в удобные Exercises
+                    if (fullProgram.programs && Array.isArray(fullProgram.programs) && fullProgram.programs.length > 0) {
+                        const srcProg = fullProgram.programs[0];
+                        parsedTitle = srcProg.name || parsedTitle;
+                        parsedDesc = srcProg.description || parsedDesc;
+                        legacyDetails = srcProg.exercisesDetails || {};
+
+                        if (srcProg.protocol) {
+                            let lastEx = null;
+                            srcProg.protocol.forEach(step => {
+                                if (step.type === 'prep' || step.type === 'work') {
+                                    if (lastEx && lastEx.name === step.ex) {
+                                        // То же самое упражнение - плюсуем подход
+                                        lastEx.sets = String(parseInt(lastEx.sets) + 1);
+                                        if (!lastEx.voiceText && step.voiceTxt) lastEx.voiceText = step.voiceTxt; 
+                                    } else {
+                                        // Новое упражнение
+                                        lastEx = {
+                                            id: generateId(),
+                                            name: step.ex || '',
+                                            sets: '1',
+                                            reps: step.time ? `${step.time}` : '60',
+                                            rest: '0',
+                                            voiceText: step.voiceTxt || ''
+                                        };
+                                        extractedExercises.push(lastEx);
+                                    }
+                                } else if (step.type === 'rest' && lastEx) {
+                                    // Отдых относится к последнему упражнению
+                                    lastEx.rest = step.time ? `${step.time}` : '40';
+                                }
+                            });
+                        }
+                    } else {
+                        // Обычный формат (резервный)
+                        extractedExercises = fullProgram.exercises || [];
+                        parsedTitle = fullProgram.title || parsedTitle;
+                        parsedDesc = fullProgram.description || parsedDesc;
+                    }
                     
-                    // Обновляем программу в локальном стейте, добавляя содержимое и SHA
-                    setPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, ...fullProgram, fileSha: data.sha } : p));
+                    setPrograms(prev => prev.map(p => p.id === prog.id ? { 
+                        ...p, 
+                        title: parsedTitle,
+                        description: parsedDesc,
+                        exercises: extractedExercises,
+                        legacyDetails: legacyDetails,
+                        fileSha: data.sha 
+                    } : p));
+                    
                     setSyncStatus(s => ({ ...s, loadingProgram: false }));
                 } catch (error) {
                     setSyncStatus(s => ({ ...s, loadingProgram: false, error: error.message }));
                 }
             };
 
-            // --- 3. СОХРАНЕНИЕ В GITHUB ---
+            // --- 3. СОХРАНЕНИЕ В GITHUB (РАЗВОРАЧИВАНИЕ PROTOCOL) ---
             const syncToGitHub = async () => {
                 if (!ghConfig.token || !ghConfig.owner || !ghConfig.repo) {
                     setShowSettings(true);
@@ -275,20 +336,83 @@
                 try {
                     // ШАГ 1: Сохранение файла программы
                     const filePath = `workouts/${activeProgram.filename}`;
-                    let fileSha = activeProgram.fileSha; // Используем кешированный SHA, если есть
+                    let fileSha = activeProgram.fileSha;
 
                     if (!fileSha) {
-                        const fileCheckRes = await fetch(`${baseUrl}/${filePath}`, { headers });
+                        const fileCheckRes = await fetch(`${baseUrl}/${filePath}`, { headers, cache: 'no-store' });
                         if (fileCheckRes.ok) fileSha = (await fileCheckRes.json()).sha;
                     }
 
-                    // Формируем чистый объект для сохранения (убираем служебный fileSha)
-                    const { fileSha: _, ...progToSave } = activeProgram;
+                    // АДАПТЕР: Разворачиваем Exercises в линейный Protocol для Плеера
+                    const protocol = [];
+                    const details = activeProgram.legacyDetails || {};
+                    
+                    activeProgram.exercises.forEach((ex, index) => {
+                        const workTime = ex.reps ? (parseInt(String(ex.reps).replace(/\D/g,'')) || 60) : 60;
+                        const restTime = ex.rest ? (parseInt(String(ex.rest).replace(/\D/g,'')) || 0) : 0;
+                        const setsCount = ex.sets ? (parseInt(String(ex.sets).replace(/\D/g,'')) || 1) : 1;
+                        
+                        for (let s = 1; s <= setsCount; s++) {
+                            protocol.push({
+                                ex: ex.name || `Упражнение ${index + 1}`,
+                                phase: (index === 0 && s === 1) ? "Подготовка" : `Подход ${s}`,
+                                type: (index === 0 && s === 1) ? "prep" : "work",
+                                time: workTime,
+                                voiceTxt: s === 1 ? (ex.voiceText || '') : '', // Озвучка только в первом подходе
+                                toneType: (index === 0 && s === 1) ? "prep" : "work",
+                                stepDesc: ex.name || ""
+                            });
+                            
+                            // Отдых после всех подходов, кроме самого последнего в тренировке
+                            const isLastOverall = (index === activeProgram.exercises.length - 1) && (s === setsCount);
+                            if (restTime > 0 && !isLastOverall) {
+                                protocol.push({
+                                    ex: "Переход",
+                                    phase: "Отдых",
+                                    type: "rest",
+                                    time: restTime,
+                                    voiceTxt: "Отдых",
+                                    toneType: "rest",
+                                    stepDesc: "Восстановление"
+                                });
+                            }
+                        }
+                        
+                        if (!details[ex.name]) {
+                            details[ex.name] = { goal: "Выполнять правильно.", start: "-", move: "-" };
+                        }
+                    });
+                    
+                    protocol.push({
+                        ex: "Финиш",
+                        phase: "Завершение",
+                        type: "finish",
+                        time: 5,
+                        voiceTxt: "Тренировка завершена.",
+                        toneType: "finish",
+                        stepDesc: "Конец."
+                    });
+                    
+                    const totalTime = protocol.reduce((acc, step) => acc + (step.time || 0), 0);
+                    const estTimeMin = Math.ceil(totalTime / 60);
+
+                    const progToSave = {
+                        programs: [{
+                            id: activeProgram.filename.replace('.json', ''),
+                            name: activeProgram.title,
+                            description: activeProgram.description,
+                            estimatedTime: `${estTimeMin} минут`,
+                            exercisesDetails: details,
+                            protocol: protocol
+                        }]
+                    };
+
                     const fileContentB64 = b64EncodeUnicode(JSON.stringify(progToSave, null, 2));
                     
                     const filePutRes = await fetch(`${baseUrl}/${filePath}`, { 
                         method: 'PUT', 
                         headers, 
+                        cache: 'no-store',
                         body: JSON.stringify({
                             message: `Обновлена программа: ${activeProgram.title}`,
                             content: fileContentB64,
@@ -296,17 +420,20 @@
                         }) 
                     });
                     
-                    if (!filePutRes.ok) throw new Error("Не удалось сохранить файл программы.");
+                    if (!filePutRes.ok) {
+                        const err = await filePutRes.json().catch(() => ({}));
+                        throw new Error(`Ошибка сохранения (PUT ${filePutRes.status}): ${err.message || res.statusText}`);
+                    }
                     
                     const newFileData = await filePutRes.json();
-                    updateActiveProgram({ fileSha: newFileData.content.sha }); // Кешируем новый SHA
+                    updateActiveProgram({ fileSha: newFileData.content.sha });
 
                     // ШАГ 2: Обновление workouts/index.json
                     const indexPath = `workouts/index.json`;
                     let indexSha = null;
                     let indexData = [];
 
-                    const indexCheckRes = await fetch(`${baseUrl}/${indexPath}`, { headers });
+                    const indexCheckRes = await fetch(`${baseUrl}/${indexPath}`, { headers, cache: 'no-store' });
                     if (indexCheckRes.ok) {
                         const indexResp = await indexCheckRes.json();
                         indexSha = indexResp.sha;
@@ -324,13 +451,18 @@
                     const indexPutRes = await fetch(`${baseUrl}/${indexPath}`, { 
                         method: 'PUT', 
                         headers, 
+                        cache: 'no-store',
                         body: JSON.stringify({
                             message: `Обновлен реестр (добавлено: ${activeProgram.title})`,
                             content: b64EncodeUnicode(JSON.stringify(indexData, null, 2)),
                             ...(indexSha && { sha: indexSha })
                         }) 
                     });
-                    if (!indexPutRes.ok) throw new Error("Не удалось обновить index.json.");
+                    
+                    if (!indexPutRes.ok) {
+                         const err = await indexPutRes.json().catch(() => ({}));
+                         throw new Error(`Ошибка обновления индекса: ${err.message || res.statusText}`);
+                    }
 
                     setSyncStatus(s => ({ ...s, saving: false }));
                     showSuccess("Успешно сохранено");
@@ -343,7 +475,6 @@
             const deleteFromGitHub = async () => {
                 if (!confirm(`Вы уверены, что хотите удалить "${activeProgram.title}"?\n\nФайл будет удален из GitHub и локального списка.`)) return;
 
-                // Если токен не настроен, удаляем только локально
                 if (!ghConfig.token) {
                     setPrograms(programs.filter(p => p.id !== activeId));
                     setActiveId(null);
@@ -358,7 +489,7 @@
                     // ШАГ 1: Удаляем файл программы
                     let sha = activeProgram.fileSha;
                     if (!sha) {
-                        const fileCheckRes = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, { headers });
+                        const fileCheckRes = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, { headers, cache: 'no-store' });
                         if (fileCheckRes.ok) sha = (await fileCheckRes.json()).sha;
                     }
 
@@ -366,31 +497,38 @@
                         const delRes = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, {
                             method: 'DELETE',
                             headers,
+                            cache: 'no-store',
                             body: JSON.stringify({ message: `Удалена программа: ${activeProgram.title}`, sha: sha })
                         });
-                        if (!delRes.ok && delRes.status !== 404) throw new Error("Не удалось удалить файл.");
+                        if (!delRes.ok && delRes.status !== 404) {
+                            const err = await delRes.json().catch(() => ({}));
+                            throw new Error(`Ошибка удаления файла: ${err.message || res.statusText}`);
+                        }
                     }
 
                     // ШАГ 2: Удаляем запись из index.json
-                    const indexCheckRes = await fetch(`${baseUrl}/workouts/index.json`, { headers });
+                    const indexCheckRes = await fetch(`${baseUrl}/workouts/index.json`, { headers, cache: 'no-store' });
                     if (indexCheckRes.ok) {
                         const indexResp = await indexCheckRes.json();
                         const indexSha = indexResp.sha;
                         let indexData = JSON.parse(b64DecodeUnicode(indexResp.content));
                         
-                        // Отфильтровываем удаленную программу
                         indexData = indexData.filter(item => item.id !== activeProgram.id && item.file !== activeProgram.filename);
                         
                         const indexPutRes = await fetch(`${baseUrl}/workouts/index.json`, {
                             method: 'PUT',
                             headers,
+                            cache: 'no-store',
                             body: JSON.stringify({
                                 message: `Обновлен реестр (удалено: ${activeProgram.title})`,
                                 content: b64EncodeUnicode(JSON.stringify(indexData, null, 2)),
                                 sha: indexSha
                             })
                         });
-                        if (!indexPutRes.ok) throw new Error("Не удалось обновить index.json.");
+                        if (!indexPutRes.ok) {
+                             const err = await indexPutRes.json().catch(() => ({}));
+                             throw new Error(`Ошибка обновления индекса при удалении: ${err.message || res.statusText}`);
+                        }
                     }
 
                     setPrograms(prev => prev.filter(p => p.id !== activeProgram.id));
@@ -445,7 +583,6 @@
                                         <div className="font-semibold truncate">{p.title || 'Без названия'}</div>
                                         <div className="text-xs text-slate-500 truncate">{p.filename}</div>
                                     </div>
-                                    {/* Индикатор облака, если программа требует подгрузки (нет exercises) */}
                                     {!p.exercises && <Icon name="Cloud" size={14} className="text-slate-500 group-hover:text-indigo-400" />}
                                 </div>
                             ))}
@@ -456,7 +593,6 @@
                     <div className="flex-1 flex flex-col bg-slate-50 relative">
                         {activeProgram ? (
                             <>
-                                {/* Верхняя панель управления */}
                                 <div className="bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm z-10">
                                     <div className="flex flex-col">
                                         <span className="text-sm font-semibold text-slate-500">Редактор программы</span>
@@ -487,7 +623,6 @@
                                     </div>
                                 </div>
 
-                                {/* Редактор или Лоадер загрузки с GitHub */}
                                 {syncStatus.loadingProgram ? (
                                     <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white">
                                         <Icon name="Loader2" size={48} className="spinner text-indigo-500 mb-4" />
@@ -497,7 +632,6 @@
                                     <div className="flex-1 overflow-y-auto p-8">
                                         <div className="max-w-4xl mx-auto space-y-6">
                                             
-                                            {/* Метаданные */}
                                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                                                 <div>
                                                     <label className="block text-sm font-bold text-slate-700 mb-1">Название программы</label>
@@ -518,7 +652,6 @@
                                                 </div>
                                             </div>
 
-                                            {/* Список упражнений */}
                                             <div className="space-y-4">
                                                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                                     <Icon name="ListChecks" size={20} className="text-indigo-500"/> Упражнения
@@ -537,15 +670,15 @@
                                                             <div className="grid grid-cols-3 gap-4">
                                                                 <div>
                                                                     <label className="block text-xs font-semibold text-slate-500 mb-1">Подходы</label>
-                                                                    <input type="text" value={ex.sets} onChange={e => updateExercise(ex.id, 'sets', e.target.value)} placeholder="Напр: 3" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 text-sm"/>
+                                                                    <input type="number" min="1" value={ex.sets} onChange={e => updateExercise(ex.id, 'sets', e.target.value)} placeholder="Напр: 3" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 text-sm"/>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Повторения/Время</label>
-                                                                    <input type="text" value={ex.reps} onChange={e => updateExercise(ex.id, 'reps', e.target.value)} placeholder="Напр: 12 или 40 сек" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 text-sm"/>
+                                                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Время на подход (сек)</label>
+                                                                    <input type="number" min="0" value={ex.reps} onChange={e => updateExercise(ex.id, 'reps', e.target.value)} placeholder="Напр: 60" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 text-sm"/>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Отдых</label>
-                                                                    <input type="text" value={ex.rest} onChange={e => updateExercise(ex.id, 'rest', e.target.value)} placeholder="Напр: 60 сек" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 text-sm"/>
+                                                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Отдых (сек)</label>
+                                                                    <input type="number" min="0" value={ex.rest} onChange={e => updateExercise(ex.id, 'rest', e.target.value)} placeholder="Напр: 40" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 text-sm"/>
                                                                 </div>
                                                             </div>
 
