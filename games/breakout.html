@@ -144,6 +144,9 @@
             letter-spacing: 1px;
             transition: all 0.2s ease;
             box-shadow: 0 4px 15px rgba(91, 140, 255, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .btn:hover {
@@ -154,6 +157,16 @@
 
         .btn:active {
             transform: translateY(1px);
+        }
+
+        .btn-secondary {
+            background: #333;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: #444;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
         }
 
         /* Специфичные стили экранов */
@@ -172,6 +185,37 @@
         .powerup-legend div { display: flex; align-items: center; gap: 8px; }
         .legend-icon { width: 16px; height: 16px; border-radius: 50%; display: inline-block; }
 
+        /* Выбор уровней */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+            width: 80%;
+            max-width: 400px;
+            max-height: 50vh;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .btn-level {
+            background: rgba(91, 140, 255, 0.15);
+            border: 2px solid var(--accent);
+            color: #fff;
+            padding: 15px 10px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        
+        .btn-level:hover {
+            background: var(--accent);
+            transform: scale(1.05);
+        }
+
         /* Эффект сканирующей линии (CRT) */
         .scanlines {
             position: absolute;
@@ -182,6 +226,11 @@
             z-index: 15;
             opacity: 0.3;
         }
+        
+        /* Скроллбар для сетки уровней */
+        .level-grid::-webkit-scrollbar { width: 6px; }
+        .level-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; }
+        .level-grid::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -208,8 +257,8 @@
     <!-- Главное меню -->
     <div id="screen-main" class="overlay active">
         <h1>Арканоид</h1>
-        <p>Инициализация систем...</p>
-        <button class="btn" id="btn-start">Запуск</button>
+        <button class="btn" id="btn-start">Запуск игры</button>
+        <button class="btn btn-secondary" id="btn-show-levels" style="margin-top: -5px;">Выбор сектора</button>
         
         <div class="powerup-legend">
             <div><span class="legend-icon" style="background: #00e5a0;"></span> [E] Расширение</div>
@@ -223,11 +272,20 @@
         </div>
     </div>
 
+    <!-- Экран выбора уровня -->
+    <div id="screen-levels" class="overlay">
+        <h2>ВЫБОР СЕКТОРА</h2>
+        <div class="level-grid" id="level-grid">
+            <!-- Кнопки уровней генерируются через JS -->
+        </div>
+        <button class="btn btn-secondary" id="btn-levels-back">В главное меню</button>
+    </div>
+
     <!-- Экран паузы -->
     <div id="screen-pause" class="overlay">
         <h2>ПАУЗА</h2>
         <button class="btn" id="btn-resume">Продолжить</button>
-        <button class="btn" id="btn-restart" style="margin-top: 10px; background: #333;">В главное меню</button>
+        <button class="btn btn-secondary" id="btn-restart" style="margin-top: 10px;">В главное меню</button>
     </div>
 
     <!-- Экран завершения игры -->
@@ -235,6 +293,7 @@
         <h2 id="gameover-title">ОТКАЗ СИСТЕМЫ</h2>
         <p>Финальный счет: <strong id="gameover-score">0</strong></p>
         <button class="btn" id="btn-retry">Повторить</button>
+        <button class="btn btn-secondary" id="btn-gameover-menu" style="margin-top: 10px;">В главное меню</button>
     </div>
     
     <!-- Экран перехода между уровнями -->
@@ -252,9 +311,6 @@
  * ============================================================================
  */
 
-/**
- * Класс 2D вектора для физических вычислений.
- */
 class Vector2 {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -299,7 +355,6 @@ const MathUtils = {
 /**
  * ============================================================================
  * ЗВУКОВОЙ ДВИЖОК (Web Audio API)
- * Синтезирует звуки без внешних файлов.
  * ============================================================================
  */
 class AudioEngine {
@@ -315,7 +370,7 @@ class AudioEngine {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             this.ctx = new AudioContext();
             this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.3; // Громкость по умолчанию
+            this.masterGain.gain.value = 0.3;
             this.masterGain.connect(this.ctx.destination);
             this.initialized = true;
         } catch (e) {
@@ -346,7 +401,6 @@ class AudioEngine {
         osc.stop(this.ctx.currentTime + duration);
     }
 
-    // Библиотека звуковых эффектов
     sfxBouncePaddle() { this.playTone(440, 'sine', 0.1, 0.8, 600); }
     sfxBounceWall() { this.playTone(220, 'square', 0.05, 0.5); }
     sfxBrickHit() { this.playTone(330, 'triangle', 0.1, 0.6); }
@@ -374,16 +428,13 @@ class InputManager {
         this.mouseX = -1;
         this.isPointerDown = false;
         
-        // Привязка событий
         window.addEventListener('keydown', e => this.keys[e.code] = true);
         window.addEventListener('keyup', e => this.keys[e.code] = false);
         
-        // Мышь
         canvas.addEventListener('mousemove', e => this.updatePointer(e, canvas));
         canvas.addEventListener('mousedown', e => { this.isPointerDown = true; this.updatePointer(e, canvas); });
         canvas.addEventListener('mouseup', () => this.isPointerDown = false);
         
-        // Сенсор
         canvas.addEventListener('touchmove', e => {
             e.preventDefault();
             this.updatePointer(e.touches[0], canvas);
@@ -397,7 +448,6 @@ class InputManager {
 
     updatePointer(e, canvas) {
         const rect = canvas.getBoundingClientRect();
-        // Масштабирование координат в зависимости от фактического размера canvas
         const scaleX = canvas.width / rect.width;
         this.mouseX = (e.clientX - rect.left) * scaleX;
     }
@@ -419,7 +469,6 @@ class GameObject {
         this.markForDeletion = false;
     }
 
-    // AABB Bounding Box
     get left() { return this.pos.x; }
     get right() { return this.pos.x + this.width; }
     get top() { return this.pos.y; }
@@ -442,42 +491,35 @@ class Paddle extends GameObject {
         this.game = game;
         this.baseWidth = 100;
         this.targetWidth = this.baseWidth;
-        this.speed = 600; // Пикселей в секунду для клавиатуры
+        this.speed = 600;
         this.color = '#5b8cff';
         
-        // Состояния PowerUp
         this.isSticky = false;
         this.laserActive = false;
         this.laserTimer = 0;
-        this.laserFireRate = 0.3; // Выстрелов в секунду
+        this.laserFireRate = 0.3;
         this.laserCooldown = 0;
     }
 
     update(dt) {
-        // Управление клавиатурой
         if (this.game.input.isDown('ArrowLeft')) {
             this.pos.x -= this.speed * dt;
         } else if (this.game.input.isDown('ArrowRight')) {
             this.pos.x += this.speed * dt;
         } else if (this.game.input.mouseX >= 0) {
-            // Управление мышью/сенсором (плавная интерполяция к курсору)
             const targetX = this.game.input.mouseX - this.width / 2;
             this.pos.x = MathUtils.lerp(this.pos.x, targetX, 15 * dt);
         }
 
-        // Ограничение по границам экрана
         this.pos.x = MathUtils.clamp(this.pos.x, 0, this.game.width - this.width);
 
-        // Плавное изменение ширины (анимация powerup)
         if (Math.abs(this.width - this.targetWidth) > 1) {
             this.width = MathUtils.lerp(this.width, this.targetWidth, 5 * dt);
-            // Корректировка позиции при расширении, чтобы не уехать за стену
             if (this.right > this.game.width) this.pos.x = this.game.width - this.width;
         } else {
             this.width = this.targetWidth;
         }
 
-        // Логика лазера
         if (this.laserActive) {
             this.laserTimer -= dt;
             this.laserCooldown -= dt;
@@ -492,7 +534,6 @@ class Paddle extends GameObject {
     }
 
     shoot() {
-        // Выстрел двумя лазерами с краев ракетки
         this.game.projectiles.push(new Laser(this.left + 10, this.top, -500));
         this.game.projectiles.push(new Laser(this.right - 10, this.top, -500));
         Audio.sfxLaserShoot();
@@ -502,13 +543,12 @@ class Paddle extends GameObject {
         switch(type) {
             case 'EXPAND':
                 this.targetWidth = Math.min(this.baseWidth * 1.6, this.game.width - 20);
-                // Сброс ширины через 15 секунд
                 clearTimeout(this.expandTimeout);
                 this.expandTimeout = setTimeout(() => { this.targetWidth = this.baseWidth; }, 15000);
                 break;
             case 'LASER':
                 this.laserActive = true;
-                this.laserTimer = 10; // 10 секунд действия лазера
+                this.laserTimer = 10;
                 break;
         }
     }
@@ -525,17 +565,14 @@ class Paddle extends GameObject {
         ctx.shadowColor = this.color;
         ctx.shadowBlur = 10;
         
-        // Основной корпус
         ctx.beginPath();
         ctx.roundRect(this.pos.x, this.pos.y, this.width, this.height, 6);
         ctx.fill();
 
-        // Декоративные элементы (светящиеся края)
         ctx.fillStyle = '#fff';
         ctx.shadowBlur = 0;
         ctx.fillRect(this.pos.x + 5, this.pos.y + 4, this.width - 10, 2);
 
-        // Отрисовка пушек лазера
         if (this.laserActive) {
             ctx.fillStyle = '#ff4466';
             ctx.fillRect(this.pos.x + 5, this.pos.y - 6, 8, 8);
@@ -561,21 +598,18 @@ class Ball {
 
     launch() {
         this.active = true;
-        // Случайный угол запуска вверх (от -60 до 60 градусов от вертикали)
-        const angle = MathUtils.randomRange(-Math.PI / 3, Math.PI / 3);
+        const angle = MathUtils.randomRange(-Math.PI / 4, Math.PI / 4);
         this.vel.x = Math.sin(angle) * this.currentSpeed;
         this.vel.y = -Math.cos(angle) * this.currentSpeed;
     }
 
     update(dt) {
         if (!this.active) {
-            // Прилипание к центру ракетки до запуска
             this.pos.x = this.game.paddle.center.x;
             this.pos.y = this.game.paddle.top - this.radius;
             return;
         }
 
-        // Сохранение следа (trail)
         if (this.game.frameCount % 2 === 0) {
             this.trail.push({ x: this.pos.x, y: this.pos.y, alpha: 1.0 });
             if (this.trail.length > 8) this.trail.shift();
@@ -584,10 +618,16 @@ class Ball {
             this.trail[i].alpha -= 2 * dt;
         }
 
-        // Перемещение
+        // Предотвращение зацикливания (строго горизонтального полета)
+        // Если вертикальная скорость слишком мала, корректируем вектор
+        const minVertical = this.baseSpeed * 0.20;
+        if (Math.abs(this.vel.y) < minVertical) {
+            this.vel.y = this.vel.y < 0 ? -minVertical : minVertical;
+            this.vel.normalize().mult(this.currentSpeed);
+        }
+
         this.pos.add(Vector2.mult(this.vel, dt));
 
-        // Обновление скорости (прогрессия сложности)
         const speedRatio = this.baseSpeed / this.vel.mag();
         if (Math.abs(speedRatio - 1) > 0.05) {
              this.vel.normalize().mult(this.currentSpeed);
@@ -597,7 +637,6 @@ class Ball {
     }
 
     checkWallCollisions() {
-        // Левая/Правая стены
         if (this.pos.x - this.radius < 0) {
             this.pos.x = this.radius;
             this.vel.x *= -1;
@@ -610,7 +649,6 @@ class Ball {
             this.game.spawnParticles(this.pos.x, this.pos.y, '#fff', 3);
         }
 
-        // Верхняя стена
         if (this.pos.y - this.radius < 0) {
             this.pos.y = this.radius;
             this.vel.y *= -1;
@@ -618,14 +656,12 @@ class Ball {
             this.game.spawnParticles(this.pos.x, this.pos.y, '#fff', 3);
         }
 
-        // Нижняя граница (Потеря мяча)
         if (this.pos.y - this.radius > this.game.height) {
             this.markForDeletion = true;
         }
     }
 
     draw(ctx) {
-        // Отрисовка следа
         ctx.shadowBlur = 0;
         for (let i = 0; i < this.trail.length; i++) {
             const p = this.trail[i];
@@ -636,7 +672,6 @@ class Ball {
             ctx.fill();
         }
 
-        // Основной мяч
         ctx.fillStyle = this.color;
         ctx.shadowColor = this.color;
         ctx.shadowBlur = 15;
@@ -650,17 +685,14 @@ class Ball {
 class Brick extends GameObject {
     constructor(x, y, w, h, type, row) {
         super(x, y, w, h);
-        this.type = type; // 1 = обычный, 2 = крепкий, 3 = бронированный, 4 = неразрушимый
+        this.type = type; 
         this.hp = type === 4 ? Infinity : type;
         this.maxHp = this.hp;
         
-        // Цвета по строкам или прочности
         const colors = ['#00e5a0', '#5b8cff', '#ffd700', '#ff8c42', '#ff4466', '#a044ff'];
         this.color = type === 4 ? '#555' : colors[row % colors.length];
-        
         this.scoreValue = type * 100;
         
-        // Анимации
         this.scale = 1.0;
         this.hitFlash = 0;
     }
@@ -673,20 +705,19 @@ class Brick extends GameObject {
         
         this.hp--;
         this.hitFlash = 1.0;
-        this.scale = 0.8; // Эффект сжатия при ударе
+        this.scale = 0.8;
         
         if (this.hp <= 0) {
             this.markForDeletion = true;
             Audio.sfxBrickBreak();
-            return true; // Разрушен
+            return true;
         } else {
             Audio.sfxBrickHit();
-            return false; // Поврежден
+            return false;
         }
     }
 
     update(dt) {
-        // Восстановление масштаба и затухание вспышки
         if (this.scale < 1.0) this.scale += 2 * dt;
         if (this.scale > 1.0) this.scale = 1.0;
         if (this.hitFlash > 0) this.hitFlash -= 4 * dt;
@@ -705,13 +736,11 @@ class Brick extends GameObject {
         ctx.roundRect(x, y, w, h, 4);
         ctx.fill();
 
-        // Блики и тени для объема
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.fillRect(x + 2, y + 2, w - 4, h/3);
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.fillRect(x + 2, y + h - h/3 - 2, w - 4, h/3);
 
-        // Трещины для поврежденных блоков
         if (this.hp < this.maxHp && this.type !== 4) {
             ctx.strokeStyle = '#111';
             ctx.lineWidth = 2;
@@ -722,7 +751,6 @@ class Brick extends GameObject {
             ctx.stroke();
         }
 
-        // Вспышка попадания
         if (this.hitFlash > 0) {
             ctx.fillStyle = `rgba(255, 255, 255, ${this.hitFlash})`;
             ctx.fill();
@@ -733,7 +761,7 @@ class Brick extends GameObject {
 class PowerUp extends GameObject {
     constructor(x, y, type) {
         super(x, y, 20, 20);
-        this.type = type; // 'EXPAND', 'MULTIBALL', 'SLOW', 'LASER'
+        this.type = type; 
         this.velY = 150;
         
         const config = {
@@ -761,7 +789,6 @@ class PowerUp extends GameObject {
         ctx.shadowColor = this.color;
         ctx.shadowBlur = 10;
         
-        // Ромб
         ctx.beginPath();
         ctx.moveTo(0, -12);
         ctx.lineTo(12, 0);
@@ -769,7 +796,7 @@ class PowerUp extends GameObject {
         ctx.lineTo(-12, 0);
         ctx.fill();
         
-        ctx.rotate(-this.angle); // Отмена вращения для текста
+        ctx.rotate(-this.angle);
         ctx.fillStyle = '#111';
         ctx.font = 'bold 12px monospace';
         ctx.textAlign = 'center';
@@ -817,7 +844,7 @@ class Particle {
     }
     update(dt) {
         this.pos.add(Vector2.mult(this.vel, dt));
-        this.vel.mult(0.95); // Трение
+        this.vel.mult(0.95);
         this.life -= this.decay * dt;
     }
     draw(ctx) {
@@ -856,109 +883,18 @@ class FloatingText {
  * ============================================================================
  */
 const LevelData = [
-    // Уровень 1: Разминка
-    [
-        "........",
-        ".111111.",
-        ".111111.",
-        ".111111.",
-    ],
-    // Уровень 2: Укрепления
-    [
-        ".222222.",
-        "11....11",
-        "11....11",
-        ".222222.",
-    ],
-    // Уровень 3: Шахматка
-    [
-        "12121212",
-        "21212121",
-        "12121212",
-        "........",
-        "....3...",
-    ],
-    // Уровень 4: Неразрушимые преграды
-    [
-        "11111111",
-        "44....44",
-        "22222222",
-        "4.4..4.4",
-        "33333333"
-    ],
-    // Уровень 5: Лицо
-    [
-        "........",
-        ".2.22.2.",
-        ".4.22.4.",
-        "........",
-        ".1....1.",
-        "..1111.."
-    ],
-    // Уровень 6: Крепость
-    [
-        "44422444",
-        "43322334",
-        "43111134",
-        "42111124",
-        "42222224"
-    ],
-    // Уровень 7: Инопланетянин
-    [
-        "..1....1",
-        "1.11..11",
-        "11111111",
-        "11.11.11",
-        "11111111",
-        "..1..1.."
-    ],
-    // Уровень 8: Диагонали
-    [
-        "3.......",
-        ".2......",
-        "..1.....",
-        "...44...",
-        ".....1..",
-        "......2.",
-        ".......3"
-    ],
-    // Уровень 9: Сердце
-    [
-        ".22..22.",
-        "23322332",
-        "23333332",
-        ".233332.",
-"..2332..",
-        "...22..."
-    ],
-    // Уровень 10: Песочные часы
-    [
-        "33333333",
-        ".222222.",
-        "..1111..",
-        "...33...",
-        "..1111..",
-        ".222222.",
-        "33333333"
-    ],
-    // Уровень 11: Хранилище
-    [
-        "444..444",
-        "433..334",
-        "43111134",
-        "43111134",
-        "433..334",
-        "444..444"
-    ],
-    // Уровень 12: Пирамида
-    [
-        "........",
-        "...33...",
-        "..2112..",
-        ".211112.",
-        "21111112",
-        "33333333"
-    ]
+    [ "........", ".111111.", ".111111.", ".111111." ],
+    [ ".222222.", "11....11", "11....11", ".222222." ],
+    [ "12121212", "21212121", "12121212", "........", "....3..." ],
+    [ "11111111", "44....44", "22222222", "4.4..4.4", "33333333" ],
+    [ "........", ".2.22.2.", ".4.22.4.", "........", ".1....1.", "..1111.." ],
+    [ "44422444", "43322334", "43111134", "42111124", "42222224" ],
+    [ "..1....1", "1.11..11", "11111111", "11.11.11", "11111111", "..1..1.." ],
+    [ "3.......", ".2......", "..1.....", "...44...", ".....1..", "......2.", ".......3" ],
+    [ ".22..22.", "23322332", "23333332", ".233332.", "..2332..", "...22..." ],
+    [ "33333333", ".222222.", "..1111..", "...33...", "..1111..", ".222222.", "33333333" ],
+    [ "444..444", "433..334", "43111134", "43111134", "433..334", "444..444" ],
+    [ "........", "...33...", "..2112..", ".211112.", "21111112", "33333333" ]
 ];
 
 /**
@@ -969,19 +905,17 @@ const LevelData = [
 class Game {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Оптимизация
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.input = new InputManager(this.canvas);
         
         this.width = 0;
         this.height = 0;
         
-        // Игровое состояние
-        this.state = 'MENU'; // MENU, PLAYING, PAUSED, LEVEL_CLEAR, GAME_OVER
+        this.state = 'MENU'; 
         this.score = 0;
         this.lives = 3;
         this.currentLevel = 0;
         
-        // Сущности
         this.paddle = new Paddle(this);
         this.balls = [];
         this.bricks = [];
@@ -990,30 +924,45 @@ class Game {
         this.particles = [];
         this.floatingTexts = [];
         
-        // Системные переменные
         this.lastTime = 0;
         this.frameCount = 0;
         this.screenShake = 0;
         this.combo = 0;
         this.comboTimer = 0;
         
-        // Привязка UI
         this.ui = {
             score: document.getElementById('hud-score'),
             level: document.getElementById('hud-level'),
             lives: document.getElementById('hud-lives'),
             menu: document.getElementById('screen-main'),
+            levels: document.getElementById('screen-levels'),
             pause: document.getElementById('screen-pause'),
             gameover: document.getElementById('screen-gameover'),
             levelclear: document.getElementById('screen-levelclear')
         };
 
+        this.initLevelsUI();
         this.bindEvents();
         this.resize();
         window.addEventListener('resize', () => this.resize());
         
-        // Старт цикла
         requestAnimationFrame(t => this.loop(t));
+    }
+
+    initLevelsUI() {
+        const grid = document.getElementById('level-grid');
+        grid.innerHTML = '';
+        LevelData.forEach((_, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-level';
+            btn.textContent = index + 1;
+            btn.onclick = () => {
+                this.currentLevel = index;
+                Audio.init();
+                this.startGame();
+            };
+            grid.appendChild(btn);
+        });
     }
 
     bindEvents() {
@@ -1021,19 +970,28 @@ class Game {
             Audio.init();
             this.startGame();
         });
+        document.getElementById('btn-show-levels').addEventListener('click', () => {
+            this.showUI('levels');
+        });
+        document.getElementById('btn-levels-back').addEventListener('click', () => {
+            this.showUI('menu');
+        });
         document.getElementById('btn-resume').addEventListener('click', () => this.togglePause());
         document.getElementById('btn-restart').addEventListener('click', () => {
             this.state = 'MENU';
             this.showUI('menu');
         });
         document.getElementById('btn-retry').addEventListener('click', () => this.startGame());
+        document.getElementById('btn-gameover-menu').addEventListener('click', () => {
+            this.state = 'MENU';
+            this.showUI('menu');
+        });
         document.getElementById('btn-nextlevel').addEventListener('click', () => this.startLevel());
         
         window.addEventListener('keydown', e => {
             if (e.code === 'Escape') {
                 if (this.state === 'PLAYING' || this.state === 'PAUSED') this.togglePause();
             }
-            // Запуск мяча пробелом
             if (e.code === 'Space' && this.state === 'PLAYING') {
                 const inactiveBall = this.balls.find(b => !b.active);
                 if (inactiveBall) inactiveBall.launch();
@@ -1057,7 +1015,7 @@ class Game {
     resize() {
         const container = document.getElementById('game-container');
         this.width = container.clientWidth;
-        this.height = container.clientHeight - 45; // Учет HUD
+        this.height = container.clientHeight - 45;
         this.canvas.width = this.width;
         this.canvas.height = this.height;
         
@@ -1081,7 +1039,6 @@ class Game {
     startGame() {
         this.score = 0;
         this.lives = 3;
-        this.currentLevel = 0;
         this.startLevel();
     }
 
@@ -1108,7 +1065,6 @@ class Game {
         const rows = map.length;
         const cols = map[0].length;
         
-        // Вычисление размеров блоков с учетом отступов
         const padding = 4;
         const topOffset = 60;
         const sideOffset = 10;
@@ -1137,7 +1093,7 @@ class Game {
         } else if (this.state === 'PAUSED') {
             this.state = 'PLAYING';
             this.showUI(null);
-            this.lastTime = performance.now(); // Предотвращение скачка dt
+            this.lastTime = performance.now();
         }
     }
 
@@ -1152,11 +1108,8 @@ class Game {
     }
 
     spawnPowerUp(x, y) {
-        // Шанс выпадения бонуса 20%
         if (Math.random() > 0.2) return;
         
-        const types = ['EXPAND', 'MULTIBALL', 'SLOW', 'LASER'];
-        // Взвешенный рандом: Мультибол и Лазер реже
         let type;
         const r = Math.random();
         if (r < 0.4) type = 'EXPAND';
@@ -1169,7 +1122,7 @@ class Game {
 
     addScore(points, x, y) {
         this.combo++;
-        this.comboTimer = 2.0; // 2 секунды на поддержание комбо
+        this.comboTimer = 2.0;
         const multiplier = Math.min(5, 1 + Math.floor(this.combo / 3));
         const total = points * multiplier;
         
@@ -1196,18 +1149,16 @@ class Game {
         } else {
             this.paddle.reset();
             this.balls = [new Ball(this, this.width / 2, this.height - 50)];
-            this.powerUps = []; // Очистка падающих бонусов
+            this.powerUps = []; 
         }
     }
 
     checkLevelClear() {
-        // Проверка: остались ли только неразрушимые блоки
         const activeBricks = this.bricks.filter(b => b.type !== 4);
         if (activeBricks.length === 0) {
             this.state = 'LEVEL_CLEAR';
             Audio.sfxLevelClear();
             
-            // Бонус за сохранение жизней
             const bonus = this.lives * 500;
             this.score += bonus;
             this.updateHUD();
@@ -1220,52 +1171,44 @@ class Game {
 
     /**
      * ========================================================================
-     * ФИЗИКА И СТОЛКНОВЕНИЯ
+     * ФИЗИКА И СТОЛКНОВЕНИЯ (Обновленный алгоритм)
      * ========================================================================
      */
     
-    // Пересечение AABB и AABB
     rectIntersect(r1, r2) {
         return !(r2.left > r1.right || r2.right < r1.left || r2.top > r1.bottom || r2.bottom < r1.top);
     }
 
-    // Пересечение Окружности (Мяч) и AABB (Блок/Ракетка)
-    resolveCircleAABBCollision(ball, rect) {
-        // Нахождение ближайшей точки на AABB к центру окружности
-        const closestX = MathUtils.clamp(ball.pos.x, rect.left, rect.right);
-        const closestY = MathUtils.clamp(ball.pos.y, rect.top, rect.bottom);
+    // Предсказуемая коллизия шарика и блока (AABB overlap-анализ)
+    resolveBlockCollision(ball, rect) {
+        const ballLeft = ball.pos.x - ball.radius;
+        const ballRight = ball.pos.x + ball.radius;
+        const ballTop = ball.pos.y - ball.radius;
+        const ballBottom = ball.pos.y + ball.radius;
 
-        // Вектор от ближайшей точки до центра окружности
-        const dx = ball.pos.x - closestX;
-        const dy = ball.pos.y - closestY;
-        const distanceSq = dx * dx + dy * dy;
-
-        if (distanceSq < ball.radius * ball.radius) {
-            // Столкновение обнаружено
-            const distance = Math.sqrt(distanceSq);
+        // Предварительная проверка пересечения bounding box'ов
+        if (ballRight > rect.left && ballLeft < rect.right && ballBottom > rect.top && ballTop < rect.bottom) {
             
-            // Если центр окружности внутри прямоугольника, выталкиваем
-            if (distance === 0) {
-                // Упрощенное выталкивание (предполагаем удар сверху/снизу)
+            // Вычисление глубины проникновения по 4-м осям
+            const overlapLeft = ballRight - rect.left;
+            const overlapRight = rect.right - ballLeft;
+            const overlapTop = ballBottom - rect.top;
+            const overlapBottom = rect.bottom - ballTop;
+
+            // Находим наименьшее пересечение (показывает со стороны какой грани произошел удар)
+            const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+            if (minOverlap === overlapTop || minOverlap === overlapBottom) {
+                // Удар сверху или снизу - инвертируем Y
                 ball.vel.y *= -1;
-                return true;
+                // Компенсация проникновения (push out)
+                ball.pos.y += (minOverlap === overlapTop) ? -overlapTop : overlapBottom;
+            } else {
+                // Удар слева или справа - инвертируем X
+                ball.vel.x *= -1;
+                // Компенсация проникновения (push out)
+                ball.pos.x += (minOverlap === overlapLeft) ? -overlapLeft : overlapRight;
             }
-
-            // Нормаль столкновения
-            const nx = dx / distance;
-            const ny = dy / distance;
-
-            // Разрешение проникновения (Push out)
-            const penetration = ball.radius - distance;
-            ball.pos.x += nx * penetration;
-            ball.pos.y += ny * penetration;
-
-            // Отражение вектора скорости
-            // Формула: V - 2 * (V dot N) * N
-            const dot = ball.vel.x * nx + ball.vel.y * ny;
-            ball.vel.x -= 2 * dot * nx;
-            ball.vel.y -= 2 * dot * ny;
-
             return true;
         }
         return false;
@@ -1276,37 +1219,44 @@ class Game {
         for (const ball of this.balls) {
             if (!ball.active) continue;
 
-            // Столкновение с ракеткой
-            if (this.resolveCircleAABBCollision(ball, this.paddle)) {
+            // Столкновение с ракеткой (проекционная физика отскока)
+            if (ball.vel.y > 0 && ball.pos.y + ball.radius >= this.paddle.top && ball.pos.y - ball.radius <= this.paddle.bottom && ball.pos.x >= this.paddle.left && ball.pos.x <= this.paddle.right) {
                 Audio.sfxBouncePaddle();
-                // Модификация угла отскока в зависимости от точки удара
-                const hitFactor = (ball.pos.x - this.paddle.center.x) / (this.paddle.width / 2);
-                // Максимальный угол отражения ~60 градусов
-                const maxAngle = Math.PI / 3;
-                const angle = hitFactor * maxAngle;
                 
-                // Перерасчет вектора скорости
+                // Нормализация точки удара: от -1 (левый край) до +1 (правый край)
+                let hitFactor = (ball.pos.x - this.paddle.center.x) / (this.paddle.width / 2);
+                hitFactor = MathUtils.clamp(hitFactor, -1, 1);
+                
+                // Определение угла отскока. Максимальный угол - 60 градусов от нормали.
+                const maxBounceAngle = Math.PI / 3;
+                const bounceAngle = hitFactor * maxBounceAngle;
+                
                 const speed = ball.vel.mag();
-                ball.vel.x = Math.sin(angle) * speed;
-                ball.vel.y = -Math.cos(angle) * Math.abs(speed); // Строго вверх
+                
+                // Расчет нового вектора скорости на базе угла проекции
+                ball.vel.x = speed * Math.sin(bounceAngle);
+                ball.vel.y = -speed * Math.cos(bounceAngle);
+                
+                // Корректировка позиции во избежание "залипания" внутри ракетки
+                ball.pos.y = this.paddle.top - ball.radius;
                 
                 this.spawnParticles(ball.pos.x, ball.pos.y + ball.radius, '#5b8cff', 5);
             }
 
-            // Столкновение с блоками
+            // Столкновение с блоками (дискретная AABB)
             for (const brick of this.bricks) {
-                if (this.resolveCircleAABBCollision(ball, brick)) {
+                if (this.resolveBlockCollision(ball, brick)) {
                     if (brick.hit()) {
                         this.spawnParticles(brick.center.x, brick.center.y, brick.color, 15);
                         this.addScore(brick.scoreValue, brick.center.x, brick.center.y);
                         this.spawnPowerUp(brick.center.x, brick.center.y);
-                        // Ускорение мяча
+                        // Постепенное ускорение мяча
                         ball.baseSpeed = Math.min(ball.maxSpeed, ball.baseSpeed + 2);
                     } else {
-                        // Осколки при повреждении
+                        // Осколки при повреждении крепких блоков
                         this.spawnParticles(ball.pos.x, ball.pos.y, '#fff', 3);
                     }
-                    break; // Обрабатываем один блок за кадр для стабильности
+                    break; // Разрешаем не более одного столкновения за кадр во избежание нестабильности вектора
                 }
             }
         }
@@ -1318,7 +1268,7 @@ class Game {
                     laser.markForDeletion = true;
                     if (brick.hit()) {
                         this.spawnParticles(brick.center.x, brick.center.y, brick.color, 10);
-                        this.addScore(brick.scoreValue / 2, brick.center.x, brick.center.y); // Половина очков за лазер
+                        this.addScore(brick.scoreValue / 2, brick.center.x, brick.center.y);
                     }
                     break;
                 }
@@ -1334,7 +1284,6 @@ class Game {
                 this.spawnFloatingText(pu.pos.x, pu.pos.y, pu.type, pu.color);
                 
                 if (pu.type === 'MULTIBALL') {
-                    // Создание новых мячей
                     const activeBalls = this.balls.filter(b => b.active);
                     if (activeBalls.length > 0) {
                         const sourceBall = activeBalls[0];
@@ -1343,7 +1292,6 @@ class Game {
                             newBall.baseSpeed = sourceBall.baseSpeed;
                             newBall.currentSpeed = sourceBall.currentSpeed;
                             newBall.active = true;
-                            // Разлет в стороны
                             newBall.vel.x = sourceBall.vel.x + (i===0 ? 100 : -100);
                             newBall.vel.y = sourceBall.vel.y;
                             this.balls.push(newBall);
@@ -1366,7 +1314,6 @@ class Game {
     update(dt) {
         if (this.state !== 'PLAYING') return;
 
-        // Таймеры
         if (this.comboTimer > 0) {
             this.comboTimer -= dt;
             if (this.comboTimer <= 0) this.combo = 0;
@@ -1375,7 +1322,6 @@ class Game {
             this.screenShake -= dt * 60;
         }
 
-        // Обновление сущностей
         this.paddle.update(dt);
         
         this.balls.forEach(ball => ball.update(dt));
@@ -1385,14 +1331,11 @@ class Game {
         this.particles.forEach(p => p.update(dt));
         this.floatingTexts.forEach(ft => ft.update(dt));
 
-        // Очистка мертвых объектов (вне экрана)
         this.projectiles.forEach(p => { if (p.pos.y < 0) p.markForDeletion = true; });
         this.powerUps.forEach(p => { if (p.pos.y > this.height) p.markForDeletion = true; });
 
-        // Коллизии
         this.handleCollisions();
 
-        // Удаление объектов, помеченных на удаление
         this.balls = this.balls.filter(b => !b.markForDeletion);
         this.bricks = this.bricks.filter(b => !b.markForDeletion);
         this.projectiles = this.projectiles.filter(p => !p.markForDeletion);
@@ -1400,17 +1343,14 @@ class Game {
         this.particles = this.particles.filter(p => p.life > 0);
         this.floatingTexts = this.floatingTexts.filter(ft => ft.life > 0);
 
-        // Проверка проигрыша (нет мячей)
         if (this.balls.length === 0) {
             this.loseLife();
         }
 
-        // Проверка победы на уровне
         this.checkLevelClear();
     }
 
     draw() {
-        // Очистка экрана с учетом эффекта дрожания камеры
         this.ctx.fillStyle = '#050508';
         this.ctx.fillRect(0, 0, this.width, this.height);
         
@@ -1421,14 +1361,12 @@ class Game {
             this.ctx.translate(dx, dy);
         }
 
-        // Рисование сущностей
         this.bricks.forEach(b => b.draw(this.ctx));
         this.powerUps.forEach(p => p.draw(this.ctx));
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.paddle.draw(this.ctx);
         this.balls.forEach(b => b.draw(this.ctx));
         
-        // Пост-эффекты
         this.ctx.globalCompositeOperation = 'lighter';
         this.particles.forEach(p => p.draw(this.ctx));
         this.ctx.globalCompositeOperation = 'source-over';
@@ -1439,7 +1377,6 @@ class Game {
     }
 
     loop(timestamp) {
-        // Вычисление Delta Time (ограничение до 0.1s во избежание бага с вкладками)
         let dt = (timestamp - this.lastTime) / 1000;
         if (dt > 0.1) dt = 0.1; 
         this.lastTime = timestamp;
@@ -1452,7 +1389,6 @@ class Game {
     }
 }
 
-// Инициализация при загрузке DOM
 window.addEventListener('DOMContentLoaded', () => {
     const arkanoid = new Game('gameCanvas');
 });
