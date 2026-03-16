@@ -359,14 +359,15 @@
         ══════════════════════════════════ */
         /* Кнопка выбора программы под select */
         #btn-select-program {
-            display: none; /* показывается только когда данные загружены */
+            display: none;
             align-items: center; gap: 6px;
-            background: rgba(91,140,255,0.12); border: 1px solid rgba(91,140,255,0.3);
-            color: var(--c-prep); border-radius: var(--radius-sm);
-            padding: 5px 10px; font-size: 0.72rem; font-weight: 700;
-            cursor: pointer; transition: background 0.15s; flex-shrink: 0; white-space: nowrap;
+            background: none; border: none;
+            color: var(--text); cursor: pointer;
+            padding: 2px 0; max-width: 100%;
+            font-family: 'Manrope', sans-serif;
         }
-        #btn-select-program:hover { background: rgba(91,140,255,0.2); }
+        #btn-select-program:hover #workout-name-display { color: var(--c-prep); }
+        #btn-select-program:hover svg { opacity: 0.9 !important; }
 
         /* Экран категорий внутри модала */
         .wcat-grid {
@@ -443,12 +444,12 @@
 <header>
     <div class="header-left">
         <div id="ex-title-header"></div>
-        <div style="display:flex;align-items:center;gap:8px;">
-            <select id="workout-select"><option value="">Загрузка…</option></select>
-            <button id="btn-select-program" title="Выбрать программу">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-        </div>
+        <!-- select скрыт, используется только для value -->
+        <select id="workout-select" style="display:none;"></select>
+        <button id="btn-select-program" title="Выбрать программу" style="display:none;">
+            <span id="workout-name-display" style="font-size:1rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;"></span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;opacity:0.5;"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
         <div id="ph-title">Ожидание</div>
     </div>
     <div id="offline-badge">офлайн</div>
@@ -907,15 +908,22 @@ function populateSelect() {
     });
 }
 
+function updateProgramNameDisplay(idx) {
+    const name = workoutsData[idx]?.name || '';
+    const el = $('workout-name-display');
+    if (el) el.textContent = name;
+}
+
 function loadProgram(idx) {
     _hardStop();
     state.programIdx = idx; wSelect.value = idx;
+    updateProgramNameDisplay(idx);
     const prog = workoutsData[idx];
     exDetails   = prog.exercisesDetails || {};
     rawProtocol = prog.protocol || [];
     applyIntensity();
     const etStr = typeof prog.estimatedTime === 'number' ? `${prog.estimatedTime} минут` : (prog.estimatedTime || '');
-    uiPhTitle.textContent = prog.name;
+    uiPhTitle.textContent = etStr ? `⏱ ${etStr}` : '';
     updateDescModal(prog, etStr);
     resetUI();
 }
@@ -1173,7 +1181,10 @@ function renderTimeline() {
     }
 }
 
-function setHeaderRunning(running) { wSelect.style.display = running ? 'none' : ''; uiExTH.style.display = running ? 'block' : 'none'; $('btn-select-program').style.display = running ? 'none' : (workoutsData.length ? 'flex' : 'none'); }
+function setHeaderRunning(running) {
+    uiExTH.style.display = running ? 'block' : 'none';
+    $('btn-select-program').style.display = running ? 'none' : (workoutsData.length ? 'flex' : 'none');
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  АУДИО
