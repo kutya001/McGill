@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Конструктор Тренировок (GitHub Sync)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,9 +14,20 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; overflow: hidden; }
         .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* Стили для кастомного JSON редактора */
+        .json-editor-container { position: relative; width: 100%; flex: 1; min-height: 400px; display: flex; flex-direction: column;}
+        .json-textarea, .json-pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 14px; line-height: 1.5; padding: 1rem; width: 100%; flex: 1; border-radius: 0.75rem; border: none; margin: 0; white-space: pre; overflow: auto; tab-size: 2; }
+        .json-textarea { position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: transparent; color: transparent; caret-color: black; outline: none; resize: none; z-index: 10; }
+        .json-pre { position: absolute; top: 0; left: 0; bottom: 0; right: 0; pointer-events: none; background-color: #f8fafc; color: #334155; }
+        /* Подсветка синтаксиса JSON */
+        .json-key { color: #8b5cf6; font-weight: 600; }
+        .json-string { color: #10b981; }
+        .json-number { color: #3b82f6; }
+        .json-boolean { color: #f59e0b; font-weight: bold; }
+        .json-null { color: #94a3b8; font-style: italic; }
     </style>
 </head>
 <body>
@@ -26,18 +37,127 @@
         // --- УТИЛИТЫ ---
         const generateId = () => Math.random().toString(36).substring(2, 10);
         
-        // Безопасное кодирование Base64 для кириллицы
         const b64EncodeUnicode = (str) => btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1)));
         const b64DecodeUnicode = (str) => decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
 
-        // Шаблоны
         const createEmptyProgram = () => ({ id: generateId(), title: 'Новая программа', filename: `program_${generateId()}.json`, description: '', exercises: [] });
         const createEmptyExercise = () => ({ id: generateId(), name: '', sets: '1', reps: '60', rest: '40', voiceText: '' });
+
+        // Легкая регулярка для подсветки синтаксиса JSON
+        const highlightJson = (json) => {
+            if (!json) return '';
+            const escaped = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) cls = 'json-key';
+                    else cls = 'json-string';
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return `<span class="${cls}">${match}</span>`;
+            });
+        };
+
+        // --- АДАПТЕРЫ ФОРМАТА ---
+        const convertToGitHubFormat = (prog) => {
+            const protocol = [];
+            const details = prog.legacyDetails || {};
+            
+            if (!prog.exercises || prog.exercises.length === 0) {
+                 return {
+                    programs: [{
+                        id: prog.filename.replace('.json', ''),
+                        name: prog.title,
+                        description: prog.description,
+                        estimatedTime: `0 минут`,
+                        exercisesDetails: {},
+                        protocol: []
+                    }]
+                };
+            }
+
+            prog.exercises.forEach((ex, index) => {
+                const workTime = ex.reps ? (parseInt(String(ex.reps).replace(/\D/g,'')) || 60) : 60;
+                const restTime = ex.rest ? (parseInt(String(ex.rest).replace(/\D/g,'')) || 0) : 0;
+                const setsCount = ex.sets ? (parseInt(String(ex.sets).replace(/\D/g,'')) || 1) : 1;
+                
+                for (let s = 1; s <= setsCount; s++) {
+                    protocol.push({
+                        ex: ex.name || `Упражнение ${index + 1}`,
+                        phase: (index === 0 && s === 1) ? "Подготовка" : `Подход ${s}`,
+                        type: (index === 0 && s === 1) ? "prep" : "work",
+                        time: workTime,
+                        voiceTxt: s === 1 ? (ex.voiceText || '') : '',
+                        toneType: (index === 0 && s === 1) ? "prep" : "work",
+                        stepDesc: ex.name || ""
+                    });
+                    
+                    const isLastOverall = (index === prog.exercises.length - 1) && (s === setsCount);
+                    if (restTime > 0 && !isLastOverall) {
+                        protocol.push({ ex: "Переход", phase: "Отдых", type: "rest", time: restTime, voiceTxt: "Отдых", toneType: "rest", stepDesc: "Восстановление" });
+                    }
+                }
+                if (!details[ex.name]) details[ex.name] = { goal: "Выполнять правильно.", start: "-", move: "-" };
+            });
+            
+            protocol.push({ ex: "Финиш", phase: "Завершение", type: "finish", time: 5, voiceTxt: "Тренировка завершена.", toneType: "finish", stepDesc: "Конец." });
+            const estTimeMin = Math.ceil(protocol.reduce((acc, step) => acc + (step.time || 0), 0) / 60);
+
+            return {
+                programs: [{
+                    id: prog.filename.replace('.json', ''),
+                    name: prog.title,
+                    description: prog.description,
+                    estimatedTime: `${estTimeMin} минут`,
+                    exercisesDetails: details,
+                    protocol: protocol
+                }]
+            };
+        };
+
+        const parseFromGitHubFormat = (fullProgram) => {
+            let extractedExercises = [];
+            let legacyDetails = {};
+            let parsedTitle = 'Без названия';
+            let parsedDesc = '';
+
+            if (fullProgram.programs && Array.isArray(fullProgram.programs) && fullProgram.programs.length > 0) {
+                const srcProg = fullProgram.programs[0];
+                parsedTitle = srcProg.name || parsedTitle;
+                parsedDesc = srcProg.description || parsedDesc;
+                legacyDetails = srcProg.exercisesDetails || {};
+
+                if (srcProg.protocol) {
+                    let lastEx = null;
+                    srcProg.protocol.forEach(step => {
+                        if (step.type === 'prep' || step.type === 'work') {
+                            if (lastEx && lastEx.name === step.ex) {
+                                lastEx.sets = String(parseInt(lastEx.sets) + 1);
+                                if (!lastEx.voiceText && step.voiceTxt) lastEx.voiceText = step.voiceTxt; 
+                            } else {
+                                lastEx = { id: generateId(), name: step.ex || '', sets: '1', reps: step.time ? `${step.time}` : '60', rest: '0', voiceText: step.voiceTxt || '' };
+                                extractedExercises.push(lastEx);
+                            }
+                        } else if (step.type === 'rest' && lastEx) {
+                            lastEx.rest = step.time ? `${step.time}` : '40';
+                        }
+                    });
+                }
+            } else {
+                extractedExercises = fullProgram.exercises || [];
+                parsedTitle = fullProgram.title || parsedTitle;
+                parsedDesc = fullProgram.description || parsedDesc;
+            }
+
+            return { title: parsedTitle, description: parsedDesc, exercises: extractedExercises, legacyDetails };
+        };
 
         // --- ИКОНКИ ---
         const Icon = ({ name, size = 20, className = "" }) => {
             const spanRef = React.useRef(null);
-            
             React.useEffect(() => {
                 if (spanRef.current && window.lucide) {
                     spanRef.current.innerHTML = '';
@@ -45,9 +165,7 @@
                     const i = document.createElement('i');
                     i.setAttribute('data-lucide', kebabName);
                     spanRef.current.appendChild(i);
-                    
                     window.lucide.createIcons({ root: spanRef.current });
-                    
                     const svg = spanRef.current.querySelector('svg');
                     if (svg) {
                         svg.setAttribute('width', size);
@@ -56,61 +174,63 @@
                     }
                 }
             }, [name, size, className]);
-
-            return <span ref={spanRef} className="inline-flex items-center justify-center shrink-0"></span>;
+            return <span ref={spanRef} className={`inline-flex items-center justify-center shrink-0 ${className}`}></span>;
         };
 
         // --- ГЛАВНЫЙ КОМПОНЕНТ ---
         function App() {
             const [programs, setPrograms] = React.useState([]);
             const [activeId, setActiveId] = React.useState(null);
-            
-            // Настройки GitHub API
             const [ghConfig, setGhConfig] = React.useState({ token: '', owner: 'kutya001', repo: 'mcgill' });
             const [showSettings, setShowSettings] = React.useState(false);
-            
-            // Статус тестирования соединения
             const [testStatus, setTestStatus] = React.useState({ loading: false, message: null, isError: false });
+            const [sidebarOpen, setSidebarOpen] = React.useState(false);
+            
+            // JSON Редактор state
+            const [jsonMode, setJsonMode] = React.useState(false);
+            const [rawJson, setRawJson] = React.useState('');
+            const [jsonError, setJsonError] = React.useState(null);
+            const preRef = React.useRef(null);
 
-            // Расширенный статус синхронизации
             const [syncStatus, setSyncStatus] = React.useState({ 
-                saving: false, 
-                loadingList: false, 
-                loadingProgram: false, 
-                deleting: false, 
-                error: null, 
-                successMessage: null 
+                saving: false, loadingList: false, loadingProgram: false, deleting: false, error: null, successMessage: null 
             });
 
-            // Загрузка локальных данных
             React.useEffect(() => {
-                const savedPrograms = localStorage.getItem('workout_programs');
-                if (savedPrograms) setPrograms(JSON.parse(savedPrograms));
-                const savedConfig = localStorage.getItem('gh_config');
-                if (savedConfig) setGhConfig(JSON.parse(savedConfig));
+                try {
+                    const savedPrograms = localStorage.getItem('workout_programs');
+                    if (savedPrograms) setPrograms(JSON.parse(savedPrograms));
+                    const savedConfig = localStorage.getItem('gh_config');
+                    if (savedConfig) setGhConfig(JSON.parse(savedConfig));
+                } catch (e) {
+                    console.error("Storage error", e);
+                }
             }, []);
 
-            // Автосохранение в локальное хранилище
             React.useEffect(() => {
-                if (programs.length > 0) localStorage.setItem('workout_programs', JSON.stringify(programs));
+                if (programs.length > 0) {
+                    localStorage.setItem('workout_programs', JSON.stringify(programs));
+                }
             }, [programs]);
 
             const activeProgram = programs.find(p => p.id === activeId);
 
-            // Обработчики изменений программы
             const updateActiveProgram = (updates) => {
                 setPrograms(prev => prev.map(p => p.id === activeId ? { ...p, ...updates } : p));
             };
 
-            const addExercise = () => updateActiveProgram({ exercises: [...activeProgram.exercises, createEmptyExercise()] });
-            
-            const updateExercise = (id, field, value) => {
-                const updatedEx = activeProgram.exercises.map(ex => ex.id === id ? { ...ex, [field]: value } : ex);
-                updateActiveProgram({ exercises: updatedEx });
-            };
-
-            const removeExercise = (id) => {
-                updateActiveProgram({ exercises: activeProgram.exercises.filter(ex => ex.id !== id) });
+            // Функции упражнений
+            const addExercise = () => updateActiveProgram({ exercises: [...(activeProgram.exercises || []), createEmptyExercise()] });
+            const updateExercise = (id, field, value) => updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === id ? { ...ex, [field]: value } : ex) });
+            const removeExercise = (id) => updateActiveProgram({ exercises: activeProgram.exercises.filter(ex => ex.id !== id) });
+            const moveExercise = (index, direction) => {
+                const newEx = [...activeProgram.exercises];
+                if (direction === 'up' && index > 0) {
+                    [newEx[index - 1], newEx[index]] = [newEx[index], newEx[index - 1]];
+                } else if (direction === 'down' && index < newEx.length - 1) {
+                    [newEx[index + 1], newEx[index]] = [newEx[index], newEx[index + 1]];
+                }
+                updateActiveProgram({ exercises: newEx });
             };
 
             const showSuccess = (msg) => {
@@ -119,38 +239,52 @@
             };
 
             const getAuthHeaders = () => {
-                const headers = {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json'
-                };
-                if (ghConfig.token) {
-                    headers['Authorization'] = `token ${ghConfig.token}`;
-                }
+                const headers = { 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+                if (ghConfig.token) headers['Authorization'] = `token ${ghConfig.token}`;
                 return headers;
             };
 
-            // --- ТЕСТ СОЕДИНЕНИЯ С GITHUB ---
+            // JSON Editor Logic
+            const toggleJsonMode = () => {
+                if (!jsonMode) {
+                    const gitHubFormat = convertToGitHubFormat(activeProgram);
+                    setRawJson(JSON.stringify(gitHubFormat, null, 2));
+                    setJsonError(null);
+                }
+                setJsonMode(!jsonMode);
+            };
+
+            const applyJson = () => {
+                try {
+                    const parsed = JSON.parse(rawJson);
+                    const internalData = parseFromGitHubFormat(parsed);
+                    updateActiveProgram(internalData);
+                    setJsonMode(false);
+                    setJsonError(null);
+                    showSuccess("Изменения JSON применены");
+                } catch(e) {
+                    setJsonError(`Синтаксическая ошибка JSON: ${e.message}`);
+                }
+            };
+
+            const handleJsonScroll = (e) => {
+                if (preRef.current) {
+                    preRef.current.scrollTop = e.target.scrollTop;
+                    preRef.current.scrollLeft = e.target.scrollLeft;
+                }
+            };
+
+            // Network Operations
             const testConnection = async () => {
                 setTestStatus({ loading: true, message: null, isError: false });
-                if (!ghConfig.owner || !ghConfig.repo) {
-                    setTestStatus({ loading: false, message: 'Укажите Owner и Repo', isError: true });
-                    return;
-                }
+                if (!ghConfig.owner || !ghConfig.repo) return setTestStatus({ loading: false, message: 'Укажите Owner и Repo', isError: true });
                 try {
-                    const res = await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}`, {
-                        headers: getAuthHeaders(),
-                        cache: 'no-store'
-                    });
-                    
+                    const res = await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}`, { headers: getAuthHeaders(), cache: 'no-store' });
                     if (res.ok) {
                         const data = await res.json();
-                        if (data.permissions && data.permissions.push) {
-                            setTestStatus({ loading: false, message: 'Успешно! Доступ на запись подтвержден.', isError: false });
-                        } else if (ghConfig.token) {
-                            setTestStatus({ loading: false, message: 'Репозиторий найден, но у токена нет прав на запись (нужен scope "repo").', isError: true });
-                        } else {
-                            setTestStatus({ loading: false, message: 'Репозиторий найден (публичный). Для сохранения нужен Токен.', isError: true });
-                        }
+                        if (data.permissions && data.permissions.push) setTestStatus({ loading: false, message: 'Успешно! Доступ на запись (Push) подтвержден.', isError: false });
+                        else if (ghConfig.token) setTestStatus({ loading: false, message: 'Репозиторий найден, но нет прав на запись (нужен scope "repo").', isError: true });
+                        else setTestStatus({ loading: false, message: 'Репозиторий найден (публичный). Нужен Токен.', isError: true });
                     } else {
                         const err = await res.json().catch(() => ({}));
                         setTestStatus({ loading: false, message: `Ошибка API: ${err.message || res.statusText}`, isError: true });
@@ -160,52 +294,30 @@
                 }
             };
 
-            // --- 1. ЗАГРУЗКА СПИСКА ИЗ GITHUB ---
             const fetchListFromGitHub = async () => {
-                if (!ghConfig.token || !ghConfig.owner || !ghConfig.repo) {
-                    setShowSettings(true);
-                    return;
-                }
-                
+                if (!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return setShowSettings(true);
                 setSyncStatus(s => ({ ...s, loadingList: true, error: null }));
                 try {
                     const baseUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents`;
-                    
-                    const dirRes = await fetch(`${baseUrl}/workouts`, { 
-                        headers: getAuthHeaders(),
-                        cache: 'no-store'
-                    });
-                    
+                    const dirRes = await fetch(`${baseUrl}/workouts`, { headers: getAuthHeaders(), cache: 'no-store' });
                     if (!dirRes.ok) throw new Error("Не удалось прочитать директорию workouts/");
                     
                     const dirData = await dirRes.json();
                     if (!Array.isArray(dirData)) throw new Error("Директория недоступна или имеет неверный формат");
 
                     const realJsonFiles = dirData.filter(f => f.type === 'file' && f.name.endsWith('.json') && f.name !== 'index.json');
-
                     let indexData = [];
                     try {
-                        const indexRes = await fetch(`${baseUrl}/workouts/index.json`, { 
-                            headers: getAuthHeaders(), cache: 'no-store'
-                        });
+                        const indexRes = await fetch(`${baseUrl}/workouts/index.json`, { headers: getAuthHeaders(), cache: 'no-store' });
                         if (indexRes.ok) {
-                            const indexJson = await indexRes.json();
-                            const parsed = JSON.parse(b64DecodeUnicode(indexJson.content));
+                            const parsed = JSON.parse(b64DecodeUnicode((await indexRes.json()).content));
                             if (Array.isArray(parsed)) indexData = parsed;
                         }
-                    } catch (e) {
-                        console.warn("index.json отсутствует или поврежден.");
-                    }
+                    } catch (e) {}
 
                     const normalizedPrograms = realJsonFiles.map(fileObj => {
                         const meta = indexData.find(item => item.file === fileObj.name || item.filename === fileObj.name) || {};
-                        return {
-                            id: meta.id || generateId(),
-                            title: meta.title || fileObj.name.replace('.json', '').replace(/_/g, ' '),
-                            filename: fileObj.name,
-                            description: meta.description || '',
-                            fileSha: fileObj.sha 
-                        };
+                        return { id: meta.id || generateId(), title: meta.title || fileObj.name.replace('.json', '').replace(/_/g, ' '), filename: fileObj.name, description: meta.description || '', fileSha: fileObj.sha };
                     });
                     
                     setPrograms(normalizedPrograms);
@@ -217,251 +329,96 @@
                 }
             };
 
-            // --- 2. ВЫБОР ПРОГРАММЫ (ИНТЕЛЛЕКТУАЛЬНЫЙ ПАРСИНГ PROTOCOL) ---
             const selectProgram = async (prog) => {
                 setActiveId(prog.id);
-                
+                setSidebarOpen(false); 
+                setJsonMode(false);
                 if (prog.exercises) return;
-
-                if (!ghConfig.token) {
-                    alert("Для загрузки контента программы из GitHub нужен токен.");
-                    setShowSettings(true);
-                    return;
-                }
-
-                if (!prog.filename || prog.filename === 'undefined') {
-                    alert("У этой программы отсутствует корректное имя файла.");
-                    return;
-                }
+                if (!ghConfig.token) return alert("Для загрузки нужен токен.");
 
                 setSyncStatus(s => ({ ...s, loadingProgram: true, error: null }));
                 try {
                     const baseUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents`;
-                    const res = await fetch(`${baseUrl}/workouts/${prog.filename}`, { 
-                        headers: getAuthHeaders(),
-                        cache: 'no-store'
-                    });
+                    const res = await fetch(`${baseUrl}/workouts/${prog.filename}`, { headers: getAuthHeaders(), cache: 'no-store' });
                     
                     if (!res.ok) {
                         if (res.status === 404) {
                             setPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, exercises: [] } : p));
-                            throw new Error(`Файл ${prog.filename} не найден (404). Инициализирован пустой шаблон.`);
+                            throw new Error(`Файл ${prog.filename} не найден (404). Шаблон пуст.`);
                         }
-                        const err = await res.json().catch(() => ({}));
-                        throw new Error(`Ошибка загрузки: ${err.message || res.statusText}`);
+                        const errData = await res.json().catch(()=>({}));
+                        throw new Error(`Ошибка загрузки: ${errData.message || res.statusText}`);
                     }
                     
+                    // Вызываем res.json() только один раз
                     const data = await res.json();
                     const fullProgram = JSON.parse(b64DecodeUnicode(data.content));
+                    const parsedData = parseFromGitHubFormat(fullProgram);
                     
-                    let extractedExercises = [];
-                    let legacyDetails = {};
-                    let parsedTitle = prog.title;
-                    let parsedDesc = prog.description;
-
-                    // АДАПТЕР: Парсим линейный protocol в удобные Exercises
-                    if (fullProgram.programs && Array.isArray(fullProgram.programs) && fullProgram.programs.length > 0) {
-                        const srcProg = fullProgram.programs[0];
-                        parsedTitle = srcProg.name || parsedTitle;
-                        parsedDesc = srcProg.description || parsedDesc;
-                        legacyDetails = srcProg.exercisesDetails || {};
-
-                        if (srcProg.protocol) {
-                            let lastEx = null;
-                            srcProg.protocol.forEach(step => {
-                                if (step.type === 'prep' || step.type === 'work') {
-                                    if (lastEx && lastEx.name === step.ex) {
-                                        // То же самое упражнение - плюсуем подход
-                                        lastEx.sets = String(parseInt(lastEx.sets) + 1);
-                                        if (!lastEx.voiceText && step.voiceTxt) lastEx.voiceText = step.voiceTxt; 
-                                    } else {
-                                        // Новое упражнение
-                                        lastEx = {
-                                            id: generateId(),
-                                            name: step.ex || '',
-                                            sets: '1',
-                                            reps: step.time ? `${step.time}` : '60',
-                                            rest: '0',
-                                            voiceText: step.voiceTxt || ''
-                                        };
-                                        extractedExercises.push(lastEx);
-                                    }
-                                } else if (step.type === 'rest' && lastEx) {
-                                    // Отдых относится к последнему упражнению
-                                    lastEx.rest = step.time ? `${step.time}` : '40';
-                                }
-                            });
-                        }
-                    } else {
-                        // Обычный формат (резервный)
-                        extractedExercises = fullProgram.exercises || [];
-                        parsedTitle = fullProgram.title || parsedTitle;
-                        parsedDesc = fullProgram.description || parsedDesc;
-                    }
-                    
-                    setPrograms(prev => prev.map(p => p.id === prog.id ? { 
-                        ...p, 
-                        title: parsedTitle,
-                        description: parsedDesc,
-                        exercises: extractedExercises,
-                        legacyDetails: legacyDetails,
-                        fileSha: data.sha 
-                    } : p));
-                    
+                    setPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, ...parsedData, fileSha: data.sha || p.fileSha } : p));
                     setSyncStatus(s => ({ ...s, loadingProgram: false }));
                 } catch (error) {
                     setSyncStatus(s => ({ ...s, loadingProgram: false, error: error.message }));
                 }
             };
 
-            // --- 3. СОХРАНЕНИЕ В GITHUB (РАЗВОРАЧИВАНИЕ PROTOCOL) ---
             const syncToGitHub = async () => {
-                if (!ghConfig.token || !ghConfig.owner || !ghConfig.repo) {
-                    setShowSettings(true);
-                    return;
-                }
-                if (!activeProgram.filename || activeProgram.filename === 'undefined') {
-                    alert("Пожалуйста, укажите корректное имя файла.");
-                    return;
-                }
-                if (!activeProgram.filename.endsWith('.json')) {
-                    alert("Имя файла должно заканчиваться на .json");
-                    return;
-                }
+                if (!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return setShowSettings(true);
+                if (!activeProgram.filename.endsWith('.json')) return alert("Имя файла должно заканчиваться на .json");
 
                 setSyncStatus(s => ({ ...s, saving: true, error: null }));
                 const baseUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents`;
                 const headers = getAuthHeaders();
 
                 try {
-                    // ШАГ 1: Сохранение файла программы
                     const filePath = `workouts/${activeProgram.filename}`;
                     let fileSha = activeProgram.fileSha;
-
                     if (!fileSha) {
                         const fileCheckRes = await fetch(`${baseUrl}/${filePath}`, { headers, cache: 'no-store' });
-                        if (fileCheckRes.ok) fileSha = (await fileCheckRes.json()).sha;
+                        if (fileCheckRes.ok) {
+                            const checkData = await fileCheckRes.json();
+                            fileSha = checkData.sha;
+                        }
                     }
 
-                    // АДАПТЕР: Разворачиваем Exercises в линейный Protocol для Плеера
-                    const protocol = [];
-                    const details = activeProgram.legacyDetails || {};
-                    
-                    activeProgram.exercises.forEach((ex, index) => {
-                        const workTime = ex.reps ? (parseInt(String(ex.reps).replace(/\D/g,'')) || 60) : 60;
-                        const restTime = ex.rest ? (parseInt(String(ex.rest).replace(/\D/g,'')) || 0) : 0;
-                        const setsCount = ex.sets ? (parseInt(String(ex.sets).replace(/\D/g,'')) || 1) : 1;
-                        
-                        for (let s = 1; s <= setsCount; s++) {
-                            protocol.push({
-                                ex: ex.name || `Упражнение ${index + 1}`,
-                                phase: (index === 0 && s === 1) ? "Подготовка" : `Подход ${s}`,
-                                type: (index === 0 && s === 1) ? "prep" : "work",
-                                time: workTime,
-                                voiceTxt: s === 1 ? (ex.voiceText || '') : '', // Озвучка только в первом подходе
-                                toneType: (index === 0 && s === 1) ? "prep" : "work",
-                                stepDesc: ex.name || ""
-                            });
-                            
-                            // Отдых после всех подходов, кроме самого последнего в тренировке
-                            const isLastOverall = (index === activeProgram.exercises.length - 1) && (s === setsCount);
-                            if (restTime > 0 && !isLastOverall) {
-                                protocol.push({
-                                    ex: "Переход",
-                                    phase: "Отдых",
-                                    type: "rest",
-                                    time: restTime,
-                                    voiceTxt: "Отдых",
-                                    toneType: "rest",
-                                    stepDesc: "Восстановление"
-                                });
-                            }
-                        }
-                        
-                        if (!details[ex.name]) {
-                            details[ex.name] = { goal: "Выполнять правильно.", start: "-", move: "-" };
-                        }
-                    });
-                    
-                    protocol.push({
-                        ex: "Финиш",
-                        phase: "Завершение",
-                        type: "finish",
-                        time: 5,
-                        voiceTxt: "Тренировка завершена.",
-                        toneType: "finish",
-                        stepDesc: "Конец."
-                    });
-                    
-                    const totalTime = protocol.reduce((acc, step) => acc + (step.time || 0), 0);
-                    const estTimeMin = Math.ceil(totalTime / 60);
-
-                    const progToSave = {
-                        programs: [{
-                            id: activeProgram.filename.replace('.json', ''),
-                            name: activeProgram.title,
-                            description: activeProgram.description,
-                            estimatedTime: `${estTimeMin} минут`,
-                            exercisesDetails: details,
-                            protocol: protocol
-                        }]
-                    };
-
+                    const progToSave = convertToGitHubFormat(activeProgram);
                     const fileContentB64 = b64EncodeUnicode(JSON.stringify(progToSave, null, 2));
                     
                     const filePutRes = await fetch(`${baseUrl}/${filePath}`, { 
-                        method: 'PUT', 
-                        headers, 
-                        cache: 'no-store',
-                        body: JSON.stringify({
-                            message: `Обновлена программа: ${activeProgram.title}`,
-                            content: fileContentB64,
-                            ...(fileSha && { sha: fileSha })
-                        }) 
+                        method: 'PUT', headers, cache: 'no-store',
+                        body: JSON.stringify({ message: `CMS Update: ${activeProgram.title}`, content: fileContentB64, ...(fileSha && { sha: fileSha }) }) 
                     });
                     
                     if (!filePutRes.ok) {
-                        const err = await filePutRes.json().catch(() => ({}));
-                        throw new Error(`Ошибка сохранения (PUT ${filePutRes.status}): ${err.message || res.statusText}`);
+                        const errData = await filePutRes.json().catch(()=>({}));
+                        throw new Error(`Ошибка сохранения файла: ${errData.message || filePutRes.statusText}`);
                     }
                     
-                    const newFileData = await filePutRes.json();
-                    updateActiveProgram({ fileSha: newFileData.content.sha });
+                    const putData = await filePutRes.json();
+                    updateActiveProgram({ fileSha: putData.content.sha });
 
-                    // ШАГ 2: Обновление workouts/index.json
                     const indexPath = `workouts/index.json`;
                     let indexSha = null;
                     let indexData = [];
-
                     const indexCheckRes = await fetch(`${baseUrl}/${indexPath}`, { headers, cache: 'no-store' });
                     if (indexCheckRes.ok) {
                         const indexResp = await indexCheckRes.json();
                         indexSha = indexResp.sha;
-                        try { indexData = JSON.parse(b64DecodeUnicode(indexResp.content)); } catch (e) { indexData = []; }
+                        try { indexData = JSON.parse(b64DecodeUnicode(indexResp.content)); } catch (e) {}
                     }
 
                     if (!Array.isArray(indexData)) indexData = [];
-                    const existingEntryIdx = indexData.findIndex(item => item.id === activeProgram.id || item.file === activeProgram.filename);
-                    
+                    const existingIdx = indexData.findIndex(item => item.id === activeProgram.id || item.file === activeProgram.filename || item.filename === activeProgram.filename);
                     const newEntry = { id: activeProgram.id, title: activeProgram.title, file: activeProgram.filename, description: activeProgram.description };
-
-                    if (existingEntryIdx > -1) indexData[existingEntryIdx] = newEntry;
-                    else indexData.push(newEntry);
+                    if (existingIdx > -1) indexData[existingIdx] = newEntry; else indexData.push(newEntry);
 
                     const indexPutRes = await fetch(`${baseUrl}/${indexPath}`, { 
-                        method: 'PUT', 
-                        headers, 
-                        cache: 'no-store',
-                        body: JSON.stringify({
-                            message: `Обновлен реестр (добавлено: ${activeProgram.title})`,
-                            content: b64EncodeUnicode(JSON.stringify(indexData, null, 2)),
-                            ...(indexSha && { sha: indexSha })
-                        }) 
+                        method: 'PUT', headers, cache: 'no-store',
+                        body: JSON.stringify({ message: `CMS Index Update`, content: b64EncodeUnicode(JSON.stringify(indexData, null, 2)), ...(indexSha && { sha: indexSha }) }) 
                     });
-                    
                     if (!indexPutRes.ok) {
-                         const err = await indexPutRes.json().catch(() => ({}));
-                         throw new Error(`Ошибка обновления индекса: ${err.message || res.statusText}`);
+                        const idxErr = await indexPutRes.json().catch(()=>({}));
+                        throw new Error(`Не удалось обновить index.json: ${idxErr.message || indexPutRes.statusText}`);
                     }
 
                     setSyncStatus(s => ({ ...s, saving: false }));
@@ -471,10 +428,8 @@
                 }
             };
 
-            // --- 4. УДАЛЕНИЕ ИЗ GITHUB ---
             const deleteFromGitHub = async () => {
-                if (!confirm(`Вы уверены, что хотите удалить "${activeProgram.title}"?\n\nФайл будет удален из GitHub и локального списка.`)) return;
-
+                if (!confirm(`Вы уверены, что хотите удалить "${activeProgram.title}"?`)) return;
                 if (!ghConfig.token) {
                     setPrograms(programs.filter(p => p.id !== activeId));
                     setActiveId(null);
@@ -486,49 +441,36 @@
                 const headers = getAuthHeaders();
 
                 try {
-                    // ШАГ 1: Удаляем файл программы
                     let sha = activeProgram.fileSha;
                     if (!sha) {
                         const fileCheckRes = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, { headers, cache: 'no-store' });
-                        if (fileCheckRes.ok) sha = (await fileCheckRes.json()).sha;
+                        if (fileCheckRes.ok) {
+                            const checkData = await fileCheckRes.json();
+                            sha = checkData.sha;
+                        }
                     }
 
                     if (sha) {
                         const delRes = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, {
-                            method: 'DELETE',
-                            headers,
-                            cache: 'no-store',
-                            body: JSON.stringify({ message: `Удалена программа: ${activeProgram.title}`, sha: sha })
+                            method: 'DELETE', headers, cache: 'no-store',
+                            body: JSON.stringify({ message: `CMS Delete: ${activeProgram.title}`, sha: sha })
                         });
                         if (!delRes.ok && delRes.status !== 404) {
-                            const err = await delRes.json().catch(() => ({}));
-                            throw new Error(`Ошибка удаления файла: ${err.message || res.statusText}`);
+                            const errData = await delRes.json().catch(()=>({}));
+                            throw new Error(`Ошибка удаления файла: ${errData.message || delRes.statusText}`);
                         }
                     }
 
-                    // ШАГ 2: Удаляем запись из index.json
                     const indexCheckRes = await fetch(`${baseUrl}/workouts/index.json`, { headers, cache: 'no-store' });
                     if (indexCheckRes.ok) {
                         const indexResp = await indexCheckRes.json();
-                        const indexSha = indexResp.sha;
                         let indexData = JSON.parse(b64DecodeUnicode(indexResp.content));
+                        indexData = indexData.filter(item => item.id !== activeProgram.id && item.file !== activeProgram.filename && item.filename !== activeProgram.filename);
                         
-                        indexData = indexData.filter(item => item.id !== activeProgram.id && item.file !== activeProgram.filename);
-                        
-                        const indexPutRes = await fetch(`${baseUrl}/workouts/index.json`, {
-                            method: 'PUT',
-                            headers,
-                            cache: 'no-store',
-                            body: JSON.stringify({
-                                message: `Обновлен реестр (удалено: ${activeProgram.title})`,
-                                content: b64EncodeUnicode(JSON.stringify(indexData, null, 2)),
-                                sha: indexSha
-                            })
+                        await fetch(`${baseUrl}/workouts/index.json`, {
+                            method: 'PUT', headers, cache: 'no-store',
+                            body: JSON.stringify({ message: `CMS Index Update (Delete)`, content: b64EncodeUnicode(JSON.stringify(indexData, null, 2)), sha: indexResp.sha })
                         });
-                        if (!indexPutRes.ok) {
-                             const err = await indexPutRes.json().catch(() => ({}));
-                             throw new Error(`Ошибка обновления индекса при удалении: ${err.message || res.statusText}`);
-                        }
                     }
 
                     setPrograms(prev => prev.filter(p => p.id !== activeProgram.id));
@@ -541,33 +483,44 @@
             };
 
             return (
-                <div className="flex h-screen overflow-hidden">
+                <div className="flex h-screen overflow-hidden bg-slate-50">
+                    
+                    {/* МОБИЛЬНЫЙ ОВЕРЛЕЙ */}
+                    {sidebarOpen && (
+                        <div className="fixed inset-0 bg-slate-900/50 z-20 md:hidden" onClick={() => setSidebarOpen(false)}></div>
+                    )}
+
                     {/* САЙДБАР */}
-                    <div className="w-80 bg-slate-900 text-slate-300 flex flex-col shrink-0">
-                        <div className="p-4 bg-slate-950 flex justify-between items-center border-b border-slate-800">
+                    <div className={`fixed inset-y-0 left-0 z-30 w-80 bg-slate-900 text-slate-300 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                        <div className="p-4 bg-slate-950 flex justify-between items-center border-b border-slate-800 shrink-0">
                             <h1 className="text-white font-bold flex items-center gap-2">
                                 <Icon name="Dumbbell" size={18} /> CMS Тренировок
                             </h1>
-                            <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-white transition">
-                                <Icon name="Settings" size={18} />
-                            </button>
+                            <div className="flex gap-1">
+                                <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-white transition p-2">
+                                    <Icon name="Settings" size={18} />
+                                </button>
+                                <button onClick={() => setSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white transition p-2">
+                                    <Icon name="X" size={20} />
+                                </button>
+                            </div>
                         </div>
                         
-                        <div className="p-4 flex gap-2">
+                        <div className="p-4 flex gap-2 shrink-0">
                             <button 
                                 onClick={() => {
                                     const newProg = createEmptyProgram();
                                     setPrograms([...programs, newProg]);
                                     setActiveId(newProg.id);
+                                    if(window.innerWidth < 768) setSidebarOpen(false);
                                 }}
                                 className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition text-sm font-semibold shadow-sm"
                             >
                                 <Icon name="Plus" size={16} /> Создать
                             </button>
                             <button 
-                                onClick={fetchListFromGitHub} 
-                                disabled={syncStatus.loadingList}
-                                title="Синхронизировать список программ из GitHub"
+                                onClick={fetchListFromGitHub} disabled={syncStatus.loadingList}
+                                title="Синхронизировать из GitHub"
                                 className="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 px-3 rounded-lg flex items-center justify-center transition disabled:opacity-50"
                             >
                                 <Icon name="RefreshCw" size={16} className={syncStatus.loadingList ? "spinner" : ""} />
@@ -576,104 +529,143 @@
 
                         <div className="flex-1 overflow-y-auto p-2 space-y-1">
                             {programs.map(p => (
-                                <div key={p.id} 
-                                     onClick={() => selectProgram(p)}
+                                <div key={p.id} onClick={() => selectProgram(p)}
                                      className={`p-3 rounded-lg cursor-pointer transition flex items-center justify-between group ${activeId === p.id ? 'bg-indigo-500/20 border border-indigo-500/30 text-white' : 'hover:bg-slate-800'}`}>
                                     <div className="overflow-hidden">
-                                        <div className="font-semibold truncate">{p.title || 'Без названия'}</div>
+                                        <div className="font-semibold truncate text-sm">{p.title || 'Без названия'}</div>
                                         <div className="text-xs text-slate-500 truncate">{p.filename}</div>
                                     </div>
-                                    {!p.exercises && <Icon name="Cloud" size={14} className="text-slate-500 group-hover:text-indigo-400" />}
+                                    {!p.exercises && <Icon name="Cloud" size={14} className="text-slate-500 group-hover:text-indigo-400 shrink-0 ml-2" />}
                                 </div>
                             ))}
                         </div>
                     </div>
 
                     {/* РАБОЧАЯ ОБЛАСТЬ */}
-                    <div className="flex-1 flex flex-col bg-slate-50 relative">
+                    <div className="flex-1 flex flex-col min-w-0 relative">
                         {activeProgram ? (
                             <>
-                                <div className="bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm z-10">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-semibold text-slate-500">Редактор программы</span>
-                                        <span className="text-xs text-slate-400">ID: {activeProgram.id}</span>
+                                {/* Верхняя панель */}
+                                <div className="bg-white border-b border-slate-200 p-3 md:p-4 flex justify-between items-center shadow-sm z-10 shrink-0 gap-2 overflow-x-auto">
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <button onClick={() => setSidebarOpen(true)} className="md:hidden text-slate-500 hover:text-slate-800 p-1">
+                                            <Icon name="Menu" size={24} />
+                                        </button>
+                                        <div className="flex flex-col hidden sm:flex">
+                                            <span className="text-sm font-semibold text-slate-500">Редактор программы</span>
+                                            <span className="text-xs text-slate-400 truncate w-32 md:w-auto">{activeProgram.filename}</span>
+                                        </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-3">
-                                        {syncStatus.error && <span className="text-red-500 text-sm font-medium">{syncStatus.error}</span>}
-                                        {syncStatus.successMessage && <span className="text-emerald-500 text-sm font-medium flex items-center gap-1"><Icon name="CheckCircle" size={16} /> {syncStatus.successMessage}</span>}
+                                    <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                                        {syncStatus.error && <span className="text-red-500 text-xs md:text-sm font-medium hidden md:inline">{syncStatus.error}</span>}
+                                        {syncStatus.successMessage && <span className="text-emerald-500 text-xs md:text-sm font-medium flex items-center gap-1 hidden sm:flex"><Icon name="CheckCircle" size={16} /> {syncStatus.successMessage}</span>}
                                         
-                                        <button 
-                                            onClick={syncToGitHub}
-                                            disabled={syncStatus.saving || syncStatus.loadingProgram || !activeProgram.exercises}
-                                            className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition disabled:opacity-70"
-                                        >
-                                            {syncStatus.saving ? <Icon name="Loader2" className="spinner" size={18} /> : <Icon name="Github" size={18} />}
-                                            {syncStatus.saving ? 'Сохранение...' : 'Сохранить'}
+                                        <button onClick={toggleJsonMode} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                                            <Icon name={jsonMode ? "List" : "Code"} size={18} />
+                                            <span className="hidden md:inline">{jsonMode ? "Визуальный режим" : "JSON режим"}</span>
                                         </button>
-                                        
-                                        <button 
-                                            onClick={deleteFromGitHub} 
-                                            disabled={syncStatus.deleting || syncStatus.loadingProgram}
-                                            title="Удалить из GitHub"
-                                            className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition disabled:opacity-50"
-                                        >
-                                            {syncStatus.deleting ? <Icon name="Loader2" className="spinner" size={20} /> : <Icon name="Trash2" size={20} />}
-                                        </button>
+
+                                        {!jsonMode && (
+                                            <>
+                                                <button onClick={syncToGitHub} disabled={syncStatus.saving || syncStatus.loadingProgram || !activeProgram.exercises}
+                                                        className="bg-slate-900 hover:bg-slate-800 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition disabled:opacity-70">
+                                                    {syncStatus.saving ? <Icon name="Loader2" className="spinner" size={18} /> : <Icon name="Github" size={18} />}
+                                                    <span className="hidden sm:inline">{syncStatus.saving ? 'Сохранение...' : 'Сохранить'}</span>
+                                                </button>
+                                                
+                                                <button onClick={deleteFromGitHub} disabled={syncStatus.deleting || syncStatus.loadingProgram} title="Удалить программу"
+                                                        className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition disabled:opacity-50">
+                                                    {syncStatus.deleting ? <Icon name="Loader2" className="spinner" size={20} /> : <Icon name="Trash2" size={20} />}
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
                                 {syncStatus.loadingProgram ? (
                                     <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white">
                                         <Icon name="Loader2" size={48} className="spinner text-indigo-500 mb-4" />
-                                        <p className="text-lg font-medium text-slate-600">Загрузка данных из GitHub...</p>
+                                        <p className="text-lg font-medium text-slate-600">Загрузка данных...</p>
+                                    </div>
+                                ) : jsonMode ? (
+                                    // РЕЖИМ JSON
+                                    <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden bg-white">
+                                        <div className="flex justify-between items-center mb-4 shrink-0">
+                                            <div>
+                                                <h3 className="font-bold text-slate-700 text-lg">Редактор JSON</h3>
+                                                <p className="text-xs text-slate-500">Прямое редактирование формата.</p>
+                                            </div>
+                                            <button onClick={applyJson} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
+                                                Применить
+                                            </button>
+                                        </div>
+                                        {jsonError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium mb-4 border border-red-200 shrink-0">{jsonError}</div>}
+                                        
+                                        <div className="json-editor-container bg-slate-50 border border-slate-300 rounded-xl shadow-inner overflow-hidden">
+                                            <textarea 
+                                                className="json-textarea" spellCheck="false"
+                                                value={rawJson} onChange={(e) => setRawJson(e.target.value)} onScroll={handleJsonScroll}
+                                            />
+                                            <pre className="json-pre" ref={preRef} aria-hidden="true">
+                                                <code dangerouslySetInnerHTML={{ __html: highlightJson(rawJson) }} />
+                                            </pre>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="flex-1 overflow-y-auto p-8">
-                                        <div className="max-w-4xl mx-auto space-y-6">
+                                    // ВИЗУАЛЬНЫЙ РЕЖИМ
+                                    <div className="flex-1 overflow-y-auto p-4 md:p-8">
+                                        <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
                                             
-                                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                                                 <div>
-                                                    <label className="block text-sm font-bold text-slate-700 mb-1">Название программы</label>
-                                                    <input type="text" value={activeProgram.title} onChange={e => updateActiveProgram({title: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-bold text-lg" placeholder="Например: Фуллбоди с гантелями"/>
+                                                    <label className="block text-xs md:text-sm font-bold text-slate-700 mb-1">Название программы</label>
+                                                    <input type="text" value={activeProgram.title} onChange={e => updateActiveProgram({title: e.target.value})} className="w-full p-2 md:p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-bold text-base md:text-lg" placeholder="Например: Фуллбоди с гантелями"/>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-1">Имя файла (для GitHub)</label>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-slate-400 font-mono text-sm">workouts/</span>
-                                                            <input type="text" value={activeProgram.filename} onChange={e => updateActiveProgram({filename: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm" placeholder="file_name.json"/>
-                                                        </div>
+                                                <div>
+                                                    <label className="block text-xs md:text-sm font-bold text-slate-700 mb-1">Имя файла (для GitHub)</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-slate-400 font-mono text-sm hidden sm:inline">workouts/</span>
+                                                        <input type="text" value={activeProgram.filename} onChange={e => updateActiveProgram({filename: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm" placeholder="file_name.json"/>
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-bold text-slate-700 mb-1">Описание (опционально)</label>
-                                                    <textarea value={activeProgram.description} onChange={e => updateActiveProgram({description: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none h-24" placeholder="Краткое описание тренировки..."></textarea>
+                                                    <label className="block text-xs md:text-sm font-bold text-slate-700 mb-1">Описание (опционально)</label>
+                                                    <textarea value={activeProgram.description} onChange={e => updateActiveProgram({description: e.target.value})} className="w-full p-2 md:p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none h-20 md:h-24 text-sm md:text-base" placeholder="Краткое описание тренировки..."></textarea>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-4">
-                                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                                <h3 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2 px-2">
                                                     <Icon name="ListChecks" size={20} className="text-indigo-500"/> Упражнения
                                                 </h3>
                                                 
                                                 {activeProgram.exercises && activeProgram.exercises.map((ex, idx) => (
-                                                    <div key={ex.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative group hover:border-indigo-300 transition-colors">
-                                                        <div className="absolute top-4 left-4 text-slate-300 font-bold text-xl">{idx + 1}</div>
-                                                        <button onClick={() => removeExercise(ex.id)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
-                                                            <Icon name="X" size={20} />
-                                                        </button>
+                                                    <div key={ex.id} className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm relative group hover:border-indigo-300 transition-colors">
+                                                        {/* Контролы упражнения */}
+                                                        <div className="flex justify-between items-center mb-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="bg-slate-100 text-slate-500 font-bold w-8 h-8 rounded-full flex items-center justify-center text-sm">{idx + 1}</div>
+                                                                <div className="flex flex-col sm:flex-row gap-1">
+                                                                    <button onClick={() => moveExercise(idx, 'up')} disabled={idx === 0} className="p-1 text-slate-400 hover:bg-slate-100 rounded disabled:opacity-30 disabled:hover:bg-transparent"><Icon name="ChevronUp" size={18} /></button>
+                                                                    <button onClick={() => moveExercise(idx, 'down')} disabled={idx === activeProgram.exercises.length - 1} className="p-1 text-slate-400 hover:bg-slate-100 rounded disabled:opacity-30 disabled:hover:bg-transparent"><Icon name="ChevronDown" size={18} /></button>
+                                                                </div>
+                                                            </div>
+                                                            <button onClick={() => removeExercise(ex.id)} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition">
+                                                                <Icon name="X" size={20} />
+                                                            </button>
+                                                        </div>
                                                         
-                                                        <div className="pl-8 pr-6 space-y-4">
-                                                            <input type="text" value={ex.name} onChange={e => updateExercise(ex.id, 'name', e.target.value)} placeholder="Название упражнения" className="w-full text-lg font-bold border-b-2 border-slate-100 pb-1 focus:border-indigo-500 outline-none placeholder-slate-300"/>
+                                                        <div className="space-y-4">
+                                                            <input type="text" value={ex.name} onChange={e => updateExercise(ex.id, 'name', e.target.value)} placeholder="Название упражнения" className="w-full text-base md:text-lg font-bold border-b-2 border-slate-100 pb-2 focus:border-indigo-500 outline-none placeholder-slate-300"/>
                                                             
-                                                            <div className="grid grid-cols-3 gap-4">
+                                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                                                                 <div>
                                                                     <label className="block text-xs font-semibold text-slate-500 mb-1">Подходы</label>
                                                                     <input type="number" min="1" value={ex.sets} onChange={e => updateExercise(ex.id, 'sets', e.target.value)} placeholder="Напр: 3" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 text-sm"/>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Время на подход (сек)</label>
+                                                                    <label className="block text-xs font-semibold text-slate-500 mb-1">Время (сек)</label>
                                                                     <input type="number" min="0" value={ex.reps} onChange={e => updateExercise(ex.id, 'reps', e.target.value)} placeholder="Напр: 60" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 text-sm"/>
                                                                 </div>
                                                                 <div>
@@ -683,14 +675,14 @@
                                                             </div>
 
                                                             <div className="flex items-start gap-2 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100">
-                                                                <Icon name="Volume2" size={18} className="text-indigo-400 mt-1 shrink-0" />
-                                                                <textarea value={ex.voiceText} onChange={e => updateExercise(ex.id, 'voiceText', e.target.value)} placeholder="Озвучка (например: 'Приготовьтесь. Держите спину ровно')" className="w-full bg-transparent outline-none resize-none h-10 text-sm text-indigo-900 placeholder-indigo-300"/>
+                                                                <Icon name="Volume2" size={18} className="text-indigo-400 mt-1 shrink-0 hidden sm:block" />
+                                                                <textarea value={ex.voiceText} onChange={e => updateExercise(ex.id, 'voiceText', e.target.value)} placeholder="Озвучка (например: 'Приготовьтесь. Держите спину ровно')" className="w-full bg-transparent outline-none resize-none h-12 text-sm text-indigo-900 placeholder-indigo-300"/>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 ))}
 
-                                                <button onClick={addExercise} className="w-full py-4 border-2 border-dashed border-slate-300 text-slate-500 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex justify-center items-center gap-2 font-bold">
+                                                <button onClick={addExercise} className="w-full py-4 border-2 border-dashed border-slate-300 text-slate-500 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex justify-center items-center gap-2 font-bold text-sm md:text-base">
                                                     <Icon name="Plus" size={20} /> Добавить упражнение
                                                 </button>
                                             </div>
@@ -699,25 +691,30 @@
                                 )}
                             </>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                                <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center mb-6 shadow-inner text-slate-300">
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4">
+                                <div className="md:hidden mb-6 text-indigo-500">
+                                    <button onClick={() => setSidebarOpen(true)} className="flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-md font-bold text-slate-700">
+                                        <Icon name="Menu" size={20}/> Открыть список программ
+                                    </button>
+                                </div>
+                                <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-200 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-inner text-slate-300">
                                     <Icon name="FileJson" size={40} />
                                 </div>
-                                <p className="text-xl font-bold text-slate-600">Выберите или скачайте программу</p>
-                                <p className="text-sm mt-2 max-w-sm text-center">Используйте кнопку обновления слева для загрузки списка из GitHub, либо создайте новую.</p>
+                                <p className="text-lg md:text-xl font-bold text-slate-600 text-center">Выберите или скачайте программу</p>
+                                <p className="text-xs md:text-sm mt-2 max-w-sm text-center">Используйте меню для загрузки списка из GitHub, либо создайте новую.</p>
                             </div>
                         )}
                     </div>
 
                     {/* МОДАЛЬНОЕ ОКНО НАСТРОЕК GITHUB */}
                     {showSettings && (
-                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center">
-                            <div className="bg-white rounded-2xl shadow-xl w-[400px] overflow-hidden">
-                                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                                    <h3 className="font-bold flex items-center gap-2"><Icon name="Github" size={18}/> Настройки синхронизации</h3>
+                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-full">
+                                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                                    <h3 className="font-bold flex items-center gap-2 text-sm md:text-base"><Icon name="Github" size={18}/> Настройки синхронизации</h3>
                                     <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-700"><Icon name="X" size={20}/></button>
                                 </div>
-                                <div className="p-6 space-y-4">
+                                <div className="p-4 md:p-6 space-y-4 overflow-y-auto">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 mb-1">Owner (Владелец репозитория)</label>
                                         <input type="text" value={ghConfig.owner} onChange={e => setGhConfig({...ghConfig, owner: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-mono text-sm" placeholder="Напр: kutya001"/>
@@ -729,40 +726,26 @@
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 mb-1">Personal Access Token (PAT)</label>
                                         <input type="password" value={ghConfig.token} onChange={e => setGhConfig({...ghConfig, token: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-mono text-sm" placeholder="ghp_xxxxxxxxxxxxxxxxx"/>
-                                        <p className="text-xs text-slate-400 mt-1">Токен должен иметь права "repo". Сохраняется только в вашем браузере.</p>
+                                        <p className="text-[10px] md:text-xs text-slate-400 mt-1">Токен должен иметь права "repo" (Read and write). Сохраняется только в вашем браузере.</p>
                                     </div>
                                     
-                                    {/* БЛОК ПРОВЕРКИ СОЕДИНЕНИЯ */}
                                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
-                                        <button 
-                                            onClick={testConnection}
-                                            disabled={testStatus.loading}
-                                            className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
-                                        >
+                                        <button onClick={testConnection} disabled={testStatus.loading} className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
                                             {testStatus.loading ? <Icon name="Loader2" size={16} className="spinner" /> : <Icon name="Wifi" size={16} />}
                                             Проверить соединение
                                         </button>
                                         {testStatus.message && (
-                                            <p className={`text-xs mt-2 text-center font-medium ${testStatus.isError ? 'text-red-500' : 'text-emerald-600'}`}>
-                                                {testStatus.message}
-                                            </p>
+                                            <p className={`text-xs mt-2 text-center font-medium ${testStatus.isError ? 'text-red-500' : 'text-emerald-600'}`}>{testStatus.message}</p>
                                         )}
                                     </div>
 
-                                    <button 
-                                        onClick={() => {
-                                            localStorage.setItem('gh_config', JSON.stringify(ghConfig));
-                                            setShowSettings(false);
-                                        }}
-                                        className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold transition mt-4"
-                                    >
+                                    <button onClick={() => { localStorage.setItem('gh_config', JSON.stringify(ghConfig)); setShowSettings(false); }} className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold transition mt-4 text-sm md:text-base">
                                         Сохранить и закрыть
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </div>
             );
         }
