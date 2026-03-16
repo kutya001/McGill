@@ -1035,10 +1035,20 @@ async function fetchWorkouts() {
     try {
         const idxRes = await fetch('./workouts/index.json');
         if (!idxRes.ok) throw new Error('index.json не найден');
-        const files = await idxRes.json();
+        const raw = await idxRes.json();
         workoutsData = [];
-        const results = await Promise.allSettled(files.map(f => fetch(`./workouts/${f}`).then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })));
-        results.forEach((res,i) => { if(res.status==='fulfilled'&&res.value?.programs) workoutsData=workoutsData.concat(res.value.programs); else console.warn(`Не загружен ${files[i]}:`,res.reason); });
+        // index.json может содержать строки "file.json" ИЛИ объекты {file:"...", ...}
+        // Нормализуем: берём только имя файла
+        const files = raw.map(entry => typeof entry === 'string' ? entry : entry.file).filter(Boolean);
+        // Убираем дубли (один и тот же файл может быть и строкой и объектом)
+        const uniqueFiles = [...new Set(files)];
+        const results = await Promise.allSettled(
+            uniqueFiles.map(f => fetch(`./workouts/${f}`).then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }))
+        );
+        results.forEach((res,i) => {
+            if (res.status==='fulfilled' && res.value?.programs) workoutsData = workoutsData.concat(res.value.programs);
+            else console.warn(`Не загружен ${uniqueFiles[i]}:`, res.reason);
+        });
         if (!workoutsData.length) throw new Error('Нет программ');
         populateSelect(); loadProgram(0);
     } catch(e) {
