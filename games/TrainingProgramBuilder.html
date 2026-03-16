@@ -13,6 +13,8 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Drag and Drop Touch Polyfill (для работы перетаскивания на телефонах) -->
+    <script src="https://unpkg.com/drag-drop-touch"></script>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background-color: #f8fafc; overflow: hidden; }
         .spinner { animation: spin 1s linear infinite; }
@@ -24,7 +26,7 @@
         .json-textarea { position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: transparent; color: transparent; caret-color: #cbd5e1; outline: none; resize: none; z-index: 10; }
         .json-pre { position: absolute; top: 0; left: 0; bottom: 0; right: 0; pointer-events: none; background-color: #0f172a; color: #cbd5e1; }
         
-        /* Подсветка синтаксиса JSON (Dark Theme) */
+        /* Подсветка синтаксиса JSON */
         .json-key { color: #c4b5fd; font-weight: 600; }
         .json-string { color: #6ee7b7; }
         .json-number { color: #93c5fd; }
@@ -36,6 +38,11 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .dark-scroll::-webkit-scrollbar-thumb { background: #475569; }
+
+        /* Drag and Drop */
+        .drag-handle { cursor: grab; touch-action: none; }
+        .drag-handle:active { cursor: grabbing; }
+        .dragging { opacity: 0.5; border: 2px dashed #6366f1 !important; }
     </style>
 </head>
 <body>
@@ -50,7 +57,6 @@
 
         const createEmptyProgram = () => ({ id: generateId(), title: 'Новая программа', filename: `program_${generateId()}.json`, description: '', exercises: [] });
         
-        // Новый гибкий шаблон блока упражнения
         const createEmptyExercise = () => ({ 
             id: generateId(), 
             name: 'Новое упражнение', 
@@ -61,7 +67,6 @@
             ]
         });
 
-        // Подсветка синтаксиса
         const highlightJson = (json) => {
             if (!json) return '';
             const escaped = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -76,6 +81,13 @@
             });
         };
 
+        const formatTime = (seconds) => {
+            if (!seconds) return '0с';
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return m > 0 ? `${m}м ${s > 0 ? s + 'с' : ''}` : `${s}с`;
+        };
+
         // --- АДАПТЕРЫ ФОРМАТА ---
         const convertToGitHubFormat = (prog) => {
             const protocol = [];
@@ -87,15 +99,8 @@
 
             prog.exercises.forEach((ex, index) => {
                 const exName = ex.name || `Блок ${index + 1}`;
+                details[exName] = { goal: ex.details?.goal || "-", start: ex.details?.start || "-", move: ex.details?.move || "-" };
                 
-                // Записываем детали
-                details[exName] = {
-                    goal: ex.details?.goal || "-",
-                    start: ex.details?.start || "-",
-                    move: ex.details?.move || "-"
-                };
-                
-                // Разворачиваем шаги 1:1
                 (ex.steps || []).forEach(step => {
                     protocol.push({
                         ex: exName,
@@ -183,7 +188,43 @@
             return <span ref={spanRef} className={`inline-flex items-center justify-center shrink-0 ${className}`}></span>;
         };
 
-        // --- ГЛАВНЫЙ КОМПОНЕНТ ---
+        // --- ДОП. ОКНО: ТОЛЬКО JSON (VIEWER) ---
+        const isJsonViewer = window.location.search.includes('view=json');
+        
+        if (isJsonViewer) {
+            const JsonViewerApp = () => {
+                const [liveJson, setLiveJson] = React.useState(localStorage.getItem('workout_live_json') || '{\n  "status": "Ожидание данных..."\n}');
+                
+                React.useEffect(() => {
+                    const handleStorage = (e) => {
+                        if (e.key === 'workout_live_json') setLiveJson(e.newValue);
+                    };
+                    window.addEventListener('storage', handleStorage);
+                    return () => window.removeEventListener('storage', handleStorage);
+                }, []);
+
+                return (
+                    <div className="h-screen w-screen bg-[#0f172a] flex flex-col p-4 md:p-8 text-slate-300">
+                        <div className="flex justify-between items-center mb-4 shrink-0 border-b border-slate-800 pb-4">
+                            <div>
+                                <h3 className="font-bold text-white text-xl flex items-center gap-2"><Icon name="Code2" size={24}/> Live JSON Preview (Внешнее окно)</h3>
+                                <p className="text-sm text-slate-400 mt-1">Этот код обновляется автоматически при редактировании программы в основной вкладке.</p>
+                            </div>
+                        </div>
+                        <div className="json-editor-container rounded-xl overflow-hidden border border-slate-800 flex-1">
+                            <pre className="json-pre dark-scroll h-full" aria-hidden="true" style={{position: 'relative'}}>
+                                <code dangerouslySetInnerHTML={{ __html: highlightJson(liveJson) }} />
+                            </pre>
+                        </div>
+                    </div>
+                );
+            };
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<JsonViewerApp />);
+        }
+
+        // --- ОСНОВНОЙ ГЛАВНЫЙ КОМПОНЕНТ ---
+        if (!isJsonViewer) {
         function App() {
             const [programs, setPrograms] = React.useState([]);
             const [activeId, setActiveId] = React.useState(null);
@@ -199,12 +240,22 @@
             const preRef = React.useRef(null);
             
             // UI State
-            const [mobileJsonMode, setMobileJsonMode] = React.useState(false); // Для переключения на мобилках
-            const [expandedDetails, setExpandedDetails] = React.useState({}); // Раскрытые детали упражнений
+            const [mobileJsonMode, setMobileJsonMode] = React.useState(false);
+            const [expandedDetails, setExpandedDetails] = React.useState({});
+            const [collapsedBlocks, setCollapsedBlocks] = React.useState({}); 
+            
+            const [syncStatus, setSyncStatus] = React.useState({ saving: false, loadingList: false, loadingProgram: false, deleting: false, error: null, successMessage: null });
 
-            const [syncStatus, setSyncStatus] = React.useState({ 
-                saving: false, loadingList: false, loadingProgram: false, deleting: false, error: null, successMessage: null 
-            });
+            // Drag and Drop States & Refs
+            const dragExItem = React.useRef(null);
+            const dragExOverItem = React.useRef(null);
+            const [draggingExIdx, setDraggingExIdx] = React.useState(null);
+            const [dragEnabledExId, setDragEnabledExId] = React.useState(null); // Идентификатор блока, разрешенного к перетаскиванию
+
+            const dragStepItem = React.useRef(null);
+            const dragStepOverItem = React.useRef(null);
+            const [draggingStepIdx, setDraggingStepIdx] = React.useState(null); // {exId, sIdx}
+            const [dragEnabledStepId, setDragEnabledStepId] = React.useState(null);
 
             React.useEffect(() => {
                 try {
@@ -218,27 +269,44 @@
             }, []);
 
             React.useEffect(() => {
-                if (programs.length > 0) {
-                    localStorage.setItem('workout_programs', JSON.stringify(programs));
-                }
+                if (programs.length > 0) localStorage.setItem('workout_programs', JSON.stringify(programs));
             }, [programs]);
 
             const activeProgram = programs.find(p => p.id === activeId);
 
-            // --- СИНХРОНИЗАЦИЯ LIVE JSON ---
             React.useEffect(() => {
                 if (activeProgram && !isEditingJson) {
                     const gitHubFormat = convertToGitHubFormat(activeProgram);
-                    setRawJson(JSON.stringify(gitHubFormat, null, 2));
+                    const newJson = JSON.stringify(gitHubFormat, null, 2);
+                    setRawJson(newJson);
+                    localStorage.setItem('workout_live_json', newJson);
                 }
             }, [activeProgram, isEditingJson]);
 
-            const updateActiveProgram = (updates) => {
-                setPrograms(prev => prev.map(p => p.id === activeId ? { ...p, ...updates } : p));
+            const updateActiveProgram = (updates) => setPrograms(prev => prev.map(p => p.id === activeId ? { ...p, ...updates } : p));
+
+            // --- СТАТИСТИКА ---
+            const progStats = React.useMemo(() => {
+                if (!activeProgram) return { time: 0, workSets: 0, blocks: 0 };
+                let time = 0, workSets = 0;
+                (activeProgram.exercises || []).forEach(ex => {
+                    (ex.steps || []).forEach(s => { time += Number(s.time) || 0; if(s.type === 'work') workSets++; });
+                });
+                return { time, workSets, blocks: (activeProgram.exercises || []).length };
+            }, [activeProgram]);
+
+            const calcExStats = (ex) => {
+                let time = 0, workSets = 0;
+                (ex.steps || []).forEach(s => { time += Number(s.time) || 0; if(s.type === 'work') workSets++; });
+                return { time, workSets };
             };
 
-            // --- ФУНКЦИИ УПРАЖНЕНИЙ И ШАГОВ ---
-            const addExercise = () => updateActiveProgram({ exercises: [...(activeProgram.exercises || []), createEmptyExercise()] });
+            // --- УПРАЖНЕНИЯ ---
+            const addExercise = () => {
+                const newEx = createEmptyExercise();
+                updateActiveProgram({ exercises: [...(activeProgram.exercises || []), newEx] });
+                setCollapsedBlocks(prev => ({...prev, [newEx.id]: false})); 
+            };
             const removeExercise = (id) => updateActiveProgram({ exercises: activeProgram.exercises.filter(ex => ex.id !== id) });
             const moveExercise = (index, direction) => {
                 const newEx = [...activeProgram.exercises];
@@ -247,22 +315,38 @@
                 updateActiveProgram({ exercises: newEx });
             };
             
+            // D&D Блоков
+            const handleExDragStart = (e, idx) => {
+                dragExItem.current = idx;
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => setDraggingExIdx(idx), 0);
+            };
+            const handleExDragEnter = (e, idx) => {
+                dragExOverItem.current = idx;
+            };
+            const handleExDragEnd = () => {
+                setDraggingExIdx(null);
+                setDragEnabledExId(null);
+                if (dragExItem.current !== null && dragExOverItem.current !== null && dragExItem.current !== dragExOverItem.current) {
+                    let _exercises = [...activeProgram.exercises];
+                    const draggedItem = _exercises.splice(dragExItem.current, 1)[0];
+                    _exercises.splice(dragExOverItem.current, 0, draggedItem);
+                    updateActiveProgram({ exercises: _exercises });
+                }
+                dragExItem.current = null;
+                dragExOverItem.current = null;
+            };
+            
             const updateExerciseName = (id, val) => updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === id ? { ...ex, name: val } : ex) });
             const updateExerciseDetails = (id, field, val) => updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === id ? { ...ex, details: {...ex.details, [field]: val} } : ex) });
 
+            // --- ШАГИ ---
             const addStep = (exId, type = 'work') => {
-                const step = { id: generateId(), type, phase: type === 'rest' ? 'Отдых' : 'Подход', time: 60, voiceTxt: '' };
+                const step = { id: generateId(), type, phase: type === 'rest' ? 'Отдых' : (type === 'prep' ? 'Подготовка' : 'Подход'), time: 60, voiceTxt: '' };
                 updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === exId ? { ...ex, steps: [...ex.steps, step] } : ex) });
             };
-            
-            const updateStep = (exId, stepId, field, val) => {
-                updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === exId ? { ...ex, steps: ex.steps.map(s => s.id === stepId ? { ...s, [field]: val } : s) } : ex) });
-            };
-            
-            const removeStep = (exId, stepId) => {
-                updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === exId ? { ...ex, steps: ex.steps.filter(s => s.id !== stepId) } : ex) });
-            };
-
+            const updateStep = (exId, stepId, field, val) => updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === exId ? { ...ex, steps: ex.steps.map(s => s.id === stepId ? { ...s, [field]: val } : s) } : ex) });
+            const removeStep = (exId, stepId) => updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === exId ? { ...ex, steps: ex.steps.filter(s => s.id !== stepId) } : ex) });
             const moveStep = (exId, stepIndex, direction) => {
                 updateActiveProgram({ exercises: activeProgram.exercises.map(ex => {
                     if (ex.id !== exId) return ex;
@@ -273,56 +357,79 @@
                 })});
             };
 
-            // Генератор подходов (Quick Generate)
+            // D&D Шагов
+            const handleStepDragStart = (e, exId, sIdx) => {
+                dragStepItem.current = { exId, sIdx };
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => setDraggingStepIdx({ exId, sIdx }), 0);
+            };
+            const handleStepDragEnter = (e, exId, sIdx) => {
+                dragStepOverItem.current = { exId, sIdx };
+            };
+            const handleStepDragEnd = (exId) => {
+                setDraggingStepIdx(null);
+                setDragEnabledStepId(null);
+                if (dragStepItem.current && dragStepOverItem.current && 
+                    dragStepItem.current.exId === exId && dragStepOverItem.current.exId === exId &&
+                    dragStepItem.current.sIdx !== dragStepOverItem.current.sIdx) {
+                    
+                    const exIndex = activeProgram.exercises.findIndex(e => e.id === exId);
+                    let _steps = [...activeProgram.exercises[exIndex].steps];
+                    const draggedItem = _steps.splice(dragStepItem.current.sIdx, 1)[0];
+                    _steps.splice(dragStepOverItem.current.sIdx, 0, draggedItem);
+                    
+                    updateActiveProgram({ exercises: activeProgram.exercises.map(e => e.id === exId ? {...e, steps: _steps} : e) });
+                }
+                dragStepItem.current = null;
+                dragStepOverItem.current = null;
+            };
+
             const handleGenerateSteps = (exId, sets, workTime, restTime) => {
                 const steps = [];
                 steps.push({ id: generateId(), type: 'prep', phase: 'Подготовка', time: 15, voiceTxt: 'Приготовьтесь' });
                 for (let i = 1; i <= sets; i++) {
                     steps.push({ id: generateId(), type: 'work', phase: `Подход ${i}`, time: Number(workTime), voiceTxt: i === 1 ? 'Начали' : '' });
-                    if (i < sets && restTime > 0) {
-                        steps.push({ id: generateId(), type: 'rest', phase: 'Отдых', time: Number(restTime), voiceTxt: 'Отдых' });
-                    }
+                    if (i < sets && restTime > 0) steps.push({ id: generateId(), type: 'rest', phase: 'Отдых', time: Number(restTime), voiceTxt: 'Отдых' });
                 }
                 updateActiveProgram({ exercises: activeProgram.exercises.map(ex => ex.id === exId ? { ...ex, steps } : ex) });
             };
 
-            const toggleDetails = (exId) => {
-                setExpandedDetails(prev => ({ ...prev, [exId]: !prev[exId] }));
+            const toggleCollapse = (exId) => setCollapsedBlocks(prev => ({...prev, [exId]: !prev[exId]}));
+            const toggleAllCollapse = () => {
+                const isAnyExpanded = activeProgram.exercises.some(ex => !collapsedBlocks[ex.id]);
+                const newState = {};
+                activeProgram.exercises.forEach(ex => newState[ex.id] = isAnyExpanded); 
+                setCollapsedBlocks(newState);
             };
 
-            // --- ФУНКЦИИ API И JSON ---
-            const showSuccess = (msg) => {
-                setSyncStatus(s => ({ ...s, successMessage: msg, error: null }));
-                setTimeout(() => setSyncStatus(s => ({ ...s, successMessage: null })), 3000);
-            };
-
-            const getAuthHeaders = () => {
-                const headers = { 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
-                if (ghConfig.token) headers['Authorization'] = `token ${ghConfig.token}`;
-                return headers;
-            };
+            // --- API СИНХРОНИЗАЦИЯ ---
+            const showSuccess = (msg) => { setSyncStatus(s => ({ ...s, successMessage: msg, error: null })); setTimeout(() => setSyncStatus(s => ({ ...s, successMessage: null })), 3000); };
+            const getAuthHeaders = () => { const headers = { 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; if (ghConfig.token) headers['Authorization'] = `token ${ghConfig.token}`; return headers; };
 
             const applyJson = () => {
                 try {
                     const parsed = JSON.parse(rawJson);
-                    const internalData = parseFromGitHubFormat(parsed);
-                    updateActiveProgram(internalData);
-                    setIsEditingJson(false);
-                    setJsonError(null);
+                    updateActiveProgram(parseFromGitHubFormat(parsed));
+                    setIsEditingJson(false); setJsonError(null);
                     showSuccess("JSON успешно применен");
-                } catch(e) {
-                    setJsonError(`Синтаксическая ошибка: ${e.message}`);
-                }
+                } catch(e) { setJsonError(`Синтаксическая ошибка: ${e.message}`); }
             };
 
-            const handleJsonScroll = (e) => {
-                if (preRef.current) {
-                    preRef.current.scrollTop = e.target.scrollTop;
-                    preRef.current.scrollLeft = e.target.scrollLeft;
-                }
+            const testConnection = async () => { 
+                setTestStatus({ loading: true, message: null, isError: false });
+                if (!ghConfig.owner || !ghConfig.repo) return setTestStatus({ loading: false, message: 'Укажите Owner и Repo', isError: true });
+                try {
+                    const res = await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}`, { headers: getAuthHeaders(), cache: 'no-store' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.permissions && data.permissions.push) setTestStatus({ loading: false, message: 'Успешно! Доступ на запись (Push) подтвержден.', isError: false });
+                        else if (ghConfig.token) setTestStatus({ loading: false, message: 'Репозиторий найден, но нет прав на запись.', isError: true });
+                        else setTestStatus({ loading: false, message: 'Репозиторий найден. Нужен Токен для записи.', isError: true });
+                    } else setTestStatus({ loading: false, message: `Ошибка API: ${(await res.json().catch(()=>({}))).message || res.statusText}`, isError: true });
+                } catch (e) { setTestStatus({ loading: false, message: `Ошибка сети: ${e.message}`, isError: true }); }
             };
 
-            const fetchListFromGitHub = async () => {
+            const fetchListFromGitHub = async () => { 
                 if (!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return setShowSettings(true);
                 setSyncStatus(s => ({ ...s, loadingList: true, error: null }));
                 try {
@@ -330,10 +437,7 @@
                     const dirRes = await fetch(`${baseUrl}/workouts`, { headers: getAuthHeaders(), cache: 'no-store' });
                     if (!dirRes.ok) throw new Error("Не удалось прочитать директорию workouts/");
                     
-                    const dirData = await dirRes.json();
-                    if (!Array.isArray(dirData)) throw new Error("Директория недоступна или имеет неверный формат");
-
-                    const realJsonFiles = dirData.filter(f => f.type === 'file' && f.name.endsWith('.json') && f.name !== 'index.json');
+                    const realJsonFiles = (await dirRes.json()).filter(f => f.type === 'file' && f.name.endsWith('.json') && f.name !== 'index.json');
                     let indexData = [];
                     try {
                         const indexRes = await fetch(`${baseUrl}/workouts/index.json`, { headers: getAuthHeaders(), cache: 'no-store' });
@@ -345,56 +449,34 @@
                         return { id: meta.id || generateId(), title: meta.title || fileObj.name.replace('.json', '').replace(/_/g, ' '), filename: fileObj.name, description: meta.description || '', fileSha: fileObj.sha };
                     });
                     
-                    setPrograms(normalizedPrograms);
-                    setActiveId(null);
-                    setSyncStatus(s => ({ ...s, loadingList: false }));
-                    showSuccess(`Загружено: ${normalizedPrograms.length}`);
-                } catch (error) {
-                    setSyncStatus(s => ({ ...s, loadingList: false, error: error.message }));
-                }
+                    setPrograms(normalizedPrograms); setActiveId(null); setSyncStatus(s => ({ ...s, loadingList: false })); showSuccess(`Загружено: ${normalizedPrograms.length}`);
+                } catch (error) { setSyncStatus(s => ({ ...s, loadingList: false, error: error.message })); }
             };
 
             const selectProgram = async (prog) => {
-                setActiveId(prog.id);
-                setSidebarOpen(false); 
-                setMobileJsonMode(false);
-                setIsEditingJson(false);
-                
+                setActiveId(prog.id); setSidebarOpen(false); setMobileJsonMode(false); setIsEditingJson(false); setCollapsedBlocks({});
                 if (prog.exercises) return;
                 if (!ghConfig.token) return alert("Для загрузки нужен токен.");
-
                 setSyncStatus(s => ({ ...s, loadingProgram: true, error: null }));
                 try {
-                    const baseUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents`;
-                    const res = await fetch(`${baseUrl}/workouts/${prog.filename}`, { headers: getAuthHeaders(), cache: 'no-store' });
-                    
+                    const res = await fetch(`https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/workouts/${prog.filename}`, { headers: getAuthHeaders(), cache: 'no-store' });
                     if (!res.ok) {
-                        if (res.status === 404) {
-                            setPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, exercises: [] } : p));
-                            throw new Error(`Файл не найден (404).`);
-                        }
+                        if (res.status === 404) { setPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, exercises: [] } : p)); throw new Error(`Файл не найден (404).`); }
                         throw new Error(`Ошибка загрузки`);
                     }
-                    
                     const data = await res.json();
                     const fullProgram = JSON.parse(b64DecodeUnicode(data.content));
-                    const parsedData = parseFromGitHubFormat(fullProgram);
-                    
-                    setPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, ...parsedData, fileSha: data.sha || p.fileSha } : p));
+                    setPrograms(prev => prev.map(p => p.id === prog.id ? { ...p, ...parseFromGitHubFormat(fullProgram), fileSha: data.sha || p.fileSha } : p));
                     setSyncStatus(s => ({ ...s, loadingProgram: false }));
-                } catch (error) {
-                    setSyncStatus(s => ({ ...s, loadingProgram: false, error: error.message }));
-                }
+                } catch (error) { setSyncStatus(s => ({ ...s, loadingProgram: false, error: error.message })); }
             };
 
-            const syncToGitHub = async () => {
+            const syncToGitHub = async () => { 
                 if (!ghConfig.token || !ghConfig.owner || !ghConfig.repo) return setShowSettings(true);
                 if (!activeProgram.filename.endsWith('.json')) return alert("Имя файла должно заканчиваться на .json");
-
                 setSyncStatus(s => ({ ...s, saving: true, error: null }));
                 const baseUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents`;
                 const headers = getAuthHeaders();
-
                 try {
                     const filePath = `workouts/${activeProgram.filename}`;
                     let fileSha = activeProgram.fileSha;
@@ -402,30 +484,21 @@
                         const fileCheckRes = await fetch(`${baseUrl}/${filePath}`, { headers, cache: 'no-store' });
                         if (fileCheckRes.ok) fileSha = (await fileCheckRes.json()).sha;
                     }
-
-                    const progToSave = convertToGitHubFormat(activeProgram);
-                    const fileContentB64 = b64EncodeUnicode(JSON.stringify(progToSave, null, 2));
-                    
                     const filePutRes = await fetch(`${baseUrl}/${filePath}`, { 
                         method: 'PUT', headers, cache: 'no-store',
-                        body: JSON.stringify({ message: `CMS Update: ${activeProgram.title}`, content: fileContentB64, ...(fileSha && { sha: fileSha }) }) 
+                        body: JSON.stringify({ message: `CMS Update: ${activeProgram.title}`, content: b64EncodeUnicode(JSON.stringify(convertToGitHubFormat(activeProgram), null, 2)), ...(fileSha && { sha: fileSha }) }) 
                     });
-                    
                     if (!filePutRes.ok) throw new Error(`Ошибка сохранения`);
-                    
-                    const putData = await filePutRes.json();
-                    updateActiveProgram({ fileSha: putData.content.sha });
+                    updateActiveProgram({ fileSha: (await filePutRes.json()).content.sha });
 
                     const indexPath = `workouts/index.json`;
-                    let indexSha = null;
-                    let indexData = [];
+                    let indexSha = null, indexData = [];
                     const indexCheckRes = await fetch(`${baseUrl}/${indexPath}`, { headers, cache: 'no-store' });
                     if (indexCheckRes.ok) {
                         const indexResp = await indexCheckRes.json();
                         indexSha = indexResp.sha;
                         try { indexData = JSON.parse(b64DecodeUnicode(indexResp.content)); } catch (e) {}
                     }
-
                     if (!Array.isArray(indexData)) indexData = [];
                     const existingIdx = indexData.findIndex(item => item.id === activeProgram.id || item.file === activeProgram.filename || item.filename === activeProgram.filename);
                     const newEntry = { id: activeProgram.id, title: activeProgram.title, file: activeProgram.filename, description: activeProgram.description };
@@ -437,79 +510,44 @@
                     });
                     if (!indexPutRes.ok) throw new Error(`Не удалось обновить index.json`);
 
-                    setSyncStatus(s => ({ ...s, saving: false }));
-                    showSuccess("Успешно сохранено");
-                } catch (error) {
-                    setSyncStatus(s => ({ ...s, saving: false, error: error.message }));
-                }
+                    setSyncStatus(s => ({ ...s, saving: false })); showSuccess("Успешно сохранено");
+                } catch (error) { setSyncStatus(s => ({ ...s, saving: false, error: error.message })); }
             };
 
-            const deleteFromGitHub = async () => {
+            const deleteFromGitHub = async () => { 
                 if (!confirm(`Удалить "${activeProgram.title}" навсегда?`)) return;
                 if (!ghConfig.token) { setPrograms(programs.filter(p => p.id !== activeId)); setActiveId(null); return; }
-
                 setSyncStatus(s => ({ ...s, deleting: true, error: null }));
                 const baseUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents`;
-                const headers = getAuthHeaders();
-
                 try {
                     let sha = activeProgram.fileSha;
                     if (!sha) {
-                        const fileCheckRes = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, { headers, cache: 'no-store' });
-                        if (fileCheckRes.ok) sha = (await fileCheckRes.json()).sha;
+                        const check = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, { headers: getAuthHeaders(), cache: 'no-store' });
+                        if (check.ok) sha = (await check.json()).sha;
                     }
-
                     if (sha) {
-                        const delRes = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, {
-                            method: 'DELETE', headers, cache: 'no-store',
-                            body: JSON.stringify({ message: `CMS Delete: ${activeProgram.title}`, sha: sha })
-                        });
+                        const delRes = await fetch(`${baseUrl}/workouts/${activeProgram.filename}`, { method: 'DELETE', headers: getAuthHeaders(), cache: 'no-store', body: JSON.stringify({ message: `CMS Delete: ${activeProgram.title}`, sha: sha }) });
                         if (!delRes.ok && delRes.status !== 404) throw new Error(`Ошибка удаления`);
                     }
-
-                    const indexCheckRes = await fetch(`${baseUrl}/workouts/index.json`, { headers, cache: 'no-store' });
-                    if (indexCheckRes.ok) {
-                        const indexResp = await indexCheckRes.json();
-                        let indexData = JSON.parse(b64DecodeUnicode(indexResp.content));
-                        indexData = indexData.filter(item => item.id !== activeProgram.id && item.file !== activeProgram.filename && item.filename !== activeProgram.filename);
-                        
-                        await fetch(`${baseUrl}/workouts/index.json`, {
-                            method: 'PUT', headers, cache: 'no-store',
-                            body: JSON.stringify({ message: `CMS Index Update (Delete)`, content: b64EncodeUnicode(JSON.stringify(indexData, null, 2)), sha: indexResp.sha })
-                        });
+                    const idxCheck = await fetch(`${baseUrl}/workouts/index.json`, { headers: getAuthHeaders(), cache: 'no-store' });
+                    if (idxCheck.ok) {
+                        const idxResp = await idxCheck.json();
+                        let idxData = JSON.parse(b64DecodeUnicode(idxResp.content)).filter(item => item.id !== activeProgram.id && item.file !== activeProgram.filename && item.filename !== activeProgram.filename);
+                        await fetch(`${baseUrl}/workouts/index.json`, { method: 'PUT', headers: getAuthHeaders(), cache: 'no-store', body: JSON.stringify({ message: `CMS Index Update (Delete)`, content: b64EncodeUnicode(JSON.stringify(idxData, null, 2)), sha: idxResp.sha }) });
                     }
-
-                    setPrograms(prev => prev.filter(p => p.id !== activeProgram.id));
-                    setActiveId(null);
-                    setSyncStatus(s => ({ ...s, deleting: false }));
-                    showSuccess("Удалено");
-                } catch (error) {
-                    setSyncStatus(s => ({ ...s, deleting: false, error: error.message }));
-                }
+                    setPrograms(prev => prev.filter(p => p.id !== activeProgram.id)); setActiveId(null); setSyncStatus(s => ({ ...s, deleting: false })); showSuccess("Удалено");
+                } catch (error) { setSyncStatus(s => ({ ...s, deleting: false, error: error.message })); }
             };
 
             // Мини-компонент генератора шагов
             const StepGenerator = ({ exId }) => {
-                const [sets, setSets] = React.useState(3);
-                const [work, setWork] = React.useState(60);
-                const [rest, setRest] = React.useState(40);
+                const [sets, setSets] = React.useState(3); const [work, setWork] = React.useState(60); const [rest, setRest] = React.useState(40);
                 return (
-                    <div className="flex flex-wrap items-end gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 mt-2">
-                        <div>
-                            <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Подходов</label>
-                            <input type="number" min="1" value={sets} onChange={e => setSets(e.target.value)} className="w-16 p-1.5 text-sm border border-slate-300 rounded outline-none focus:border-indigo-500 text-center"/>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Работа (сек)</label>
-                            <input type="number" min="0" value={work} onChange={e => setWork(e.target.value)} className="w-16 p-1.5 text-sm border border-slate-300 rounded outline-none focus:border-indigo-500 text-center"/>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Отдых (сек)</label>
-                            <input type="number" min="0" value={rest} onChange={e => setRest(e.target.value)} className="w-16 p-1.5 text-sm border border-slate-300 rounded outline-none focus:border-indigo-500 text-center"/>
-                        </div>
-                        <button onClick={() => handleGenerateSteps(exId, sets, work, rest)} className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded text-sm font-semibold transition ml-auto flex items-center gap-1">
-                            <Icon name="Wand2" size={14}/> Сгенерировать шаги
-                        </button>
+                    <div className="flex flex-wrap items-end gap-2 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 mt-2">
+                        <div><label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Подходов</label><input type="number" min="1" value={sets} onChange={e => setSets(e.target.value)} className="w-14 p-1.5 text-sm border border-slate-200 rounded outline-none focus:border-indigo-500 text-center"/></div>
+                        <div><label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Работа (с)</label><input type="number" min="0" value={work} onChange={e => setWork(e.target.value)} className="w-14 p-1.5 text-sm border border-slate-200 rounded outline-none focus:border-indigo-500 text-center"/></div>
+                        <div><label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Отдых (с)</label><input type="number" min="0" value={rest} onChange={e => setRest(e.target.value)} className="w-14 p-1.5 text-sm border border-slate-200 rounded outline-none focus:border-indigo-500 text-center"/></div>
+                        <button onClick={() => handleGenerateSteps(exId, sets, work, rest)} className="bg-white hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded shadow-sm text-sm font-semibold transition ml-auto flex items-center gap-1"><Icon name="Wand2" size={14}/> Авто-генерация</button>
                     </div>
                 )
             };
@@ -517,35 +555,27 @@
             // Компонент Live JSON
             const LiveJsonPanel = () => (
                 <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden bg-[#0f172a] text-slate-300">
-                    <div className="flex justify-between items-center mb-4 shrink-0">
+                    <div className="flex justify-between items-start mb-4 shrink-0 gap-2">
                         <div>
                             <h3 className="font-bold text-white text-lg flex items-center gap-2"><Icon name="Code2" size={20}/> Live JSON Preview</h3>
-                            <p className="text-xs text-slate-400">Код, отправляемый в плеер (авто-обновление).</p>
+                            <p className="text-xs text-slate-400 mt-1">Отправляется в плеер.</p>
                         </div>
-                        {isEditingJson ? (
-                            <button onClick={applyJson} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
-                                Применить код
+                        <div className="flex flex-col gap-2 shrink-0 items-end">
+                            <button onClick={() => window.open(window.location.pathname + '?view=json', '_blank')} className="text-indigo-400 hover:text-indigo-300 text-xs font-semibold flex items-center gap-1 transition bg-indigo-900/30 px-2 py-1 rounded">
+                                <Icon name="ExternalLink" size={12}/> В новом окне
                             </button>
-                        ) : (
-                            <button onClick={() => setIsEditingJson(true)} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
-                                Изменить вручную
-                            </button>
-                        )}
+                            {isEditingJson ? (
+                                <button onClick={applyJson} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm transition">Применить</button>
+                            ) : (
+                                <button onClick={() => setIsEditingJson(true)} className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition">Изменить</button>
+                            )}
+                        </div>
                     </div>
                     {jsonError && <div className="bg-red-900/50 text-red-400 p-3 rounded-lg text-sm font-medium mb-4 border border-red-800/50 shrink-0">{jsonError}</div>}
                     
                     <div className={`json-editor-container rounded-xl overflow-hidden border ${isEditingJson ? 'border-indigo-500' : 'border-slate-800'}`}>
-                        {/* Текстовое поле доступно всегда, но readOnly если не режим редактирования */}
-                        <textarea 
-                            className="json-textarea dark-scroll" spellCheck="false"
-                            value={rawJson} 
-                            onChange={(e) => { setRawJson(e.target.value); if(!isEditingJson) setIsEditingJson(true); }} 
-                            onScroll={handleJsonScroll}
-                            readOnly={!isEditingJson}
-                        />
-                        <pre className="json-pre dark-scroll" ref={preRef} aria-hidden="true">
-                            <code dangerouslySetInnerHTML={{ __html: highlightJson(rawJson) }} />
-                        </pre>
+                        <textarea className="json-textarea dark-scroll" spellCheck="false" value={rawJson} onChange={(e) => { setRawJson(e.target.value); if(!isEditingJson) setIsEditingJson(true); }} onScroll={(e) => { if (preRef.current) { preRef.current.scrollTop = e.target.scrollTop; preRef.current.scrollLeft = e.target.scrollLeft; } }} readOnly={!isEditingJson} />
+                        <pre className="json-pre dark-scroll" ref={preRef} aria-hidden="true"><code dangerouslySetInnerHTML={{ __html: highlightJson(rawJson) }} /></pre>
                     </div>
                 </div>
             );
@@ -557,21 +587,15 @@
                     {/* САЙДБАР */}
                     <div className={`fixed inset-y-0 left-0 z-30 w-80 bg-slate-900 text-slate-300 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                         <div className="p-4 bg-slate-950 flex justify-between items-center border-b border-slate-800 shrink-0">
-                            <h1 className="text-white font-bold flex items-center gap-2">
-                                <Icon name="Dumbbell" size={18} /> CMS Тренировок
-                            </h1>
+                            <h1 className="text-white font-bold flex items-center gap-2"><Icon name="Dumbbell" size={18} /> CMS Тренировок</h1>
                             <div className="flex gap-1">
                                 <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-white transition p-2"><Icon name="Settings" size={18} /></button>
                                 <button onClick={() => setSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white transition p-2"><Icon name="X" size={20} /></button>
                             </div>
                         </div>
                         <div className="p-4 flex gap-2 shrink-0">
-                            <button onClick={() => { const newProg = createEmptyProgram(); setPrograms([...programs, newProg]); setActiveId(newProg.id); if(window.innerWidth < 768) setSidebarOpen(false); }} className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition text-sm font-semibold shadow-sm">
-                                <Icon name="Plus" size={16} /> Создать
-                            </button>
-                            <button onClick={fetchListFromGitHub} disabled={syncStatus.loadingList} className="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 px-3 rounded-lg flex items-center justify-center transition disabled:opacity-50">
-                                <Icon name="RefreshCw" size={16} className={syncStatus.loadingList ? "spinner" : ""} />
-                            </button>
+                            <button onClick={() => { const newProg = createEmptyProgram(); setPrograms([...programs, newProg]); setActiveId(newProg.id); if(window.innerWidth < 768) setSidebarOpen(false); }} className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 transition text-sm font-semibold shadow-sm"><Icon name="Plus" size={16} /> Создать</button>
+                            <button onClick={fetchListFromGitHub} disabled={syncStatus.loadingList} className="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 px-3 rounded-lg flex items-center justify-center transition disabled:opacity-50"><Icon name="RefreshCw" size={16} className={syncStatus.loadingList ? "spinner" : ""} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-2 space-y-1 dark-scroll">
                             {programs.map(p => (
@@ -586,7 +610,7 @@
                         </div>
                     </div>
 
-                    {/* РАБОЧАЯ ОБЛАСТЬ (с разделением на ПК) */}
+                    {/* РАБОЧАЯ ОБЛАСТЬ */}
                     <div className="flex-1 flex flex-col min-w-0 relative">
                         {activeProgram ? (
                             <>
@@ -599,7 +623,6 @@
                                             <span className="text-xs text-slate-400 truncate">{activeProgram.filename}</span>
                                         </div>
                                     </div>
-                                    
                                     <div className="flex items-center gap-2 md:gap-3 shrink-0">
                                         {syncStatus.error && <span className="text-red-500 text-xs md:text-sm font-medium hidden md:inline">{syncStatus.error}</span>}
                                         {syncStatus.successMessage && <span className="text-emerald-500 text-xs md:text-sm font-medium flex items-center gap-1 hidden sm:flex"><Icon name="CheckCircle" size={16} /> {syncStatus.successMessage}</span>}
@@ -612,7 +635,6 @@
                                             {syncStatus.saving ? <Icon name="Loader2" className="spinner" size={18} /> : <Icon name="Github" size={18} />}
                                             <span className="hidden sm:inline">{syncStatus.saving ? 'Сохранение...' : 'Сохранить'}</span>
                                         </button>
-                                        
                                         <button onClick={deleteFromGitHub} disabled={syncStatus.deleting || syncStatus.loadingProgram} title="Удалить программу" className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition disabled:opacity-50">
                                             {syncStatus.deleting ? <Icon name="Loader2" className="spinner" size={20} /> : <Icon name="Trash2" size={20} />}
                                         </button>
@@ -627,13 +649,21 @@
                                 ) : (
                                     <div className="flex-1 flex overflow-hidden">
                                         
-                                        {/* ВИЗУАЛЬНЫЙ РЕДАКТОР (Слева на ПК, на весь экран на мобилке если не json) */}
+                                        {/* ВИЗУАЛЬНЫЙ РЕДАКТОР */}
                                         <div className={`flex-1 overflow-y-auto p-4 md:p-6 ${mobileJsonMode ? 'hidden lg:block' : 'block'}`}>
                                             <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
                                                 
-                                                {/* Метаданные программы */}
+                                                {/* Метаданные и СТАТИСТИКА ПРОГРАММЫ */}
                                                 <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                                                     <input type="text" value={activeProgram.title} onChange={e => updateActiveProgram({title: e.target.value})} className="w-full p-2 border-b-2 border-transparent hover:border-slate-200 focus:border-indigo-500 outline-none font-bold text-xl md:text-2xl transition-colors" placeholder="Название программы"/>
+                                                    
+                                                    {/* ПЛАШКА СТАТИСТИКИ */}
+                                                    <div className="flex flex-wrap items-center gap-4 py-3 border-y border-slate-100 text-sm text-slate-600 font-medium">
+                                                        <div className="flex items-center gap-1.5"><Icon name="Clock" size={16} className="text-blue-500"/>Общее время: {formatTime(progStats.time)}</div>
+                                                        <div className="flex items-center gap-1.5"><Icon name="Activity" size={16} className="text-emerald-500"/>Рабочих подходов: {progStats.workSets}</div>
+                                                        <div className="flex items-center gap-1.5"><Icon name="ListChecks" size={16} className="text-indigo-500"/>Блоков: {progStats.blocks}</div>
+                                                    </div>
+
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>
                                                             <label className="block text-xs font-bold text-slate-500 mb-1">Имя файла (для GitHub)</label>
@@ -651,102 +681,137 @@
 
                                                 {/* Блоки упражнений */}
                                                 <div className="space-y-4">
-                                                    <h3 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2 px-2">
-                                                        <Icon name="ListChecks" size={20} className="text-indigo-500"/> Блоки и Упражнения
-                                                    </h3>
+                                                    <div className="flex justify-between items-center px-2">
+                                                        <h3 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                                                            <Icon name="ListChecks" size={20} className="text-indigo-500"/> Блоки и Упражнения
+                                                        </h3>
+                                                        <button onClick={toggleAllCollapse} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition flex items-center gap-1">
+                                                            <Icon name="UnfoldVertical" size={16}/> Свернуть/Развернуть
+                                                        </button>
+                                                    </div>
                                                     
-                                                    {activeProgram.exercises && activeProgram.exercises.map((ex, idx) => (
-                                                        <div key={ex.id} className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm relative group transition-colors focus-within:border-indigo-300 hover:border-indigo-200">
+                                                    {activeProgram.exercises && activeProgram.exercises.map((ex, idx) => {
+                                                        const isCollapsed = collapsedBlocks[ex.id];
+                                                        const exStats = calcExStats(ex);
+                                                        
+                                                        return (
+                                                        <div key={ex.id} 
+                                                             draggable={dragEnabledExId === ex.id} 
+                                                             onDragStart={(e) => handleExDragStart(e, idx)} 
+                                                             onDragEnter={(e) => handleExDragEnter(e, idx)} 
+                                                             onDragEnd={handleExDragEnd} 
+                                                             onDragOver={(e) => e.preventDefault()}
+                                                             className={`bg-white p-4 md:p-5 rounded-2xl border ${draggingExIdx === idx ? 'opacity-50 border-dashed border-indigo-500' : 'border-slate-200'} shadow-sm relative group transition-colors focus-within:border-indigo-300 hover:border-indigo-200`}>
                                                             
                                                             {/* Шапка блока */}
-                                                            <div className="flex justify-between items-start mb-2 gap-2">
+                                                            <div className="flex justify-between items-start gap-2">
                                                                 <div className="flex-1 flex gap-3 items-center">
+                                                                    <div className="drag-handle text-slate-300 hover:text-indigo-500 p-1 -ml-2" 
+                                                                         onPointerDown={() => setDragEnabledExId(ex.id)}
+                                                                         onPointerUp={() => setDragEnabledExId(null)}
+                                                                         onPointerLeave={() => setDragEnabledExId(null)}
+                                                                         title="Перетащите, чтобы поменять местами"><Icon name="GripVertical" size={20}/></div>
                                                                     <div className="bg-slate-100 text-slate-400 font-bold w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0">{idx + 1}</div>
-                                                                    <input type="text" value={ex.name} onChange={e => updateExerciseName(ex.id, e.target.value)} placeholder="Название блока/упражнения" className="w-full text-lg md:text-xl font-bold bg-transparent outline-none placeholder-slate-300"/>
+                                                                    <div className="w-full">
+                                                                        <input type="text" value={ex.name} onChange={e => updateExerciseName(ex.id, e.target.value)} placeholder="Название блока/упражнения" className="w-full text-lg md:text-xl font-bold bg-transparent outline-none placeholder-slate-300"/>
+                                                                        {/* Статистика блока */}
+                                                                        <div className="flex gap-3 text-xs text-slate-500 mt-1 font-medium">
+                                                                            <span className="flex items-center gap-1"><Icon name="Clock" size={12}/> {formatTime(exStats.time)}</span>
+                                                                            <span className="flex items-center gap-1"><Icon name="Activity" size={12}/> {exStats.workSets} подходов</span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex flex-col sm:flex-row gap-1 shrink-0 mt-1">
-                                                                    <button onClick={() => moveExercise(idx, 'up')} disabled={idx === 0} className="p-1 text-slate-400 hover:bg-slate-100 rounded disabled:opacity-30"><Icon name="ChevronUp" size={18} /></button>
-                                                                    <button onClick={() => moveExercise(idx, 'down')} disabled={idx === activeProgram.exercises.length - 1} className="p-1 text-slate-400 hover:bg-slate-100 rounded disabled:opacity-30"><Icon name="ChevronDown" size={18} /></button>
-                                                                    <button onClick={() => removeExercise(ex.id)} className="text-red-400 hover:bg-red-50 p-1 rounded transition ml-1"><Icon name="X" size={18} /></button>
+                                                                <div className="flex flex-col sm:flex-row gap-1 shrink-0 mt-1 items-center">
+                                                                    <button onClick={() => toggleCollapse(ex.id)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded transition" title={isCollapsed ? "Развернуть" : "Свернуть"}>
+                                                                        <Icon name={isCollapsed ? "EyeOff" : "Eye"} size={18} />
+                                                                    </button>
+                                                                    {!isCollapsed && (
+                                                                        <>
+                                                                            <div className="hidden sm:flex border-l border-slate-200 h-6 mx-1"></div>
+                                                                            <button onClick={() => moveExercise(idx, 'up')} disabled={idx === 0} className="p-1 text-slate-400 hover:bg-slate-100 rounded disabled:opacity-30 hidden sm:block"><Icon name="ChevronUp" size={18} /></button>
+                                                                            <button onClick={() => moveExercise(idx, 'down')} disabled={idx === activeProgram.exercises.length - 1} className="p-1 text-slate-400 hover:bg-slate-100 rounded disabled:opacity-30 hidden sm:block"><Icon name="ChevronDown" size={18} /></button>
+                                                                            <button onClick={() => removeExercise(ex.id)} className="text-red-400 hover:bg-red-50 p-1.5 rounded transition ml-1"><Icon name="Trash2" size={18} /></button>
+                                                                        </>
+                                                                    )}
                                                                 </div>
                                                             </div>
 
-                                                            {/* Доп детали (кнопка раскрытия) */}
-                                                            <button onClick={() => toggleDetails(ex.id)} className="text-xs text-indigo-500 font-semibold mb-3 flex items-center gap-1 hover:text-indigo-600 transition pl-11">
-                                                                <Icon name={expandedDetails[ex.id] ? "ChevronUp" : "ChevronDown"} size={14}/> 
-                                                                {expandedDetails[ex.id] ? "Скрыть детали" : "Детали упражнения (Цель, позиция...)"}
-                                                            </button>
+                                                            {!isCollapsed && (
+                                                                <div className="mt-4 border-t border-slate-100 pt-4">
+                                                                    <button onClick={() => toggleDetails(ex.id)} className="text-xs text-indigo-500 font-semibold mb-3 flex items-center gap-1 hover:text-indigo-600 transition pl-8">
+                                                                        <Icon name={expandedDetails[ex.id] ? "ChevronUp" : "ChevronDown"} size={14}/> 
+                                                                        {expandedDetails[ex.id] ? "Скрыть детали" : "Детали упражнения (Цель, позиция...)"}
+                                                                    </button>
 
-                                                            {expandedDetails[ex.id] && (
-                                                                <div className="pl-11 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                                    <div>
-                                                                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Цель</label>
-                                                                        <input type="text" value={ex.details?.goal} onChange={e=>updateExerciseDetails(ex.id, 'goal', e.target.value)} className="w-full p-2 text-xs border border-slate-200 rounded bg-slate-50 outline-none focus:border-indigo-500" placeholder="..."/>
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Старт. позиция</label>
-                                                                        <input type="text" value={ex.details?.start} onChange={e=>updateExerciseDetails(ex.id, 'start', e.target.value)} className="w-full p-2 text-xs border border-slate-200 rounded bg-slate-50 outline-none focus:border-indigo-500" placeholder="..."/>
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Движение</label>
-                                                                        <input type="text" value={ex.details?.move} onChange={e=>updateExerciseDetails(ex.id, 'move', e.target.value)} className="w-full p-2 text-xs border border-slate-200 rounded bg-slate-50 outline-none focus:border-indigo-500" placeholder="..."/>
+                                                                    {expandedDetails[ex.id] && (
+                                                                        <div className="pl-8 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                                            <div><label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Цель</label><input type="text" value={ex.details?.goal} onChange={e=>updateExerciseDetails(ex.id, 'goal', e.target.value)} className="w-full p-2 text-xs border border-slate-200 rounded bg-slate-50 outline-none focus:border-indigo-500" placeholder="..."/></div>
+                                                                            <div><label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Старт. позиция</label><input type="text" value={ex.details?.start} onChange={e=>updateExerciseDetails(ex.id, 'start', e.target.value)} className="w-full p-2 text-xs border border-slate-200 rounded bg-slate-50 outline-none focus:border-indigo-500" placeholder="..."/></div>
+                                                                            <div><label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Движение</label><input type="text" value={ex.details?.move} onChange={e=>updateExerciseDetails(ex.id, 'move', e.target.value)} className="w-full p-2 text-xs border border-slate-200 rounded bg-slate-50 outline-none focus:border-indigo-500" placeholder="..."/></div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="pl-0 sm:pl-8 space-y-2 mt-2">
+                                                                        {(ex.steps || []).map((step, sIdx) => (
+                                                                            <div key={step.id} 
+                                                                                 draggable={dragEnabledStepId === step.id} 
+                                                                                 onDragStart={(e) => handleStepDragStart(e, ex.id, sIdx)} 
+                                                                                 onDragEnter={(e) => handleStepDragEnter(e, ex.id, sIdx)} 
+                                                                                 onDragEnd={() => handleStepDragEnd(ex.id)} 
+                                                                                 onDragOver={(e) => e.preventDefault()}
+                                                                                 className={`flex flex-wrap items-center gap-2 p-2 bg-slate-50 border ${draggingStepIdx?.exId === ex.id && draggingStepIdx?.sIdx === sIdx ? 'opacity-50 border-dashed border-indigo-500' : 'border-slate-100'} rounded-lg group/step`}>
+                                                                                
+                                                                                <div className="drag-handle text-slate-300 hover:text-indigo-500 p-1 opacity-50 group-hover/step:opacity-100"
+                                                                                     onPointerDown={() => setDragEnabledStepId(step.id)}
+                                                                                     onPointerUp={() => setDragEnabledStepId(null)}
+                                                                                     onPointerLeave={() => setDragEnabledStepId(null)}>
+                                                                                    <Icon name="GripVertical" size={16}/>
+                                                                                </div>
+                                                                                
+                                                                                <select value={step.type} onChange={e=>updateStep(ex.id, step.id, 'type', e.target.value)} className="text-xs p-1.5 border border-slate-200 rounded bg-white outline-none focus:border-indigo-500 font-medium">
+                                                                                    <option value="prep">Подготовка</option>
+                                                                                    <option value="work">Работа (Подход)</option>
+                                                                                    <option value="rest">Отдых</option>
+                                                                                    <option value="finish">Финиш</option>
+                                                                                </select>
+                                                                                
+                                                                                <input type="text" value={step.phase} onChange={e=>updateStep(ex.id, step.id, 'phase', e.target.value)} placeholder="Напр: Подход 1" className="w-24 text-xs p-1.5 border border-slate-200 rounded outline-none focus:border-indigo-500"/>
+                                                                                
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <Icon name="Timer" size={14} className="text-slate-400"/>
+                                                                                    <input type="number" min="0" value={step.time} onChange={e=>updateStep(ex.id, step.id, 'time', e.target.value)} className="w-14 text-xs p-1.5 border border-slate-200 rounded outline-none focus:border-indigo-500 text-center"/>
+                                                                                    <span className="text-xs text-slate-400">сек</span>
+                                                                                </div>
+                                                                                
+                                                                                <div className="flex items-center gap-1 flex-1 min-w-[150px]">
+                                                                                    <Icon name="Volume2" size={14} className="text-slate-400"/>
+                                                                                    <input type="text" value={step.voiceTxt} onChange={e=>updateStep(ex.id, step.id, 'voiceTxt', e.target.value)} placeholder="Голос озвучки..." className="w-full text-xs p-1.5 border border-slate-200 rounded outline-none focus:border-indigo-500 text-indigo-700"/>
+                                                                                </div>
+
+                                                                                <button onClick={()=>removeStep(ex.id, step.id)} className="text-slate-300 hover:text-red-500 p-1 transition ml-auto"><Icon name="X" size={16}/></button>
+                                                                            </div>
+                                                                        ))}
+
+                                                                        <div className="flex flex-wrap items-center gap-2 mt-3 pl-7">
+                                                                            <button onClick={()=>addStep(ex.id, 'prep')} className="text-[11px] uppercase font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded transition">+ Разминка</button>
+                                                                            <button onClick={()=>addStep(ex.id, 'work')} className="text-[11px] uppercase font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition">+ Подход</button>
+                                                                            <button onClick={()=>addStep(ex.id, 'rest')} className="text-[11px] uppercase font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition">+ Отдых</button>
+                                                                        </div>
+                                                                        <div className="pl-7"><StepGenerator exId={ex.id} /></div>
                                                                     </div>
                                                                 </div>
                                                             )}
-
-                                                            {/* Таймлайн шагов */}
-                                                            <div className="pl-2 sm:pl-11 space-y-2 mt-2">
-                                                                {(ex.steps || []).map((step, sIdx) => (
-                                                                    <div key={step.id} className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-lg group/step">
-                                                                        <div className="flex flex-col sm:flex-row gap-1 opacity-20 group-hover/step:opacity-100 transition-opacity">
-                                                                            <button onClick={()=>moveStep(ex.id, sIdx, 'up')} disabled={sIdx===0} className="p-0.5 text-slate-500 hover:bg-slate-200 rounded disabled:invisible"><Icon name="ChevronUp" size={14}/></button>
-                                                                            <button onClick={()=>moveStep(ex.id, sIdx, 'down')} disabled={sIdx===(ex.steps.length-1)} className="p-0.5 text-slate-500 hover:bg-slate-200 rounded disabled:invisible"><Icon name="ChevronDown" size={14}/></button>
-                                                                        </div>
-                                                                        
-                                                                        <select value={step.type} onChange={e=>updateStep(ex.id, step.id, 'type', e.target.value)} className="text-xs p-1.5 border border-slate-200 rounded bg-white outline-none focus:border-indigo-500 font-medium">
-                                                                            <option value="prep">Подготовка</option>
-                                                                            <option value="work">Работа (Подход)</option>
-                                                                            <option value="rest">Отдых</option>
-                                                                            <option value="finish">Финиш</option>
-                                                                        </select>
-                                                                        
-                                                                        <input type="text" value={step.phase} onChange={e=>updateStep(ex.id, step.id, 'phase', e.target.value)} placeholder="Напр: Подход 1" className="w-24 text-xs p-1.5 border border-slate-200 rounded outline-none focus:border-indigo-500"/>
-                                                                        
-                                                                        <div className="flex items-center gap-1">
-                                                                            <Icon name="Timer" size={14} className="text-slate-400"/>
-                                                                            <input type="number" min="0" value={step.time} onChange={e=>updateStep(ex.id, step.id, 'time', e.target.value)} className="w-14 text-xs p-1.5 border border-slate-200 rounded outline-none focus:border-indigo-500 text-center"/>
-                                                                            <span className="text-xs text-slate-400">сек</span>
-                                                                        </div>
-                                                                        
-                                                                        <div className="flex items-center gap-1 flex-1 min-w-[150px]">
-                                                                            <Icon name="Volume2" size={14} className="text-slate-400"/>
-                                                                            <input type="text" value={step.voiceTxt} onChange={e=>updateStep(ex.id, step.id, 'voiceTxt', e.target.value)} placeholder="Голос озвучки..." className="w-full text-xs p-1.5 border border-slate-200 rounded outline-none focus:border-indigo-500 text-indigo-700"/>
-                                                                        </div>
-
-                                                                        <button onClick={()=>removeStep(ex.id, step.id)} className="text-slate-300 hover:text-red-500 p-1 transition ml-auto"><Icon name="Trash" size={16}/></button>
-                                                                    </div>
-                                                                ))}
-
-                                                                <div className="flex flex-wrap items-center gap-2 mt-3">
-                                                                    <button onClick={()=>addStep(ex.id, 'prep')} className="text-[11px] uppercase font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded transition">+ Разминка</button>
-                                                                    <button onClick={()=>addStep(ex.id, 'work')} className="text-[11px] uppercase font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition">+ Подход</button>
-                                                                    <button onClick={()=>addStep(ex.id, 'rest')} className="text-[11px] uppercase font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition">+ Отдых</button>
-                                                                </div>
-
-                                                                {/* Быстрая генерация */}
-                                                                <StepGenerator exId={ex.id} />
-                                                            </div>
                                                         </div>
-                                                    ))}
+                                                    )})}
 
                                                     <button onClick={addExercise} className="w-full py-4 border-2 border-dashed border-slate-300 text-slate-500 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex justify-center items-center gap-2 font-bold text-sm md:text-base">
-                                                        <Icon name="Plus" size={20} /> Добавить блок упражнения
+                                                        <Icon name="Plus" size={20} /> Добавить новый блок
                                                     </button>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* ЖИВОЙ ПРОСМОТР JSON (Справа на ПК, скрыт на мобилке если не выбран jsonMode) */}
+                                        {/* ЖИВОЙ ПРОСМОТР JSON */}
                                         <div className={`lg:flex lg:w-[400px] xl:w-[500px] border-l border-slate-300 z-10 ${mobileJsonMode ? 'flex w-full' : 'hidden'}`}>
                                             <LiveJsonPanel />
                                         </div>
@@ -755,56 +820,31 @@
                             </>
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4">
-                                <div className="md:hidden mb-6 text-indigo-500">
-                                    <button onClick={() => setSidebarOpen(true)} className="flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-md font-bold text-slate-700">
-                                        <Icon name="Menu" size={20}/> Открыть список программ
-                                    </button>
-                                </div>
-                                <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-200 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-inner text-slate-300">
-                                    <Icon name="FileJson" size={40} />
-                                </div>
+                                <div className="md:hidden mb-6 text-indigo-500"><button onClick={() => setSidebarOpen(true)} className="flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-md font-bold text-slate-700"><Icon name="Menu" size={20}/> Открыть список программ</button></div>
+                                <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-200 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-inner text-slate-300"><Icon name="FileJson" size={40} /></div>
                                 <p className="text-lg md:text-xl font-bold text-slate-600 text-center">Выберите или скачайте программу</p>
-                                <p className="text-xs md:text-sm mt-2 max-w-sm text-center">Используйте меню для загрузки списка из GitHub, либо создайте новую.</p>
                             </div>
                         )}
                     </div>
 
-                    {/* МОДАЛЬНОЕ ОКНО НАСТРОЕК */}
+                    {/* НАСТРОЙКИ */}
                     {showSettings && (
                         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-full">
                                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
-                                    <h3 className="font-bold flex items-center gap-2 text-sm md:text-base"><Icon name="Github" size={18}/> Настройки синхронизации</h3>
+                                    <h3 className="font-bold flex items-center gap-2 text-sm md:text-base"><Icon name="Github" size={18}/> Настройки</h3>
                                     <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-700"><Icon name="X" size={20}/></button>
                                 </div>
                                 <div className="p-4 md:p-6 space-y-4 overflow-y-auto dark-scroll">
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1">Owner (Владелец репозитория)</label>
-                                        <input type="text" value={ghConfig.owner} onChange={e => setGhConfig({...ghConfig, owner: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-mono text-sm" placeholder="Напр: kutya001"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1">Repo (Название репозитория)</label>
-                                        <input type="text" value={ghConfig.repo} onChange={e => setGhConfig({...ghConfig, repo: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-mono text-sm" placeholder="Напр: mcgill"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1">Personal Access Token (PAT)</label>
-                                        <input type="password" value={ghConfig.token} onChange={e => setGhConfig({...ghConfig, token: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-mono text-sm" placeholder="ghp_xxxxxxxxxxxxxxxxx"/>
-                                        <p className="text-[10px] md:text-xs text-slate-400 mt-1">Токен должен иметь права "repo" (Read and write). Сохраняется только в вашем браузере.</p>
-                                    </div>
+                                    <div><label className="block text-xs font-bold text-slate-500 mb-1">Owner</label><input type="text" value={ghConfig.owner} onChange={e => setGhConfig({...ghConfig, owner: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-mono text-sm"/></div>
+                                    <div><label className="block text-xs font-bold text-slate-500 mb-1">Repo</label><input type="text" value={ghConfig.repo} onChange={e => setGhConfig({...ghConfig, repo: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-mono text-sm"/></div>
+                                    <div><label className="block text-xs font-bold text-slate-500 mb-1">Token (PAT)</label><input type="password" value={ghConfig.token} onChange={e => setGhConfig({...ghConfig, token: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 font-mono text-sm"/></div>
                                     
                                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
-                                        <button onClick={testConnection} disabled={testStatus.loading} className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2 disabled:opacity-50">
-                                            {testStatus.loading ? <Icon name="Loader2" size={16} className="spinner" /> : <Icon name="Wifi" size={16} />}
-                                            Проверить соединение
-                                        </button>
-                                        {testStatus.message && (
-                                            <p className={`text-xs mt-2 text-center font-medium ${testStatus.isError ? 'text-red-500' : 'text-emerald-600'}`}>{testStatus.message}</p>
-                                        )}
+                                        <button onClick={testConnection} disabled={testStatus.loading} className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2"><Icon name="Wifi" size={16}/> Проверить соединение</button>
+                                        {testStatus.message && <p className={`text-xs mt-2 text-center font-medium ${testStatus.isError ? 'text-red-500' : 'text-emerald-600'}`}>{testStatus.message}</p>}
                                     </div>
-
-                                    <button onClick={() => { localStorage.setItem('gh_config', JSON.stringify(ghConfig)); setShowSettings(false); }} className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold transition mt-4 text-sm md:text-base">
-                                        Сохранить и закрыть
-                                    </button>
+                                    <button onClick={() => { localStorage.setItem('gh_config', JSON.stringify(ghConfig)); setShowSettings(false); }} className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold transition mt-4 text-sm md:text-base">Сохранить</button>
                                 </div>
                             </div>
                         </div>
@@ -815,6 +855,7 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+        }
     </script>
 </body>
 </html>
