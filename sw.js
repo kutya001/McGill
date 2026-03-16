@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mcgill-trainer-v4';
+const CACHE_NAME = 'mcgill-trainer-v5';
 const STATIC_ASSETS = [
     '/McGill/',
     '/McGill/index.html',
@@ -25,29 +25,52 @@ self.addEventListener('activate', (event) => {
     );
 });
 
+// Слушаем сообщение SKIP_WAITING для принудительной активации
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 self.addEventListener('fetch', (event) => {
     const url = event.request.url;
 
-    // index.json (workouts + games) — Network First
+    // index.json (workouts + games) — Network First, кэшируем и попутно prefetch файлов
     if (url.includes('workouts/index.json') || url.includes('games/index.json')) {
         event.respondWith(
             fetch(event.request)
-                .then(response => {
+                .then(async response => {
+                    // Клонируем ДО любого чтения body
                     const toCache = response.clone();
-                    caches.open(CACHE_NAME).then(async cache => {
-                        cache.put(event.request, toCache.clone());
+                    const toRead  = response.clone();
+
+                    // Кэшируем индекс
+                    const cache = await caches.open(CACHE_NAME);
+                    cache.put(event.request, toCache);
+
+                    // Prefetch дочерних файлов (только workouts/index.json)
+                    if (url.includes('workouts/index.json')) {
                         try {
-                            const data = await toCache.json();
+                            const data = await toRead.json();
                             const base = url.replace('index.json', '');
-                            const files = Array.isArray(data) ? data : [];
-                            files.forEach(entry => {
-                                const fileUrl = base + (typeof entry === 'string' ? entry : entry.file);
+                            // Нормализуем: строки и объекты {file:"..."}
+                            const files = Array.isArray(data)
+                                ? data.map(e => typeof e === 'string' ? e : e?.file).filter(Boolean)
+                                : [];
+                            const uniqueFiles = [...new Set(files)];
+                            uniqueFiles.forEach(f => {
+                                const fileUrl = base + f;
                                 cache.match(fileUrl).then(cached => {
-                                    if (!cached) fetch(fileUrl).then(r => { if(r.ok) cache.put(fileUrl, r); }).catch(()=>{});
+                                    if (!cached) {
+                                        fetch(fileUrl)
+                                            .then(r => { if (r.ok) cache.put(fileUrl, r); })
+                                            .catch(() => {});
+                                    }
                                 });
                             });
                         } catch(e) {}
-                    });
+                    }
+
                     return response;
                 })
                 .catch(() => caches.match(event.request))
@@ -55,7 +78,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Workouts JSON + Games HTML — Stale-While-Revalidate
+    // Workouts JSON + Games HTML/JSON — Stale-While-Revalidate
     if ((url.includes('/workouts/') && url.endsWith('.json')) ||
         (url.includes('/games/') && (url.endsWith('.html') || url.endsWith('.json')))) {
         event.respondWith(
