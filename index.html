@@ -178,8 +178,8 @@
         .tab-btn:hover:not(.active) { color: var(--text-2); background: var(--surface-2); }
 
         /* Контент табов */
-        .tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-        .tab-content.active { display: flex; }
+        .tab-pane { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+        .tab-pane.active { display: flex; }
 
         /* ══════════════════════════════════════════════
            MAIN (таб тренировки)
@@ -187,9 +187,14 @@
         #tab-workout {
             overflow-y: auto;
             overflow-x: hidden;
+        }
+        .workout-main {
+            display: flex;
+            flex-direction: column;
             align-items: center;
             padding: 16px 16px 20px;
             gap: 12px;
+            min-height: 100%;
         }
 
         /* ══════════════════════════════════════════════
@@ -530,21 +535,19 @@
             #left-panel { display: none; }
             #btn-menu { display: flex; }
 
-            .app-body { flex-direction: column-reverse; }
+            #center-panel { flex-direction: column; }
 
-            #center-panel { flex-direction: column-reverse; }
-
+            /* Таб-бар всегда снизу */
             .tab-bar {
+                order: 10;
                 border-top: 1px solid var(--border);
                 border-bottom: none;
                 flex-shrink: 0;
                 padding-bottom: env(safe-area-inset-bottom, 0);
             }
-            .tab-btn { font-size: 0.6rem; }
 
-            /* Табы скрывают при запущенной тренировке */
-            body.timer-active .tab-bar { display: none; }
-            body.timer-active .tab-btn-workout { display: flex; }
+            /* Пейны занимают всё пространство */
+            .tab-pane { order: 1; }
         }
 
         /* Десктоп (≥ 768px): левая панель видна, нет мобильного меню и нижних табов */
@@ -555,59 +558,29 @@
 
             #left-panel { display: flex; }
 
-            /* Убираем нижние табы — навигация через левую панель */
+            /* Убираем нижние табы */
             .tab-bar { display: none; }
 
-            /* Тренировочный таб всегда виден */
-            #tab-workout { display: flex; }
-            #tab-games { display: flex; }
-            #tab-settings { display: flex; }
-            #tab-more { display: flex; }
+            /* Оба таба видны рядом */
+            #tab-workout,
+            #tab-games { display: flex !important; }
 
-            /* Две колонки: тренировка + правая */
-            #center-panel {
-                flex-direction: row;
-            }
-            #workout-col {
+            /* Горизонтальное расположение */
+            #center-panel { flex-direction: row; }
+
+            /* Тренировка — фиксированная ширина */
+            #tab-workout {
                 flex: 0 0 400px;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
                 border-right: 1px solid var(--border);
             }
-            #right-col {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-            }
-            #right-col .tab-content { display: flex; }
-            #right-col .tab-content.hidden-desktop { display: none; }
 
-            /* Вкладки внутри правой колонки */
-            .desktop-right-tabs {
-                display: flex;
-                flex-shrink: 0;
-                background: var(--surface);
-                border-bottom: 1px solid var(--border);
-            }
-            .desktop-tab-btn {
-                padding: 10px 16px;
-                cursor: pointer; border: none; background: transparent;
-                color: var(--text-3); font-family: 'Manrope', sans-serif;
-                font-size: 0.8rem; font-weight: 700;
-                transition: color 0.15s; position: relative;
-                display: flex; align-items: center; gap: 6px;
-            }
-            .desktop-tab-btn svg { width: 14px; height: 14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-            .desktop-tab-btn.active { color: var(--c-prep); }
-            .desktop-tab-btn.active::after { content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:32px; height:2px; background:var(--c-prep); border-radius:2px 2px 0 0; }
-            .desktop-tab-btn:hover:not(.active) { color: var(--text-2); }
+            /* Игры — остаток */
+            #tab-games { flex: 1; }
         }
 
-        /* Очень широкий — три колонки */
+        /* Очень широкий — тренировка шире */
         @media (min-width: 1100px) {
-            #workout-col { flex: 0 0 440px; }
+            #tab-workout { flex: 0 0 440px; }
         }
 
         ::-webkit-scrollbar { width: 4px; }
@@ -740,10 +713,9 @@
             </button>
         </nav>
 
-        <!-- МОБИЛЬ: обёртка с табами -->
-        <!-- ДЕСКТОП: две колонки через CSS -->
-        <div id="workout-col" class="tab-content active" id-tab="tab-workout">
-            <main id="tab-workout" role="main" class="tab-content active">
+        <!-- ТАБ ТРЕНИРОВКИ -->
+        <div id="tab-workout" class="tab-pane active" role="main">
+            <main class="workout-main">
                 <div class="timer-wrap" id="timer-wrap" role="timer" aria-label="Таймер" aria-live="polite">
                     <svg class="ring-svg" viewBox="0 0 190 190">
                         <circle class="ring-bg" cx="95" cy="95" r="85"/>
@@ -772,24 +744,13 @@
             </main>
         </div>
 
-        <!-- Правая колонка (десктоп) / просто таб (мобиль) -->
-        <div id="right-col">
-            <!-- Вкладки правой колонки (только десктоп) -->
-            <div class="desktop-right-tabs" id="desktop-right-tabs">
-                <button class="desktop-tab-btn active" data-dtab="tab-games">
-                    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="17" cy="13" r="1" fill="currentColor" stroke="none"/></svg>
-                    Игры
-                </button>
+        <!-- ТАБ ИГР -->
+        <div id="tab-games" class="tab-pane" role="tabpanel">
+            <div class="games-search-bar">
+                <input type="search" class="games-search-input" id="games-search" placeholder="Поиск игры…" autocomplete="off">
             </div>
-
-            <!-- ТАБ ИГР -->
-            <div id="tab-games" class="tab-content" role="tabpanel">
-                <div class="games-search-bar">
-                    <input type="search" class="games-search-input" id="games-search" placeholder="Поиск игры…" autocomplete="off">
-                </div>
-                <div class="games-scroll" id="games-scroll">
-                    <div style="color:var(--text-3);font-size:0.82rem;padding:20px 4px">Загрузка игр…</div>
-                </div>
+            <div class="games-scroll" id="games-scroll">
+                <div style="color:var(--text-3);font-size:0.82rem;padding:20px 4px">Загрузка игр…</div>
             </div>
         </div>
 
@@ -1574,30 +1535,16 @@ $('btn-game-back').addEventListener('click', closeGame);
 //  НАВИГАЦИЯ — ТАБЫ (МОБИЛЬ)
 // ═══════════════════════════════════════════════════════════════════
 function switchTab(tabId) {
-    // Мобильные нижние табы
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabId);
     });
-    // Контент
-    document.querySelectorAll('.tab-content').forEach(tc => {
-        tc.classList.toggle('active', tc.id === tabId);
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.id === tabId);
     });
 }
 
 document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-});
-
-// Десктопные вкладки правой колонки
-document.querySelectorAll('.desktop-tab-btn[data-dtab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.desktop-tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        // Показываем нужный таб в правой колонке
-        document.querySelectorAll('#right-col .tab-content').forEach(tc => {
-            tc.classList.toggle('active', tc.id === btn.dataset.dtab);
-        });
-    });
 });
 
 // ═══════════════════════════════════════════════════════════════════
