@@ -3,45 +3,169 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Крестики-нолики</title>
+<title>Неоновые Крестики-нолики</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{--bg:#0a0a0f;--sur:#1a1a24;--sur2:#22222f;--text:#f0f0f8;--text2:#8888aa;--g:#00e5a0;--r:#ff4466;--b:#5b8cff;--y:#ffd700}
-  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;gap:16px;user-select:none}
-  #status{font-size:.9rem;color:var(--text2);letter-spacing:.06em;height:20px;text-align:center}
-  #board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(80vw,280px)}
-  .cell{aspect-ratio:1;background:var(--sur);border-radius:12px;border:2px solid var(--sur2);display:flex;align-items:center;justify-content:center;font-size:2.8rem;cursor:pointer;transition:background .15s,border-color .15s}
-  .cell:hover:not(.taken){background:var(--sur2);border-color:rgba(255,255,255,.15)}
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+  *{box-sizing:border-box;margin:0;padding:0; user-select: none; touch-action: none;}
+  :root{--bg:#050508;--sur:rgba(10, 10, 15, 0.85);--sur2:#22222f;--text:#f0f0f8;--text2:#8888aa;--g:#00e5a0;--r:#ff4466;--b:#5b8cff;--y:#ffd700}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;overflow:hidden;}
+
+  #game-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    box-shadow: 0 0 40px rgba(91, 140, 255, 0.05);
+  }
+
+  /* Scanlines effect */
+  #game-wrapper::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 5;
+    background-size: 100% 4px, 6px 100%;
+    pointer-events: none;
+  }
+
+  #top-bar { display: flex; justify-content: space-between; width: min(80vw,280px); align-items: center; z-index: 10; }
+
+  #btn-pause {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    backdrop-filter: blur(4px);
+  }
+
+  #status{font-size:1.1rem; font-weight: 700; color:var(--text); letter-spacing:.06em; height:24px; text-align:center; z-index: 10;}
+
+  #board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(80vw,280px); z-index: 10;}
+  .cell{aspect-ratio:1;background:var(--sur);border-radius:12px;border:2px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:3rem;cursor:pointer;transition:all .15s; box-shadow: 0 0 15px rgba(0,0,0,0.5);}
+  .cell:hover:not(.taken){background:var(--sur2);border-color:rgba(255,255,255,.3);}
   .cell.taken{cursor:default}
-  .cell.x{color:var(--b)}
-  .cell.o{color:var(--r)}
-  .cell.win{border-color:var(--y)!important;background:rgba(255,215,0,.08)!important}
-  #score-row{display:flex;gap:24px;font-size:.75rem;color:var(--text2)}
-  .sc{text-align:center}.sc-val{font-size:1.3rem;font-weight:700;color:var(--text)}
-  #btn-new{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--text2);padding:9px 28px;border-radius:8px;font-family:inherit;font-size:.85rem;cursor:pointer}
-  #btn-new:hover{background:var(--sur2);color:var(--text)}
-  #diff-row{display:flex;gap:8px}
-  .diff-btn{background:var(--sur2);border:1px solid var(--sur2);color:var(--text2);padding:6px 14px;border-radius:6px;font-family:inherit;font-size:.7rem;cursor:pointer}
-  .diff-btn.active{border-color:var(--b);color:var(--b)}
+  .cell.x{color:var(--b); text-shadow: 0 0 15px var(--b); border-color: rgba(91,140,255,0.3);}
+  .cell.o{color:var(--r); text-shadow: 0 0 15px var(--r); border-color: rgba(255,68,102,0.3);}
+  .cell.win{border-color:var(--y)!important;background:rgba(255,215,0,.15)!important; box-shadow: 0 0 20px rgba(255,215,0,0.5); transform: scale(1.05); z-index: 2;}
+
+  #score-row{display:flex;gap:30px;font-size:.75rem;color:var(--text2); z-index: 10;}
+  .sc{text-align:center}.sc-val{font-size:1.5rem;font-weight:800;color:var(--text); text-shadow: 0 0 10px currentColor;}
+
+  .btn {
+    background: transparent; color: #fff; border: 2px solid var(--b);
+    padding: 12px 30px; border-radius: 12px; font-size: 0.9rem; font-weight: 700;
+    font-family: inherit; cursor: pointer; margin-bottom: 10px; width: 80%; max-width: 250px;
+    transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .btn:active { transform: scale(0.95); }
+  .btn-primary { background: var(--b); color: #000; box-shadow: 0 0 20px rgba(91,140,255, 0.4); }
+
+  /* Overlays */
+  .overlay {
+    position: absolute; inset: 0; background: var(--sur); backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .overlay.active { opacity: 1; pointer-events: auto; }
+
+  .menu-title {
+    font-size: 2.2rem; font-weight: 800; margin-bottom: 30px; text-align: center;
+    background: linear-gradient(90deg, var(--b), var(--r));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+  }
+
+  #diff-selectors { display: flex; gap: 8px; margin-bottom: 20px; width: 80%; max-width: 250px; }
+  .diff-btn {
+    flex: 1; background: transparent; border: 1px solid var(--text2); color: var(--text2);
+    padding: 8px 0; border-radius: 8px; font-family: inherit; font-size: 0.8rem; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .diff-btn.active { border-color: var(--b); color: var(--b); background: rgba(91,140,255,0.1); }
 </style>
 </head>
 <body>
-<div id="diff-row">
-  <button class="diff-btn" data-d="easy">Легко</button>
-  <button class="diff-btn active" data-d="hard">Сложно</button>
+
+<div id="game-wrapper">
+
+  <!-- Main Game UI -->
+  <div id="top-bar">
+    <div style="width:36px;"></div> <!-- Spacer -->
+    <div id="status">Ваш ход</div>
+    <button id="btn-pause">⏸</button>
+  </div>
+
+  <div id="board"></div>
+
+  <div id="score-row">
+    <div class="sc"><div class="sc-val" id="sw" style="color:var(--b)">0</div><div id="lbl-p1">Вы</div></div>
+    <div class="sc"><div class="sc-val" id="sd">0</div><div>Ничья</div></div>
+    <div class="sc"><div class="sc-val" id="sl" style="color:var(--r)">0</div><div id="lbl-p2">ИИ</div></div>
+  </div>
+
+  <!-- Main Menu Overlay -->
+  <div class="overlay active" id="menu-main">
+    <div class="menu-title">TIC TAC TOE</div>
+
+    <div id="main-btns" style="display:flex; flex-direction:column; align-items:center; width:100%;">
+      <button class="btn btn-primary" id="btn-1p">1 Игрок</button>
+      <button class="btn" id="btn-2p">2 Игрока</button>
+    </div>
+
+    <div id="diff-btns" style="display:none; flex-direction:column; align-items:center; width:100%;">
+      <div style="color:var(--text2); font-size:0.8rem; margin-bottom:10px;">Сложность ИИ</div>
+      <div id="diff-selectors">
+        <button class="diff-btn" data-d="easy">Легко</button>
+        <button class="diff-btn active" data-d="hard">Сложно</button>
+      </div>
+      <button class="btn btn-primary" id="btn-start-ai">Старт</button>
+      <button class="btn" id="btn-back-main" style="border-color:var(--text2); color:var(--text2);">Назад</button>
+    </div>
+  </div>
+
+  <!-- Pause Menu Overlay -->
+  <div class="overlay" id="menu-pause">
+    <div class="menu-title" style="background:var(--text); -webkit-text-fill-color:var(--text);">ПАУЗА</div>
+    <button class="btn btn-primary" id="btn-resume">Продолжить</button>
+    <button class="btn" id="btn-restart">Сброс счета</button>
+    <button class="btn" id="btn-quit" style="border-color:var(--r); color:var(--r);">В меню</button>
+  </div>
+
 </div>
-<div id="status">Ваш ход</div>
-<div id="board"></div>
-<div id="score-row">
-  <div class="sc"><div class="sc-val" id="sw">0</div><div>Вы</div></div>
-  <div class="sc"><div class="sc-val" id="sd">0</div><div>Ничья</div></div>
-  <div class="sc"><div class="sc-val" id="sl">0</div><div>ИИ</div></div>
-</div>
-<button id="btn-new">Новая игра</button>
 
 <script>
+/**
+ * AUDIO SYSTEM
+ */
+const AudioSys = {
+  ctx: null,
+  init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); if (this.ctx.state === 'suspended') this.ctx.resume(); },
+  playTone(freq, type, duration, vol=0.5) {
+    if(!this.ctx) return; const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    osc.connect(gain); gain.connect(this.ctx.destination);
+    gain.gain.setValueAtTime(vol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+    osc.start(); osc.stop(this.ctx.currentTime + duration);
+  },
+  sfx: {
+    placeX: () => AudioSys.playTone(600, 'square', 0.1, 0.2),
+    placeO: () => AudioSys.playTone(400, 'sine', 0.1, 0.2),
+    win: () => { [400, 500, 600, 800].forEach((f, i) => setTimeout(() => AudioSys.playTone(f, 'square', 0.15, 0.3), i*100)); },
+    draw: () => AudioSys.playTone(300, 'triangle', 0.3, 0.3)
+  }
+};
+
 const WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-let board,human='X',ai='O',scores={w:0,d:0,l:0},locked=false,diff='hard';
+let board, currentPlayer='X', mode='1p', diff='hard';
+let scores={w:0, d:0, l:0}; // w: X wins, d: draws, l: O wins
+let locked=false;
 
 function $(id){return document.getElementById(id);}
 
@@ -51,7 +175,7 @@ function renderBoard(){
     const c=document.createElement('div');
     c.className='cell'+(v?` taken ${v.toLowerCase()}`:'');
     c.textContent=v==='X'?'✕':v==='O'?'○':'';
-    if(!v&&!locked) c.addEventListener('click',()=>humanMove(i));
+    if(!v&&!locked) c.addEventListener('click',()=>handleCellClick(i));
     el.appendChild(c);
   });
 }
@@ -60,20 +184,38 @@ function checkWin(b,p){
   return WINS.find(w=>w.every(i=>b[i]===p))||null;
 }
 
-function humanMove(i){
+function handleCellClick(i){
   if(board[i]||locked) return;
-  board[i]=human; renderBoard();
-  const w=checkWin(board,human);
-  if(w){highlight(w);end('win');return;}
+  board[i] = currentPlayer;
+  if (currentPlayer === 'X') AudioSys.sfx.placeX();
+  else AudioSys.sfx.placeO();
+
+  renderBoard();
+
+  const w=checkWin(board, currentPlayer);
+  if(w){
+     highlight(w);
+     end(currentPlayer === 'X' ? 'win' : (mode==='1p'?'lose':'win2'));
+     return;
+  }
   if(board.every(Boolean)){end('draw');return;}
-  locked=true; $('status').textContent='Думает…';
-  setTimeout(()=>{aiMove();},diff==='hard'?300:100);
+
+  if (mode === '1p') {
+      locked=true; $('status').textContent='Думает…';
+      setTimeout(()=>{aiMove();},diff==='hard'?300:100);
+  } else {
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      $('status').textContent=currentPlayer === 'X' ? 'Ход: ИГРОК 1 (✕)' : 'Ход: ИГРОК 2 (○)';
+      $('status').style.color = currentPlayer === 'X' ? 'var(--b)' : 'var(--r)';
+  }
 }
 
 function aiMove(){
   const idx=diff==='hard'?bestMove():randomMove();
-  board[idx]=ai; renderBoard();
-  const w=checkWin(board,ai);
+  board[idx]='O';
+  AudioSys.sfx.placeO();
+  renderBoard();
+  const w=checkWin(board,'O');
   if(w){highlight(w);end('lose');return;}
   if(board.every(Boolean)){end('draw');return;}
   locked=false; $('status').textContent='Ваш ход';
@@ -88,7 +230,7 @@ function bestMove(){
   let best=-Infinity,move=0;
   board.forEach((_,i)=>{
     if(board[i]) return;
-    board[i]=ai;
+    board[i]='O';
     const s=minimax(board,0,false);
     board[i]=null;
     if(s>best){best=s;move=i;}
@@ -97,16 +239,16 @@ function bestMove(){
 }
 
 function minimax(b,depth,isMax){
-  if(checkWin(b,ai)) return 10-depth;
-  if(checkWin(b,human)) return depth-10;
+  if(checkWin(b,'O')) return 10-depth;
+  if(checkWin(b,'X')) return depth-10;
   if(b.every(Boolean)) return 0;
   if(isMax){
     let best=-Infinity;
-    b.forEach((_,i)=>{ if(!b[i]){b[i]=ai;best=Math.max(best,minimax(b,depth+1,false));b[i]=null;} });
+    b.forEach((_,i)=>{ if(!b[i]){b[i]='O';best=Math.max(best,minimax(b,depth+1,false));b[i]=null;} });
     return best;
   } else {
     let best=Infinity;
-    b.forEach((_,i)=>{ if(!b[i]){b[i]=human;best=Math.min(best,minimax(b,depth+1,true));b[i]=null;} });
+    b.forEach((_,i)=>{ if(!b[i]){b[i]='X';best=Math.min(best,minimax(b,depth+1,true));b[i]=null;} });
     return best;
   }
 }
@@ -116,29 +258,100 @@ function highlight(w){
   w.forEach(i=>cells[i].classList.add('win'));
 }
 
+function updateScores() {
+  $('sw').textContent = scores.w;
+  $('sd').textContent = scores.d;
+  $('sl').textContent = scores.l;
+}
+
 function end(result){
   locked=true;
-  if(result==='win'){scores.w++;$('sw').textContent=scores.w;$('status').textContent='🎉 Вы победили!';}
-  else if(result==='lose'){scores.l++;$('sl').textContent=scores.l;$('status').textContent='🤖 ИИ победил';}
-  else{scores.d++;$('sd').textContent=scores.d;$('status').textContent='🤝 Ничья';}
+  $('status').style.color = 'var(--text)';
+  if(result==='win'){
+      scores.w++;
+      $('status').textContent= mode==='1p' ? '🎉 Вы победили!' : '🎉 Игрок 1 победил!';
+      AudioSys.sfx.win();
+  } else if(result==='lose'){
+      scores.l++;
+      $('status').textContent='🤖 ИИ победил';
+  } else if (result==='win2') {
+      scores.l++;
+      $('status').textContent='🎉 Игрок 2 победил!';
+      AudioSys.sfx.win();
+  } else {
+      scores.d++;
+      $('status').textContent='🤝 Ничья';
+      AudioSys.sfx.draw();
+  }
+  updateScores();
+
+  // Auto restart after a bit
+  setTimeout(() => { if ($('menu-main').classList.contains('active')) return; newGame(); }, 1500);
 }
 
 function newGame(){
   board=Array(9).fill(null); locked=false;
-  $('status').textContent='Ваш ход'; renderBoard();
+  currentPlayer = 'X';
+  $('status').style.color = 'var(--text)';
+  $('status').textContent= mode==='1p' ? 'Ваш ход' : 'Ход: ИГРОК 1 (✕)';
+  if (mode === '2p') $('status').style.color = 'var(--b)';
+  renderBoard();
 }
 
-$('btn-new').addEventListener('click',newGame);
+// UI bindings
+$('btn-1p').onclick = () => {
+    $('main-btns').style.display='none';
+    $('diff-btns').style.display='flex';
+    mode = '1p';
+};
+
+$('btn-2p').onclick = () => {
+    mode = '2p';
+    $('lbl-p1').textContent = 'Игрок 1';
+    $('lbl-p2').textContent = 'Игрок 2';
+    scores={w:0,d:0,l:0}; updateScores();
+    $('menu-main').classList.remove('active');
+    AudioSys.init();
+    newGame();
+};
+
+$('btn-back-main').onclick = () => {
+    $('diff-btns').style.display='none';
+    $('main-btns').style.display='flex';
+};
+
+$('btn-start-ai').onclick = () => {
+    $('lbl-p1').textContent = 'Вы';
+    $('lbl-p2').textContent = 'ИИ';
+    scores={w:0,d:0,l:0}; updateScores();
+    $('menu-main').classList.remove('active');
+    AudioSys.init();
+    newGame();
+};
+
 document.querySelectorAll('.diff-btn').forEach(b=>{
   b.addEventListener('click',()=>{
     diff=b.dataset.d;
     document.querySelectorAll('.diff-btn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
-    newGame();
   });
 });
 
-newGame();
+$('btn-pause').onclick = () => $('menu-pause').classList.add('active');
+$('btn-resume').onclick = () => $('menu-pause').classList.remove('active');
+$('btn-restart').onclick = () => {
+    scores={w:0,d:0,l:0}; updateScores();
+    $('menu-pause').classList.remove('active');
+    newGame();
+};
+$('btn-quit').onclick = () => {
+    $('menu-pause').classList.remove('active');
+    $('menu-main').classList.add('active');
+    $('main-btns').style.display='flex';
+    $('diff-btns').style.display='none';
+};
+
+// Initial setup not starting game until menu selection
 </script>
 </body>
 </html>

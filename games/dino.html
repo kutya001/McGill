@@ -3,61 +3,214 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Дино</title>
+<title>Неоновый Динозавр</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;overflow:hidden;user-select:none}
-canvas{display:block;touch-action:none}
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+  *{box-sizing:border-box;margin:0;padding:0; user-select: none; touch-action: none;}
+  :root{--bg:#050508;--sur:rgba(10, 10, 15, 0.85);--sur2:#22222f;--text:#f0f0f8;--text2:#8888aa;--g:#00e5a0;--r:#ff4466;--b:#5b8cff;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;overflow:hidden;}
+
+  #game-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    height: 100%;
+    max-height: 300px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(0, 229, 160, 0.05);
+  }
+
+  /* Scanlines */
+  #game-wrapper::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 5;
+    background-size: 100% 4px, 6px 100%;
+    pointer-events: none;
+  }
+
+  #top-bar {
+    position: absolute; top:0; left:0; right:0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 15px 20px; z-index: 10; pointer-events: none;
+  }
+
+  .score-box { display: flex; flex-direction: column; }
+  .score-val { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--text); text-shadow: 0 0 10px currentColor; }
+  .score-lbl { font-size: 0.6rem; letter-spacing: 0.1em; color: var(--text2); margin-top: 4px; text-transform: uppercase; }
+  .score-right { text-align: right; }
+  .score-right .score-val { color: var(--text2); text-shadow: none; font-size: 1.2rem;}
+
+  #btn-pause {
+    position: absolute; bottom: 15px; right: 15px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 1.2rem;
+    display: none; align-items: center; justify-content: center; cursor: pointer;
+    backdrop-filter: blur(4px); z-index: 20; pointer-events: auto;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+  }
+
+  /* Overlays */
+  .overlay {
+    position: absolute; inset: 0; background: var(--sur); backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .overlay.active { opacity: 1; pointer-events: auto; }
+
+  .menu-title {
+    font-size: 2.2rem; font-weight: 800; margin-bottom: 10px; text-align: center;
+    background: linear-gradient(90deg, var(--g), var(--b));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(0, 229, 160, 0.3));
+  }
+  .menu-subtitle { font-size: 0.8rem; color: var(--text2); margin-bottom: 30px; text-align: center; max-width: 80%; line-height: 1.5; }
+
+  .btn {
+    background: transparent; color: #fff; border: 2px solid var(--g);
+    padding: 12px 30px; border-radius: 12px; font-size: 1rem; font-weight: 700;
+    font-family: inherit; cursor: pointer; margin-bottom: 15px; width: 80%; max-width: 250px;
+    transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .btn:active { transform: scale(0.95); }
+  .btn-primary { background: var(--g); color: #000; box-shadow: 0 0 20px rgba(0,229,160, 0.4); }
+  .btn-danger { border-color: var(--r); color: var(--r); }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<script>
-const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
-const W=Math.min(window.innerWidth,500),H=200;
-canvas.width=W;canvas.height=H;
-canvas.style.width=W+'px';canvas.style.height=H+'px';
 
-const GND=150,GRAVITY=0.7,JUMP=-14;
-let dino,obstacles,score,best=+localStorage.getItem('dino_best')||0,spd,state,raf,tick;
+<div id="game-wrapper">
+  <div id="top-bar" style="display:none;">
+    <div class="score-box">
+      <div class="score-val" id="score-val">0</div>
+      <div class="score-lbl">СЧЁТ</div>
+    </div>
+    <div class="score-box score-right">
+      <div class="score-val" id="best-val">0</div>
+      <div class="score-lbl">РЕКОРД</div>
+    </div>
+  </div>
+
+  <button id="btn-pause">⏸</button>
+  <canvas id="c"></canvas>
+
+  <!-- Main Menu Overlay -->
+  <div class="overlay active" id="menu-main">
+    <div class="menu-title">NEON DINO</div>
+    <div class="menu-subtitle">Прыгай через кактусы.<br>Сложность постоянно растет.</div>
+    <button class="btn btn-primary" id="btn-start">Запуск</button>
+  </div>
+
+  <!-- Pause Menu Overlay -->
+  <div class="overlay" id="menu-pause">
+    <div class="menu-title" style="background:var(--text); -webkit-text-fill-color:var(--text);">ПАУЗА</div>
+    <button class="btn btn-primary" id="btn-resume">Продолжить</button>
+    <button class="btn btn-danger" id="btn-quit">В меню</button>
+  </div>
+
+  <!-- Game Over Overlay -->
+  <div class="overlay" id="menu-game-over">
+    <div class="menu-title" style="background:var(--r); -webkit-text-fill-color:var(--r);">ВЫ ПОГИБЛИ</div>
+    <p id="final-score" style="color:var(--text2); margin-bottom:20px;">Счёт: 0</p>
+    <button class="btn btn-primary" id="btn-restart">Повторить</button>
+    <button class="btn btn-danger" id="btn-go-menu">В меню</button>
+  </div>
+</div>
+
+<script>
+/**
+ * AUDIO SYSTEM
+ */
+const AudioSys = {
+  ctx: null,
+  init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); if (this.ctx.state === 'suspended') this.ctx.resume(); },
+  playTone(freq, type, duration, vol=0.5) {
+    if(!this.ctx) return; const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    osc.connect(gain); gain.connect(this.ctx.destination);
+    gain.gain.setValueAtTime(vol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+    osc.start(); osc.stop(this.ctx.currentTime + duration);
+  },
+  sfx: {
+    jump: () => AudioSys.playTone(400, 'sine', 0.1, 0.3),
+    die: () => { AudioSys.playTone(150, 'sawtooth', 0.4, 0.4); },
+    point: () => { AudioSys.playTone(800, 'square', 0.1, 0.2); setTimeout(()=>AudioSys.playTone(1200, 'square', 0.1, 0.2), 100); }
+  }
+};
+
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+let W, H, GND;
+function resize() {
+    W=canvas.parentElement.clientWidth; H=canvas.parentElement.clientHeight;
+    canvas.width=W; canvas.height=H;
+    GND=H-40;
+    if(dino && state !== 'PLAYING') dino.y = GND;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const GRAVITY=0.7,JUMP=-13;
+let dino,obstacles,score,best=+localStorage.getItem('dino_best')||0,spd,state='MENU',raf,tick;
 let clouds=[];
+let milestone = 0;
+
+function $(id) { return document.getElementById(id); }
 
 function init(){
-  dino={x:60,y:GND,vy:0,w:30,h:36,frame:0,ftick:0,ducking:false};
-  obstacles=[];clouds=[{x:W,y:40,w:60},{x:W+200,y:55,w:80}];
-  score=0;spd=4;state='idle';tick=0;
+  dino={x:W*0.15,y:GND,vy:0,w:30,h:36,frame:0,ftick:0};
+  obstacles=[];clouds=[{x:W,y:H*0.2,w:60},{x:W+200,y:H*0.3,w:80}];
+  score=0;spd=5;state='PLAYING';tick=0;milestone=0;
+  $('score-val').textContent = 0;
+  $('best-val').textContent = Math.floor(best/10);
+  $('top-bar').style.display = 'flex';
+  $('btn-pause').style.display = 'flex';
+  document.querySelectorAll('.overlay').forEach(e=>e.classList.remove('active'));
   if(raf) cancelAnimationFrame(raf);
   raf=requestAnimationFrame(loop);
 }
 
 function jump(){
-  if(state==='dead') return init();
-  if(state==='idle') state='play';
-  if(dino.y>=GND) dino.vy=JUMP;
+  if(state !== 'PLAYING') return;
+  if(dino.y>=GND) {
+      dino.vy=JUMP;
+      AudioSys.sfx.jump();
+  }
 }
 
 function loop(){
   raf=requestAnimationFrame(loop);
-  if(state==='play') update();
-  draw();
+  if(state==='PLAYING') {
+      update();
+      draw();
+  } else if (state === 'PAUSED' || state === 'MENU') {
+      // Just keep rendering the last frame
+      draw();
+  }
 }
 
 function update(){
   tick++;
-  // Скорость нарастает
   if(tick%400===0) spd+=0.5;
 
-  // Дино
   dino.vy+=GRAVITY;dino.y+=dino.vy;
   if(dino.y>=GND){dino.y=GND;dino.vy=0;}
   dino.ftick++;if(dino.ftick%8===0) dino.frame=1-dino.frame;
 
-  // Облака
   clouds.forEach(c=>{c.x-=spd*.3;});
   clouds=clouds.filter(c=>c.x>-100);
-  if(clouds.length<2||clouds[clouds.length-1].x<W-150) clouds.push({x:W+50,y:30+Math.random()*40,w:50+Math.random()*50});
+  if(clouds.length<2||clouds[clouds.length-1].x<W-150) clouds.push({x:W+50,y:H*0.15+Math.random()*H*0.3,w:50+Math.random()*50});
 
-  // Препятствия
   if(obstacles.length===0||obstacles[obstacles.length-1].x<W-200-Math.random()*200){
     const tall=Math.random()<.4;
     obstacles.push({x:W+10,y:tall?GND-30:GND,w:20,h:tall?66:36});
@@ -66,59 +219,111 @@ function update(){
   obstacles=obstacles.filter(o=>o.x>-40);
 
   score++;
-  if(score>best){best=score;localStorage.setItem('dino_best',best);}
+  if(score>best){best=score;localStorage.setItem('dino_best',best); $('best-val').textContent = Math.floor(best/10);}
+
+  // Point sound every 1000 score ticks (~100 points)
+  if (Math.floor(score/1000) > milestone) {
+      milestone = Math.floor(score/1000);
+      AudioSys.sfx.point();
+      $('score-val').style.transform = 'scale(1.5)';
+      $('score-val').style.color = 'var(--g)';
+      setTimeout(() => {
+          $('score-val').style.transform = 'scale(1)';
+          $('score-val').style.color = 'var(--text)';
+      }, 300);
+  }
+
+  if(tick%5 === 0) $('score-val').textContent = Math.floor(score/10);
 
   // Столкновение
   for(const o of obstacles){
     if(dino.x+dino.w-6>o.x+4&&dino.x+6<o.x+o.w-4&&dino.y+dino.h-4>o.y+4){
-      state='dead';return;
+      die(); return;
     }
   }
 }
 
+function die() {
+    state = 'DEAD';
+    AudioSys.sfx.die();
+    draw(); // Draw dead state
+    $('final-score').textContent = `Счёт: ${Math.floor(score/10)}`;
+    $('menu-game-over').classList.add('active');
+    $('btn-pause').style.display = 'none';
+}
+
 function draw(){
-  ctx.fillStyle='#111118';ctx.fillRect(0,0,W,H);
-  // Земля
-  ctx.fillStyle='#2c2c40';ctx.fillRect(0,GND+36,W,4);
+  ctx.fillStyle='#050508';ctx.fillRect(0,0,W,H);
+
+  // Земля (Неоновая линия)
+  ctx.shadowBlur = 10; ctx.shadowColor = 'var(--b)';
+  ctx.fillStyle='var(--b)';ctx.fillRect(0,GND+36,W,2);
+  ctx.shadowBlur = 0;
 
   // Облака
   clouds.forEach(c=>{
-    ctx.fillStyle='rgba(136,136,170,.15)';
+    ctx.fillStyle='rgba(91, 140, 255, 0.1)';
     ctx.beginPath();ctx.ellipse(c.x,c.y,c.w/2,14,0,0,Math.PI*2);ctx.fill();
   });
 
   // Препятствия (кактусы)
   obstacles.forEach(o=>{
-    ctx.fillStyle='#00c897';
+    ctx.shadowBlur = 10; ctx.shadowColor = 'var(--r)';
+    ctx.fillStyle='var(--r)';
     ctx.beginPath();ctx.roundRect(o.x,o.y,o.w,o.h,4);ctx.fill();
-    // "руки"
     ctx.fillRect(o.x-8,o.y+10,8,6);
     ctx.fillRect(o.x+o.w,o.y+14,8,6);
+    ctx.shadowBlur = 0;
+
+    // Внутреннее свечение
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.fillRect(o.x+4, o.y+4, o.w-8, o.h-8);
   });
 
   // Дино
-  ctx.font='30px serif';ctx.textAlign='left';ctx.textBaseline='bottom';
+  ctx.font='36px serif';ctx.textAlign='left';ctx.textBaseline='bottom';
   const frames=['🦕','🦖'];
-  ctx.fillText(state==='dead'?'💀':frames[dino.frame],dino.x,dino.y+dino.h);
-
-  // Счёт
-  ctx.fillStyle='#f0f0f8';ctx.font='bold 14px JetBrains Mono,monospace';
-  ctx.textAlign='right';ctx.textBaseline='top';
-  ctx.fillText(`${Math.floor(score/10)}  rec:${Math.floor(best/10)}`,W-10,8);
-
-  if(state==='idle'||state==='dead'){
-    ctx.fillStyle='rgba(10,10,15,.7)';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#f0f0f8';ctx.font='bold 1rem JetBrains Mono,monospace';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(state==='idle'?'🦕 Tap / Space для старта':'💀 Tap для перезапуска',W/2,H/2);
-  }
+  ctx.fillText(state==='DEAD'?'💀':frames[dino.frame],dino.x,dino.y+dino.h);
 }
 
-canvas.addEventListener('click',jump);
-canvas.addEventListener('touchstart',e=>{e.preventDefault();jump();},{passive:false});
-document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();jump();}});
+// Управление
+canvas.addEventListener('mousedown',jump);
+canvas.addEventListener('touchstart',e=>{if(state==='PLAYING'){e.preventDefault();jump();}},{passive:false});
+document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jump();}});
 
-init();
+// UI
+$('btn-start').onclick = () => { AudioSys.init(); init(); };
+$('btn-restart').onclick = () => init();
+$('btn-go-menu').onclick = () => {
+    $('menu-game-over').classList.remove('active');
+    $('menu-main').classList.add('active');
+    $('top-bar').style.display='none';
+    state = 'MENU';
+};
+
+$('btn-pause').onclick = () => {
+    if(state === 'PLAYING') {
+        state = 'PAUSED';
+        $('menu-pause').classList.add('active');
+        $('btn-pause').style.display = 'none';
+    }
+};
+
+$('btn-resume').onclick = () => {
+    state = 'PLAYING';
+    $('menu-pause').classList.remove('active');
+    $('btn-pause').style.display = 'flex';
+};
+
+$('btn-quit').onclick = () => {
+    state = 'MENU';
+    $('menu-pause').classList.remove('active');
+    $('menu-main').classList.add('active');
+    $('top-bar').style.display='none';
+};
+
+// Start render loop without game logic
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>

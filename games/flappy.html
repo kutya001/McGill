@@ -3,29 +3,172 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Флаппи</title>
+<title>Неоновый Флаппи</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;overflow:hidden;user-select:none}
-canvas{display:block;border-radius:12px;touch-action:none}
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+  *{box-sizing:border-box;margin:0;padding:0; user-select: none; touch-action: none;}
+  :root{--bg:#050508;--sur:rgba(10, 10, 15, 0.85);--sur2:#22222f;--text:#f0f0f8;--text2:#8888aa;--g:#00e5a0;--r:#ff4466;--b:#5b8cff;--y:#ffd700}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;overflow:hidden;}
+
+  #game-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    height: 100%;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(0, 229, 160, 0.05);
+  }
+
+  /* Scanlines */
+  #game-wrapper::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 5;
+    background-size: 100% 4px, 6px 100%;
+    pointer-events: none;
+  }
+
+  #top-bar {
+    position: absolute; top:0; left:0; right:0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 15px 20px; z-index: 10; pointer-events: none;
+  }
+
+  .score-box { display: flex; flex-direction: column; }
+  .score-val { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--text); text-shadow: 0 0 10px currentColor; transition: transform 0.1s; }
+  .score-lbl { font-size: 0.7rem; letter-spacing: 0.1em; color: var(--text2); margin-top: 4px; text-transform: uppercase; }
+
+  #btn-pause {
+    position: absolute; top: 15px; right: 15px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 1.2rem;
+    display: none; align-items: center; justify-content: center; cursor: pointer;
+    backdrop-filter: blur(4px); z-index: 20; pointer-events: auto;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+  }
+
+  /* Overlays */
+  .overlay {
+    position: absolute; inset: 0; background: var(--sur); backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .overlay.active { opacity: 1; pointer-events: auto; }
+
+  .menu-title {
+    font-size: 2.2rem; font-weight: 800; margin-bottom: 10px; text-align: center;
+    background: linear-gradient(90deg, var(--y), var(--r));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+  }
+  .menu-subtitle { font-size: 0.8rem; color: var(--text2); margin-bottom: 30px; text-align: center; max-width: 80%; line-height: 1.5; }
+
+  .btn {
+    background: transparent; color: #fff; border: 2px solid var(--y);
+    padding: 12px 30px; border-radius: 12px; font-size: 1rem; font-weight: 700;
+    font-family: inherit; cursor: pointer; margin-bottom: 15px; width: 80%; max-width: 250px;
+    transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .btn:active { transform: scale(0.95); }
+  .btn-primary { background: var(--y); color: #000; box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+  .btn-danger { border-color: var(--r); color: var(--r); }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+
+<div id="game-wrapper">
+  <div id="top-bar" style="display:none;">
+    <div class="score-box">
+      <div class="score-val" id="score-val">0</div>
+      <div class="score-lbl">СЧЁТ</div>
+    </div>
+  </div>
+
+  <button id="btn-pause">⏸</button>
+  <canvas id="c"></canvas>
+
+  <!-- Main Menu Overlay -->
+  <div class="overlay active" id="menu-main">
+    <div class="menu-title">NEON BIRD</div>
+    <div class="menu-subtitle">Кликай, чтобы лететь.<br>Избегай неоновых труб.</div>
+    <button class="btn btn-primary" id="btn-start">Запуск</button>
+  </div>
+
+  <!-- Pause Menu Overlay -->
+  <div class="overlay" id="menu-pause">
+    <div class="menu-title" style="background:var(--text); -webkit-text-fill-color:var(--text);">ПАУЗА</div>
+    <button class="btn btn-primary" id="btn-resume" style="border-color:var(--g); background:var(--g); box-shadow:0 0 20px rgba(0,229,160,0.4);">Продолжить</button>
+    <button class="btn btn-danger" id="btn-quit">В меню</button>
+  </div>
+
+  <!-- Game Over Overlay -->
+  <div class="overlay" id="menu-game-over">
+    <div class="menu-title" style="background:var(--r); -webkit-text-fill-color:var(--r);">ВЫ ПОГИБЛИ</div>
+    <p id="final-score" style="color:var(--text2); margin-bottom:10px;">Счёт: 0</p>
+    <p id="best-score" style="color:var(--y); margin-bottom:20px; font-weight:700;">Рекорд: 0</p>
+    <button class="btn btn-primary" id="btn-restart" style="border-color:var(--b); background:var(--b); box-shadow:0 0 20px rgba(91,140,255,0.4);">Повторить</button>
+    <button class="btn btn-danger" id="btn-go-menu">В меню</button>
+  </div>
+</div>
+
 <script>
+/**
+ * AUDIO SYSTEM
+ */
+const AudioSys = {
+  ctx: null,
+  init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); if (this.ctx.state === 'suspended') this.ctx.resume(); },
+  playTone(freq, type, duration, vol=0.5, slideFreq=null) {
+    if(!this.ctx) return; const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    if (slideFreq) osc.frequency.exponentialRampToValueAtTime(slideFreq, this.ctx.currentTime + duration);
+    osc.connect(gain); gain.connect(this.ctx.destination);
+    gain.gain.setValueAtTime(vol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+    osc.start(); osc.stop(this.ctx.currentTime + duration);
+  },
+  sfx: {
+    flap: () => AudioSys.playTone(300, 'sine', 0.1, 0.3, 500),
+    die: () => { AudioSys.playTone(150, 'sawtooth', 0.4, 0.4, 50); },
+    score: () => { AudioSys.playTone(600, 'square', 0.1, 0.2); setTimeout(()=>AudioSys.playTone(800, 'square', 0.1, 0.2), 100); }
+  }
+};
+
 const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
-const W=Math.min(window.innerWidth,360),H=window.innerHeight-20;
-canvas.width=W;canvas.height=H;
+let W, H;
+function resize() {
+    W=canvas.parentElement.clientWidth; H=canvas.parentElement.clientHeight;
+    canvas.width=W; canvas.height=H;
+}
+window.addEventListener('resize', resize);
+resize();
 
 const GRAVITY=0.35,JUMP=-7,GAP=140,PIPE_W=52,SPEED=2.4;
-let bird,pipes,score,best=+localStorage.getItem('flappy_best')||0,state='idle',raf;
+let bird,pipes,score,best=+localStorage.getItem('flappy_best')||0,state='MENU',raf;
 
 const BIRD_FRAMES=['🐦','🐤'];
 let bframe=0,bframeTick=0;
 
+function $(id) { return document.getElementById(id); }
+
 function init(){
   bird={x:W*0.28,y:H/2,vy:0,r:16};
-  pipes=[];score=0;state='idle';
+  pipes=[];score=0;state='PLAYING';
+  $('score-val').textContent = 0;
+  $('top-bar').style.display = 'flex';
+  $('btn-pause').style.display = 'flex';
+  document.querySelectorAll('.overlay').forEach(e=>e.classList.remove('active'));
   spawnPipe();
   if(raf) cancelAnimationFrame(raf);
   raf=requestAnimationFrame(loop);
@@ -37,15 +180,19 @@ function spawnPipe(){
 }
 
 function flap(){
-  if(state==='dead') return init();
-  if(state==='idle') state='play';
+  if(state !== 'PLAYING') return;
   bird.vy=JUMP;
+  AudioSys.sfx.flap();
 }
 
 function loop(){
   raf=requestAnimationFrame(loop);
-  if(state==='play') update();
-  draw();
+  if(state==='PLAYING') {
+      update();
+      draw();
+  } else if (state === 'PAUSED' || state === 'MENU') {
+      draw();
+  }
 }
 
 function update(){
@@ -55,7 +202,14 @@ function update(){
   // Трубы
   for(let p of pipes){
     p.x-=SPEED;
-    if(!p.scored&&p.x+PIPE_W<bird.x){p.scored=true;score++;if(score>best){best=score;localStorage.setItem('flappy_best',best);}}
+    if(!p.scored&&p.x+PIPE_W<bird.x){
+        p.scored=true;score++;
+        AudioSys.sfx.score();
+        $('score-val').textContent = score;
+        $('score-val').style.transform = 'scale(1.4)';
+        setTimeout(() => $('score-val').style.transform = 'scale(1)', 150);
+        if(score>best){best=score;localStorage.setItem('flappy_best',best);}
+    }
     if(bird.x+bird.r>p.x&&bird.x-bird.r<p.x+PIPE_W&&(bird.y-bird.r<p.top||bird.y+bird.r>p.top+p.gap)){die();return;}
   }
   pipes=pipes.filter(p=>p.x>-PIPE_W);
@@ -64,27 +218,43 @@ function update(){
   bframeTick++;if(bframeTick%12===0) bframe=1-bframe;
 }
 
-function die(){state='dead';}
+function die() {
+    state = 'DEAD';
+    AudioSys.sfx.die();
+    draw();
+    $('final-score').textContent = `Счёт: ${score}`;
+    $('best-score').textContent = `Рекорд: ${best}`;
+    $('menu-game-over').classList.add('active');
+    $('btn-pause').style.display = 'none';
+}
 
 function draw(){
   // Фон
-  ctx.fillStyle='#111118';ctx.fillRect(0,0,W,H);
-  // Земля
-  ctx.fillStyle='#22222f';ctx.fillRect(0,H-30,W,30);
+  ctx.fillStyle='#050508';ctx.fillRect(0,0,W,H);
+
+  // Земля (Неоновая)
+  ctx.shadowBlur = 10; ctx.shadowColor = 'var(--y)';
+  ctx.fillStyle='var(--sur2)';ctx.fillRect(0,H-30,W,30);
+  ctx.fillStyle='var(--y)';ctx.fillRect(0,H-30,W,2);
+  ctx.shadowBlur = 0;
 
   // Трубы
   pipes.forEach(p=>{
-    ctx.fillStyle='#00c897';
+    ctx.shadowBlur = 15; ctx.shadowColor = 'var(--g)';
+    ctx.fillStyle='var(--g)';
+
     // Верхняя
     ctx.beginPath();ctx.roundRect(p.x,0,PIPE_W,p.top,4);ctx.fill();
-    ctx.fillStyle='#00a87e';
+    ctx.fillStyle='var(--b)';
     ctx.fillRect(p.x-4,p.top-20,PIPE_W+8,20);
+
     // Нижняя
-    ctx.fillStyle='#00c897';
+    ctx.fillStyle='var(--g)';
     const bot=p.top+p.gap;
     ctx.beginPath();ctx.roundRect(p.x,bot,PIPE_W,H-bot-30,4);ctx.fill();
-    ctx.fillStyle='#00a87e';
+    ctx.fillStyle='var(--b)';
     ctx.fillRect(p.x-4,bot,PIPE_W+8,20);
+    ctx.shadowBlur = 0;
   });
 
   // Птица
@@ -94,33 +264,48 @@ function draw(){
   ctx.rotate(tilt*Math.PI/180);
   ctx.font=`${bird.r*2}px serif`;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(state==='dead'?'💥':BIRD_FRAMES[bframe],0,0);
+  ctx.fillText(state==='DEAD'?'💥':BIRD_FRAMES[bframe],0,0);
   ctx.restore();
-
-  // Счёт
-  ctx.fillStyle='#f0f0f8';ctx.font='bold 28px JetBrains Mono,monospace';
-  ctx.textAlign='center';ctx.textBaseline='top';
-  ctx.fillText(score,W/2,14);
-
-  if(state==='idle'||state==='dead'){
-    ctx.fillStyle='rgba(10,10,15,.75)';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#f0f0f8';ctx.font='bold 1.3rem JetBrains Mono,monospace';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(state==='idle'?'🐦 Флаппи':'💀 Игра окончена',W/2,H/2-40);
-    ctx.font='.8rem JetBrains Mono,monospace';ctx.fillStyle='#8888aa';
-    ctx.fillText(`Счёт: ${score}  Рекорд: ${best}`,W/2,H/2);
-    ctx.fillStyle='#5b8cff';ctx.fillRect(W/2-60,H/2+30,120,44);
-    ctx.beginPath();ctx.roundRect(W/2-60,H/2+30,120,44,10);ctx.fillStyle='#5b8cff';ctx.fill();
-    ctx.fillStyle='#fff';ctx.font='bold .95rem JetBrains Mono,monospace';
-    ctx.fillText(state==='idle'?'Начать':'Ещё раз',W/2,H/2+52);
-  }
 }
 
-canvas.addEventListener('click',flap);
-canvas.addEventListener('touchstart',e=>{e.preventDefault();flap();},{passive:false});
-document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();flap();}});
+// Управление
+canvas.addEventListener('mousedown',flap);
+canvas.addEventListener('touchstart',e=>{if(state==='PLAYING'){e.preventDefault();flap();}},{passive:false});
+document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();flap();}});
 
-init();
+// UI
+$('btn-start').onclick = () => { AudioSys.init(); init(); };
+$('btn-restart').onclick = () => init();
+$('btn-go-menu').onclick = () => {
+    $('menu-game-over').classList.remove('active');
+    $('menu-main').classList.add('active');
+    $('top-bar').style.display='none';
+    state = 'MENU';
+};
+
+$('btn-pause').onclick = () => {
+    if(state === 'PLAYING') {
+        state = 'PAUSED';
+        $('menu-pause').classList.add('active');
+        $('btn-pause').style.display = 'none';
+    }
+};
+
+$('btn-resume').onclick = () => {
+    state = 'PLAYING';
+    $('menu-pause').classList.remove('active');
+    $('btn-pause').style.display = 'flex';
+};
+
+$('btn-quit').onclick = () => {
+    state = 'MENU';
+    $('menu-pause').classList.remove('active');
+    $('menu-main').classList.add('active');
+    $('top-bar').style.display='none';
+};
+
+// Start render loop without game logic
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>

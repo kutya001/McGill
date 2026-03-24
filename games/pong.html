@@ -249,8 +249,25 @@
   <div class="overlay active" id="menu-main">
     <div class="menu-title">NEON PONG</div>
     <div class="menu-subtitle">Свайпай снизу, чтобы двигать ракетку.<br>Отбивай мяч краями для крученых ударов.</div>
-    <button class="btn btn-primary" id="btn-campaign">Кампания</button>
-    <button class="btn" id="btn-endless">Выживание</button>
+
+    <div id="menu-main-buttons" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+      <button class="btn btn-primary" id="btn-1p">1 Игрок</button>
+      <button class="btn" id="btn-2p">2 Игрока</button>
+    </div>
+
+    <div id="menu-1p-buttons" style="display:none; width: 100%; flex-direction: column; align-items: center;">
+      <button class="btn btn-primary" id="btn-campaign" style="font-size: 0.9rem; padding: 10px 20px;">Кампания (1P)</button>
+      <button class="btn" id="btn-endless" style="font-size: 0.9rem; padding: 10px 20px;">Выживание (1P)</button>
+
+      <div style="margin: 15px 0 5px; color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase;">Свободная игра (ИИ)</div>
+      <div style="display: flex; gap: 5px; width: 80%; max-width: 250px; margin-bottom: 10px;">
+        <button class="btn btn-diff" data-diff="1" id="btn-diff-easy" style="width:33%; padding:8px 0; font-size:0.7rem; margin:0;">Лёгк</button>
+        <button class="btn btn-primary btn-diff" data-diff="2" id="btn-diff-med" style="width:33%; padding:8px 0; font-size:0.7rem; margin:0;">Сред</button>
+        <button class="btn btn-diff" data-diff="3" id="btn-diff-hard" style="width:33%; padding:8px 0; font-size:0.7rem; margin:0;">Слож</button>
+      </div>
+      <button class="btn" id="btn-start-ai" style="font-size: 0.9rem; padding: 10px 20px; border-color: #5b8cff; color: #5b8cff;">Старт (ИИ)</button>
+      <button class="btn btn-danger" id="btn-back-main" style="margin-top: 10px; padding: 8px 20px; font-size: 0.8rem; max-width: 150px;">Назад</button>
+    </div>
   </div>
 
   <!-- Pause Menu -->
@@ -517,7 +534,7 @@ class Paddle {
     this.aiSpeed = 5;
     this.aiError = 0;
   }
-  update(balls) {
+  update(balls, manualTargetX = null) {
     if (this.isAI) {
       // Find lowest/highest ball heading towards AI
       let targetBall = null;
@@ -546,6 +563,9 @@ class Paddle {
       }
     } else {
       // Player movement interpolation
+      if (manualTargetX !== null) {
+        this.targetX = manualTargetX;
+      }
       this.x += (this.targetX - (this.x + this.w/2)) * 0.3;
     }
     
@@ -663,15 +683,17 @@ const Levels = [
  */
 const Game = {
   state: 'MENU', // MENU, PLAYING, PAUSED, TRANSITION
-  mode: 'CAMPAIGN', // CAMPAIGN, ENDLESS
+  mode: 'CAMPAIGN', // CAMPAIGN, ENDLESS, FREE_AI, MULTIPLAYER
   levelIdx: 0,
+  aiDifficulty: 2, // 1: Easy, 2: Med, 3: Hard
   score: { player: 0, ai: 0 },
   targetScore: 3,
+  keys: { p1Left: false, p1Right: false, p2Left: false, p2Right: false },
   
   entities: {
     balls: [],
     player: null,
-    ai: null,
+    ai: null, // AI or Player 2
     obstacles: [],
     particles: [],
     powerups: [],
@@ -705,33 +727,88 @@ const Game = {
 
   setupInputs() {
     // Touch controls
-    canvas.addEventListener('touchmove', e => {
+    const handleTouch = (e) => {
       e.preventDefault();
       if(this.state !== 'PLAYING') return;
       const rect = canvas.getBoundingClientRect();
-      this.entities.player.targetX = e.touches[0].clientX - rect.left;
-    }, {passive: false});
+
+      for(let i=0; i<e.touches.length; i++) {
+        let touchX = e.touches[i].clientX - rect.left;
+        let touchY = e.touches[i].clientY - rect.top;
+        if(this.mode === 'MULTIPLAYER') {
+           if(touchY > H/2) this.entities.player.targetX = touchX;
+           else this.entities.ai.targetX = touchX;
+        } else {
+           this.entities.player.targetX = touchX;
+        }
+      }
+    };
+    canvas.addEventListener('touchmove', handleTouch, {passive: false});
+    canvas.addEventListener('touchstart', handleTouch, {passive: false});
 
     // Mouse controls
     canvas.addEventListener('mousemove', e => {
       if(this.state !== 'PLAYING') return;
+      if(this.mode === 'MULTIPLAYER') return; // In multiplayer, mouse is disabled to avoid single-player advantage, use keys
       const rect = canvas.getBoundingClientRect();
       this.entities.player.targetX = e.clientX - rect.left;
     });
 
-    // Buttons
-    document.getElementById('btn-campaign').addEventListener('click', () => {
-      AudioSys.init();
-      this.mode = 'CAMPAIGN';
-      this.levelIdx = 0;
-      this.startLevel();
+    // Keyboard controls for 2-player
+    window.addEventListener('keydown', e => {
+      if(e.code === 'ArrowLeft') this.keys.p2Left = true;
+      if(e.code === 'ArrowRight') this.keys.p2Right = true;
+      if(e.code === 'KeyA') this.keys.p1Left = true;
+      if(e.code === 'KeyD') this.keys.p1Right = true;
+      if(e.code === 'Escape' && (this.state === 'PLAYING' || this.state === 'PAUSED')) {
+         if(this.state === 'PLAYING') {
+            this.state = 'PAUSED';
+            ui.menus.pause.classList.add('active');
+            ui.btnPause.style.display = 'none';
+         } else {
+            this.state = 'PLAYING';
+            ui.menus.pause.classList.remove('active');
+            ui.btnPause.style.display = 'block';
+         }
+      }
     });
-    
+    window.addEventListener('keyup', e => {
+      if(e.code === 'ArrowLeft') this.keys.p2Left = false;
+      if(e.code === 'ArrowRight') this.keys.p2Right = false;
+      if(e.code === 'KeyA') this.keys.p1Left = false;
+      if(e.code === 'KeyD') this.keys.p1Right = false;
+    });
+
+    // Menus logic
+    document.getElementById('btn-1p').addEventListener('click', () => {
+       document.getElementById('menu-main-buttons').style.display = 'none';
+       document.getElementById('menu-1p-buttons').style.display = 'flex';
+    });
+
+    document.getElementById('btn-back-main').addEventListener('click', () => {
+       document.getElementById('menu-1p-buttons').style.display = 'none';
+       document.getElementById('menu-main-buttons').style.display = 'flex';
+    });
+
+    const diffBtns = document.querySelectorAll('.btn-diff');
+    diffBtns.forEach(btn => btn.addEventListener('click', (e) => {
+       diffBtns.forEach(b => b.classList.remove('btn-primary'));
+       e.target.classList.add('btn-primary');
+       this.aiDifficulty = parseInt(e.target.dataset.diff);
+    }));
+
+    // Start Buttons
+    document.getElementById('btn-campaign').addEventListener('click', () => {
+      AudioSys.init(); this.mode = 'CAMPAIGN'; this.levelIdx = 0; this.startLevel();
+    });
     document.getElementById('btn-endless').addEventListener('click', () => {
-      AudioSys.init();
-      this.mode = 'ENDLESS';
-      this.levelIdx = 0; // Use config of level 1, but endless scaling
-      this.startLevel();
+      AudioSys.init(); this.mode = 'ENDLESS'; this.levelIdx = 0; this.startLevel();
+    });
+    document.getElementById('btn-start-ai').addEventListener('click', () => {
+      AudioSys.init(); this.mode = 'FREE_AI'; this.levelIdx = 0; this.startLevel();
+    });
+    document.getElementById('btn-2p').addEventListener('click', () => {
+      AudioSys.init(); this.mode = 'MULTIPLAYER'; this.levelIdx = 0; this.startLevel();
     });
 
     ui.btnPause.addEventListener('click', () => {
@@ -787,14 +864,35 @@ const Game = {
     this.combo = 0;
     this.updateScoreUI();
 
-    const config = Levels[Math.min(this.levelIdx, Levels.length-1)];
+    let config;
+    if (this.mode === 'CAMPAIGN' || this.mode === 'ENDLESS') {
+      config = Levels[Math.min(this.levelIdx, Levels.length-1)];
+      ui.lvlName.textContent = this.mode === 'ENDLESS' ? "БЕСКОНЕЧНЫЙ" : config.name;
+      ui.lvlDesc.textContent = this.mode === 'ENDLESS' ? "Выживай как можно дольше" : config.desc;
+      ui.scoreAI.nextElementSibling.textContent = 'ИИ';
+      ui.scorePlayer.nextElementSibling.textContent = 'ИГРОК';
+    } else if (this.mode === 'FREE_AI') {
+      let speedMap = {1: 4, 2: 7, 3: 12};
+      let errMap = {1: 30, 2: 10, 3: 0};
+      let bSpeedMap = {1: 7, 2: 9, 3: 12};
+      config = { aiWidth: 90, aiSpeed: speedMap[this.aiDifficulty], aiError: errMap[this.aiDifficulty], ballSpeed: bSpeedMap[this.aiDifficulty], targetScore: 5, obstacles: [] };
+      let diffNames = {1: "Лёгкий", 2: "Средний", 3: "Сложный"};
+      ui.lvlName.textContent = "СВОБОДНАЯ ИГРА";
+      ui.lvlDesc.textContent = `Сложность: ${diffNames[this.aiDifficulty]}`;
+      ui.scoreAI.nextElementSibling.textContent = 'ИИ';
+      ui.scorePlayer.nextElementSibling.textContent = 'ИГРОК';
+    } else if (this.mode === 'MULTIPLAYER') {
+      config = { aiWidth: 90, aiSpeed: 0, aiError: 0, ballSpeed: 8, targetScore: 5, obstacles: [] };
+      ui.lvlName.textContent = "ДВА ИГРОКА";
+      ui.lvlDesc.textContent = "Кто победит?";
+      ui.scoreAI.nextElementSibling.textContent = 'ИГРОК 2';
+      ui.scorePlayer.nextElementSibling.textContent = 'ИГРОК 1';
+    }
+
     this.targetScore = this.mode === 'ENDLESS' ? Infinity : config.targetScore;
     
-    ui.lvlName.textContent = this.mode === 'ENDLESS' ? "БЕСКОНЕЧНЫЙ" : config.name;
-    ui.lvlDesc.textContent = this.mode === 'ENDLESS' ? "Выживай как можно дольше" : config.desc;
-
     this.entities.player = new Paddle(H - 40, false, '#00e5a0');
-    this.entities.ai = new Paddle(70, true, '#ff4466');
+    this.entities.ai = new Paddle(70, this.mode !== 'MULTIPLAYER', '#ff4466');
     this.entities.ai.w = config.aiWidth;
     this.entities.ai.aiSpeed = config.aiSpeed;
     this.entities.ai.aiError = config.aiError;
@@ -818,9 +916,16 @@ const Game = {
   },
 
   spawnBall() {
-    const config = Levels[Math.min(this.levelIdx, Levels.length-1)];
-    let speed = config.ballSpeed;
-    if (this.mode === 'ENDLESS') speed += this.score.player * 0.5; // Scale speed endlessly
+    let speed = 8;
+    if (this.mode === 'CAMPAIGN' || this.mode === 'ENDLESS') {
+       speed = Levels[Math.min(this.levelIdx, Levels.length-1)].ballSpeed;
+       if (this.mode === 'ENDLESS') speed += this.score.player * 0.5;
+    } else if (this.mode === 'FREE_AI') {
+       let bSpeedMap = {1: 7, 2: 9, 3: 12};
+       speed = bSpeedMap[this.aiDifficulty];
+    } else {
+       speed = 8;
+    }
     
     const b = new Ball(W/2, H/2);
     // Determine serve direction (towards loser of last point, or random)
@@ -993,9 +1098,13 @@ const Game = {
       } else if (this.score.ai >= this.targetScore) {
         this.gameOver();
       }
-    } else {
+    } else if (this.mode === 'ENDLESS') {
       // Endless mode - if AI scores, game over.
       if (scorer === 'ai') this.gameOver();
+    } else if (this.mode === 'FREE_AI' || this.mode === 'MULTIPLAYER') {
+      if (this.score.player >= this.targetScore || this.score.ai >= this.targetScore) {
+         this.gameOver();
+      }
     }
   },
 
@@ -1017,12 +1126,27 @@ const Game = {
 
   gameOver() {
     this.state = 'TRANSITION';
-    ui.goTitle.textContent = "ВЫ ПРОИГРАЛИ";
-    ui.goTitle.style.color = "var(--danger)";
-    ui.goDesc.textContent = this.mode === 'ENDLESS' ? `Ваш рекорд: ${this.score.player}` : "Машина оказалась сильнее.";
+    if (this.mode === 'MULTIPLAYER') {
+        let p1Wins = this.score.player > this.score.ai;
+        ui.goTitle.textContent = p1Wins ? "ИГРОК 1 ПОБЕДИЛ" : "ИГРОК 2 ПОБЕДИЛ";
+        ui.goTitle.style.color = p1Wins ? "var(--primary)" : "var(--danger)";
+        ui.goDesc.textContent = `Счёт: ${this.score.player} - ${this.score.ai}`;
+        if (p1Wins) AudioSys.sfx.winLevel(); else AudioSys.sfx.winLevel(); // No real loss sound for multiplayer win
+    } else if (this.mode === 'FREE_AI') {
+        let p1Wins = this.score.player > this.score.ai;
+        ui.goTitle.textContent = p1Wins ? "ВЫ ПОБЕДИЛИ" : "ВЫ ПРОИГРАЛИ";
+        ui.goTitle.style.color = p1Wins ? "var(--primary)" : "var(--danger)";
+        ui.goDesc.textContent = `Счёт: ${this.score.player} - ${this.score.ai}`;
+        if (p1Wins) AudioSys.sfx.winLevel(); else AudioSys.sfx.lose();
+    } else {
+        ui.goTitle.textContent = "ВЫ ПРОИГРАЛИ";
+        ui.goTitle.style.color = "var(--danger)";
+        ui.goDesc.textContent = this.mode === 'ENDLESS' ? `Ваш рекорд: ${this.score.player}` : "Машина оказалась сильнее.";
+        AudioSys.sfx.lose();
+    }
+
     ui.menus.gameOver.classList.add('active');
     ui.btnPause.style.display = 'none';
-    AudioSys.sfx.lose();
   },
 
   update() {
@@ -1038,8 +1162,21 @@ const Game = {
 
     this.bgOffset += 0.5;
 
-    this.entities.player.update();
-    this.entities.ai.update(this.entities.balls);
+    // Manual input handling for multiplayer or single player keys
+    let p1Target = null;
+    let p2Target = null;
+    let speed = 8;
+
+    if (this.keys.p1Left) p1Target = this.entities.player.x + this.entities.player.w/2 - speed;
+    if (this.keys.p1Right) p1Target = this.entities.player.x + this.entities.player.w/2 + speed;
+
+    if (!this.entities.ai.isAI) {
+      if (this.keys.p2Left) p2Target = this.entities.ai.x + this.entities.ai.w/2 - speed;
+      if (this.keys.p2Right) p2Target = this.entities.ai.x + this.entities.ai.w/2 + speed;
+    }
+
+    this.entities.player.update(this.entities.balls, p1Target);
+    this.entities.ai.update(this.entities.balls, p2Target);
 
     this.entities.balls.forEach(b => b.update());
     this.entities.powerups.forEach(p => p.update());

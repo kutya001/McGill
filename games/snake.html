@@ -264,11 +264,21 @@ const Game = {
     }, {passive: true});
 
     document.addEventListener('keydown', e => {
+      if(e.code === 'Escape' && (this.state === 'PLAYING' || this.state === 'PAUSED')) {
+        if(this.state === 'PLAYING') {
+          this.state = 'PAUSED';
+          this.showMenu('pause');
+        } else {
+          this.state = 'PLAYING';
+          this.hideMenus();
+        }
+      }
+
       if(this.state !== 'PLAYING') return;
-      if(e.key === 'ArrowUp') this.queueInput({x: 0, y: -1});
-      if(e.key === 'ArrowDown') this.queueInput({x: 0, y: 1});
-      if(e.key === 'ArrowLeft') this.queueInput({x: -1, y: 0});
-      if(e.key === 'ArrowRight') this.queueInput({x: 1, y: 0});
+      if(e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') this.queueInput({x: 0, y: -1});
+      if(e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') this.queueInput({x: 0, y: 1});
+      if(e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') this.queueInput({x: -1, y: 0});
+      if(e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') this.queueInput({x: 1, y: 0});
     });
 
     document.getElementById('btn-campaign').onclick = () => { AudioSys.init(); this.mode = 'CAMPAIGN'; this.levelIdx = 0; this.startLevel(); };
