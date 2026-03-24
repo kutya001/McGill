@@ -784,41 +784,51 @@
 
       if (isMobile) {
         // On mobile, panels are stacked top and bottom (flex-direction: column)
-        // We need to reserve height for panels. Rough estimate: ~180px for panels
-        const panelHeight = 180;
-        const maxBoardHeight = availableHeight - panelHeight;
+        MINI_BLOCK_SIZE = 10; // fixed small size for panels
 
-        // Calculate BLOCK_SIZE constrained by height and width
-        const sizeByHeight = Math.floor(maxBoardHeight / ROWS);
-        const sizeByWidth = Math.floor(availableWidth / COLS);
+        // Next canvas will be horizontal (3 pieces side by side)
+        holdCanvas.width = MINI_BLOCK_SIZE * 4;
+        holdCanvas.height = MINI_BLOCK_SIZE * 4;
 
-        BLOCK_SIZE = Math.min(sizeByHeight, sizeByWidth);
-        MINI_BLOCK_SIZE = Math.min(15, Math.floor(BLOCK_SIZE * 0.7)); // smaller blocks for panels
+        nextCanvas.width = MINI_BLOCK_SIZE * 12;
+        nextCanvas.height = MINI_BLOCK_SIZE * 4;
       } else {
         // On desktop, panels are on sides
-        // We need to reserve width for side panels (120px * 2) + gaps (20px * 2) = 280px
-        const panelWidth = 280;
-        const maxBoardWidth = availableWidth - panelWidth;
-
-        const sizeByHeight = Math.floor(availableHeight / ROWS);
-        const sizeByWidth = Math.floor(maxBoardWidth / COLS);
-
-        BLOCK_SIZE = Math.min(sizeByHeight, sizeByWidth);
         MINI_BLOCK_SIZE = 20; // Default size for desktop panels
+
+        // Next canvas will be vertical (3 pieces on top of each other)
+        holdCanvas.width = MINI_BLOCK_SIZE * 4;
+        holdCanvas.height = MINI_BLOCK_SIZE * 4;
+
+        nextCanvas.width = MINI_BLOCK_SIZE * 4;
+        nextCanvas.height = MINI_BLOCK_SIZE * 12;
       }
+
+      // Allow DOM to layout the mini canvases and measure real UI height
+      const leftPanelHeight = document.getElementById('left-panel').offsetHeight || 0;
+      const rightPanelHeight = document.getElementById('right-panel').offsetHeight || 0;
+
+      let maxBoardHeight, maxBoardWidth;
+
+      if (isMobile) {
+        // Sub panel heights + 20px gap
+        maxBoardHeight = availableHeight - leftPanelHeight - rightPanelHeight - 20;
+        maxBoardWidth = availableWidth;
+      } else {
+        maxBoardHeight = availableHeight;
+        maxBoardWidth = availableWidth - 280; // 120px * 2 + gaps
+      }
+
+      const sizeByHeight = Math.floor(maxBoardHeight / ROWS);
+      const sizeByWidth = Math.floor(maxBoardWidth / COLS);
+
+      BLOCK_SIZE = Math.min(sizeByHeight, sizeByWidth);
 
       // Ensure a minimum block size so it's somewhat playable
       if (BLOCK_SIZE < 10) BLOCK_SIZE = 10;
 
       canvas.width = BLOCK_SIZE * COLS;
       canvas.height = BLOCK_SIZE * ROWS;
-
-      // Update mini canvas sizes (Hold: 4x4 blocks, Next: 4x12 blocks)
-      holdCanvas.width = MINI_BLOCK_SIZE * 4;
-      holdCanvas.height = MINI_BLOCK_SIZE * 4;
-
-      nextCanvas.width = MINI_BLOCK_SIZE * 4;
-      nextCanvas.height = MINI_BLOCK_SIZE * 12;
 
       if (game) {
         render(); // redraw with new sizes
@@ -965,7 +975,7 @@
     }
 
     // Отрисовка мини-панелей (Hold и Next)
-    function drawMiniPiece(context, piece, offsetY = 0) {
+    function drawMiniPiece(context, piece, offsetX = 0, offsetY = 0) {
       if (!piece) return;
       
       const bSize = MINI_BLOCK_SIZE;
@@ -973,9 +983,20 @@
       const shapeWidth = piece.shape[0].length * bSize;
       const shapeHeight = piece.shape.length * bSize;
       
-      const startX = (context.canvas.width - shapeWidth) / 2;
-      // Используем width (или MINI_BLOCK_SIZE*4) как базовый квадрат для центрирования
-      const startY = (MINI_BLOCK_SIZE * 4 - shapeHeight) / 2 + offsetY;
+      let startX, startY;
+
+      const isHorizontal = context.canvas.width > context.canvas.height;
+
+      if (isHorizontal) {
+        // Если холст горизонтальный (для Next на мобильных)
+        // базовый квадрат: 4 * bSize по ширине, 4 * bSize по высоте
+        startX = (MINI_BLOCK_SIZE * 4 - shapeWidth) / 2 + offsetX;
+        startY = (MINI_BLOCK_SIZE * 4 - shapeHeight) / 2 + offsetY;
+      } else {
+        // Вертикальный холст (стандартный)
+        startX = (context.canvas.width - shapeWidth) / 2 + offsetX;
+        startY = (MINI_BLOCK_SIZE * 4 - shapeHeight) / 2 + offsetY;
+      }
 
       for (let r = 0; r < piece.shape.length; r++) {
         for (let c = 0; c < piece.shape[r].length; c++) {
@@ -996,8 +1017,13 @@
       }
 
       // Next pieces (3 штуки)
+      const isHorizontal = nextCanvas.width > nextCanvas.height;
       for (let i = 0; i < game.nextPieces.length; i++) {
-        drawMiniPiece(nextCtx, game.nextPieces[i], i * MINI_BLOCK_SIZE * 4); // Смещение вниз для каждой следующей фигуры
+        if (isHorizontal) {
+           drawMiniPiece(nextCtx, game.nextPieces[i], i * MINI_BLOCK_SIZE * 4, 0); // Смещение вправо
+        } else {
+           drawMiniPiece(nextCtx, game.nextPieces[i], 0, i * MINI_BLOCK_SIZE * 4); // Смещение вниз
+        }
       }
     }
 
