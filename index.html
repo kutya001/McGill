@@ -1202,15 +1202,14 @@ function buildInfoCard(exName, stepDesc) {
 }
 
 function renderTimeline() {
-    timeline.innerHTML = '';
-    if (!protocol.length) return;
+    if (!protocol.length) { timeline.innerHTML = ''; return; }
     const end = Math.min(state.stepIdx + 5, protocol.length);
+    let html = '';
     for (let i = state.stepIdx; i < end; i++) {
-        const s = protocol[i], div = document.createElement('div');
-        div.className = `tl-item${i === state.stepIdx ? ' active' : ''}`;
-        div.innerHTML = `<span class="tl-name"><span class="tl-dot"></span>${s.ex} — ${s.phase}</span><span class="tl-time">${s.time}с</span>`;
-        timeline.appendChild(div);
+        const s = protocol[i];
+        html += `<div class="tl-item${i === state.stepIdx ? ' active' : ''}"><span class="tl-name"><span class="tl-dot"></span>${s.ex} — ${s.phase}</span><span class="tl-time">${s.time}с</span></div>`;
     }
+    timeline.innerHTML = html;
 }
 
 function setHeaderRunning(running) {
