@@ -135,12 +135,10 @@
         }
         @keyframes prepPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
 
-        .swipe-hint { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; color: var(--text-3); font-family: 'JetBrains Mono', monospace; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.4s; }
-        body.state-work .swipe-hint, body.state-rest .swipe-hint { opacity: 1; }
-
         .timer-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         #time-display { font-family: 'JetBrains Mono', monospace; font-size: 3.8rem; font-weight: 700; line-height: 1; letter-spacing: -0.03em; transition: color 0.3s ease; }
         #time-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-2); margin-top: 4px; transition: color 0.3s ease; font-family: 'JetBrains Mono', monospace; }
+        #total-time-display { font-size: 0.75rem; color: var(--text-2); margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
         #step-counter { font-size: 0.6rem; color: var(--text-3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
         #set-counter { font-size: 0.62rem; color: var(--accent); margin-top: 1px; font-family: 'JetBrains Mono', monospace; transition: color 0.3s; }
 
@@ -149,7 +147,7 @@
         .btn-ctrl:active { transform: scale(0.97); }
         .btn-ctrl:disabled { opacity: 0.3; cursor: not-allowed; }
         #btn-main  { background: var(--c-work); color: #000; }
-        #btn-next  { background: var(--surface-3); border: 1px solid var(--border-hi); }
+        #btn-prev, #btn-next  { background: var(--surface-3); border: 1px solid var(--border-hi); }
         #btn-reset { background: var(--surface-3); border: 1px solid var(--border-hi); flex: 0 0 46px; padding: 13px 4px; }
 
         .info-card { width: 100%; max-width: 380px; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--c-prep); border-radius: var(--radius); padding: 14px; font-size: 0.82rem; line-height: 1.55; flex-shrink: 0; max-height: 200px; overflow-y: auto; transition: border-left-color 0.3s ease; }
@@ -572,12 +570,13 @@
                     <div class="timer-inner">
                         <div id="time-display">00</div>
                         <div id="time-label">ГОТОВ</div>
+                        <div id="total-time-display"></div>
                         <div id="step-counter"></div>
                         <div id="set-counter"></div>
                     </div>
-                    <div class="swipe-hint">↑ свайп = пропуск</div>
                 </div>
                 <div class="controls">
+                    <button class="btn-ctrl" id="btn-prev" disabled>Назад</button>
                     <button class="btn-ctrl" id="btn-main">Старт</button>
                     <button class="btn-ctrl" id="btn-next" disabled>Пропуск</button>
                     <button class="btn-ctrl" id="btn-reset" title="Начать заново">↺</button>
@@ -822,10 +821,10 @@ const saveSoundCfg = () => { try { localStorage.setItem('mcgill_sound', JSON.str
 const loadSoundCfg = () => { try { const s = JSON.parse(localStorage.getItem('mcgill_sound')||'null'); if(s) Object.assign(soundCfg,s); } catch {} };
 
 const $ = id => document.getElementById(id);
-const uiTime=$('time-display'), uiLabel=$('time-label'), uiCounter=$('step-counter'), uiSet=$('set-counter');
+const uiTime=$('time-display'), uiLabel=$('time-label'), uiTotalTime=$('total-time-display'), uiCounter=$('step-counter'), uiSet=$('set-counter');
 const uiPhTitle=$('ph-title'), uiExTH=$('ex-title-header'), wSelect=$('workout-select');
 const infoCard=$('info-card'), timeline=$('timeline'), progressFill=$('progress-fill'), ringFg=$('ring-fg');
-const btnMain=$('btn-main'), btnNext=$('btn-next'), btnReset=$('btn-reset');
+const btnMain=$('btn-main'), btnNext=$('btn-next'), btnPrev=$('btn-prev'), btnReset=$('btn-reset');
 
 const syncOffline = () => document.body.classList.toggle('offline', !navigator.onLine);
 window.addEventListener('online', syncOffline); window.addEventListener('offline', syncOffline); syncOffline();
@@ -1073,8 +1072,30 @@ function _rafLoop() {
         }
         updateUI();
         if (state.timeLeft <= 3 && step.time > 5) playTone('tick');
+    } else {
+        // Update the global timer continuously even if current step's remaining time is unchanged
+        // to show smooth progress or just keep it in sync. The main logic needs to calculate
+        // done/left precisely.
+        updateGlobalTimerUI();
     }
     rafId = requestAnimationFrame(_rafLoop);
+}
+
+function updateGlobalTimerUI() {
+    if (!protocol.length || state.stepIdx >= protocol.length) return;
+    const step = protocol[state.stepIdx];
+    let done = 0;
+    for (let i = 0; i < state.stepIdx; i++) done += protocol[i].time;
+    // Calculate precise done time based on elapsed time of current step
+    const elapsedInStep = Math.max(0, step.time - state.timeLeft);
+    done += elapsedInStep;
+
+    const left = Math.max(0, totalTime - done);
+    const mmDone = Math.floor(done / 60);
+    const ssDone = Math.floor(done % 60).toString().padStart(2, '0');
+    const mmLeft = Math.floor(left / 60);
+    const ssLeft = Math.floor(left % 60).toString().padStart(2, '0');
+    uiTotalTime.textContent = `${mmDone}:${ssDone} / -${mmLeft}:${ssLeft}`;
 }
 
 function _hardStop() {
@@ -1087,10 +1108,10 @@ function _hardStop() {
 function resetUI() {
     const sid = state.sessionId, pidx = state.programIdx;
     Object.assign(state, { stepIdx:0, timeLeft:0, isRunning:false, sessionId:sid, programIdx:pidx });
-    btnMain.textContent = 'Старт'; btnMain.style.background = ''; btnNext.disabled = true;
+    btnMain.textContent = 'Старт'; btnMain.style.background = ''; btnNext.disabled = true; btnPrev.disabled = true;
     progressFill.style.width = '0%'; ringFg.style.strokeDashoffset = RING_C; ringFg.style.stroke = 'var(--c-prep)';
     document.body.className = '';
-    uiTime.textContent = '00'; uiLabel.textContent = 'ГОТОВ'; uiCounter.textContent = ''; uiSet.textContent = '';
+    uiTime.textContent = '00'; uiLabel.textContent = 'ГОТОВ'; uiTotalTime.textContent = ''; uiCounter.textContent = ''; uiSet.textContent = '';
     setHeaderRunning(false);
     infoCard.innerHTML = `<div style="color:var(--text-2)">Нажмите «Старт» для начала тренировки.</div>`;
     renderTimeline();
@@ -1102,16 +1123,16 @@ function startTimer() {
     if (state.stepIdx === 0 && state.timeLeft === 0) {
         speak('Инициализация протокола.');
         state.isRunning = true;
-        btnMain.textContent = 'Пауза'; btnMain.style.background = 'var(--c-rest)'; btnNext.disabled = false;
+        btnMain.textContent = 'Пауза'; btnMain.style.background = 'var(--c-rest)'; btnNext.disabled = false; btnPrev.disabled = true;
         loadStep(); return;
     }
     stepStartTs = performance.now() - ((protocol[state.stepIdx]?.time - state.timeLeft) * 1000);
     state.isRunning = true;
-    btnMain.textContent = 'Пауза'; btnMain.style.background = 'var(--c-rest)'; btnNext.disabled = false;
+    btnMain.textContent = 'Пауза'; btnMain.style.background = 'var(--c-rest)'; btnNext.disabled = false; btnPrev.disabled = (state.stepIdx === 0);
     _scheduleRaf();
 }
 
-function pauseTimer() { _hardStop(); btnMain.textContent = 'Продолжить'; btnMain.style.background = 'var(--c-work)'; btnNext.disabled = true; }
+function pauseTimer() { _hardStop(); btnMain.textContent = 'Продолжить'; btnMain.style.background = 'var(--c-work)'; btnNext.disabled = true; btnPrev.disabled = true; }
 
 function loadStep() {
     if (state.stepIdx >= protocol.length) { handleFinish(); return; }
@@ -1124,13 +1145,20 @@ function loadStep() {
 
 function nextStep() { if (state.stepIdx < protocol.length) { state.stepIdx++; loadStep(); } }
 
+function prevStep() {
+    if (state.stepIdx > 0) {
+        state.stepIdx--;
+        loadStep();
+    }
+}
+
 function handleFinish() {
     saveHistory({ done: true }); _hardStop(); setHeaderRunning(false);
-    uiTime.textContent = '✓'; uiLabel.textContent = 'ФИНИШ'; uiCounter.textContent = ''; uiSet.textContent = '';
+    uiTime.textContent = '✓'; uiLabel.textContent = 'ФИНИШ'; uiTotalTime.textContent = ''; uiCounter.textContent = ''; uiSet.textContent = '';
     document.body.className = 'state-finish'; progressFill.style.width = '100%';
     ringFg.style.strokeDashoffset = '0'; ringFg.style.stroke = 'var(--c-finish)';
     infoCard.innerHTML = buildInfoCard('Финиш', 'Комплекс успешно завершён!');
-    renderTimeline(); btnMain.textContent = 'Старт'; btnMain.style.background = ''; btnNext.disabled = true;
+    renderTimeline(); btnMain.textContent = 'Старт'; btnMain.style.background = ''; btnNext.disabled = true; btnPrev.disabled = true;
 }
 
 function updateUI() {
@@ -1151,6 +1179,10 @@ function updateUI() {
     ringFg.style.stroke = cmap[step.type] || 'var(--c-prep)';
     infoCard.innerHTML = buildInfoCard(step.ex, step.stepDesc);
     renderTimeline();
+
+    updateGlobalTimerUI();
+
+    btnPrev.disabled = (state.stepIdx === 0);
 }
 
 function getSetInfo(idx) {
@@ -1507,6 +1539,7 @@ document.querySelectorAll('[data-modal]').forEach(item => {
 // ═══════════════════════════════════════════════════════════════════
 btnMain.addEventListener('click', () => state.isRunning ? pauseTimer() : startTimer());
 btnNext.addEventListener('click', () => { if (!btnNext.disabled) nextStep(); });
+btnPrev.addEventListener('click', () => { if (!btnPrev.disabled) prevStep(); });
 btnReset.addEventListener('click', () => {
     const inProgress = state.isRunning || state.stepIdx > 0;
     if (inProgress && !confirm('Начать тренировку заново?')) return;
@@ -1520,15 +1553,13 @@ wSelect.addEventListener('change', e => {
     loadProgram(idx);
 });
 
-// Свайп
+// Свайп (долгое нажатие и двойное касание)
 (() => {
     const w = $('timer-wrap');
     let sy = 0, pt = null, lt = 0, didLongPress = false;
     w.addEventListener('touchstart', e => { sy = e.touches[0].clientY; didLongPress = false; pt = setTimeout(() => { if (state.isRunning && state.stepIdx < protocol.length) { didLongPress = true; protocol[state.stepIdx].time += 5; totalTime += 5; stepStartTs -= 5000; showToast('+5с'); } }, 600); }, {passive:true});
     w.addEventListener('touchend', e => {
         clearTimeout(pt);
-        const deltaY = sy - e.changedTouches[0].clientY;
-        if (deltaY > 55 && state.isRunning) { lt = 0; nextStep(); return; }
         if (didLongPress) { lt = 0; return; }
         const now = Date.now();
         if (now - lt < 300 && state.isRunning && state.stepIdx < protocol.length && state.timeLeft > 6) { protocol[state.stepIdx].time = Math.max(1, protocol[state.stepIdx].time - 5); totalTime = Math.max(0, totalTime - 5); stepStartTs += 5000; showToast('-5с'); }
