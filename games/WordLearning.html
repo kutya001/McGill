@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -190,6 +190,44 @@ main{flex:1;overflow:hidden;position:relative}
 .empty .em-icon{font-size:2.5rem;margin-bottom:12px}
 .empty p{font-size:.82rem;margin-bottom:16px}
 
+.btn-orange{background:var(--orange);color:#000}
+
+#hdr-user{font-size:.68rem;color:var(--tx2);background:var(--sf3);border:1px solid var(--bd);border-radius:20px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+#hdr-user:hover{background:var(--sf2)}
+
+.word-item .w-edit{width:28px;height:28px;border-radius:50%;background:var(--sf3);border:none;color:var(--tx2);font-size:.7rem;cursor:pointer;flex-shrink:0}
+.tag .edit{background:none;border:none;color:var(--blue);cursor:pointer;font-size:.7rem;padding:0 2px}
+
+.prompt-box{background:var(--sf3);border:1px solid var(--bd);border-radius:var(--rs);padding:12px;font-family:monospace;font-size:.68rem;color:var(--tx2);line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;user-select:text;-webkit-user-select:text;margin-bottom:10px}
+
+.rating-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);margin-bottom:8px}
+.rating-pos{font-size:1.1rem;font-weight:800;color:var(--gold);min-width:28px;text-align:center}
+.rating-pos.p1{color:var(--gold)}.rating-pos.p2{color:var(--tx2)}.rating-pos.p3{color:var(--orange)}
+.rating-name{flex:1;font-size:.88rem;font-weight:600}
+.rating-score{font-size:.82rem;color:var(--blue);font-weight:700}
+.rating-detail{font-size:.68rem;color:var(--tx3)}
+
+.login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:20px}
+.login-box{width:100%;max-width:320px}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo .em{font-size:3rem}
+.login-logo h2{font-size:1.2rem;margin-top:8px}
+.login-logo p{font-size:.78rem;color:var(--tx2);margin-top:4px}
+
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.user-row:last-child{border-bottom:none}
+.user-row .u-name{flex:1;font-size:.85rem;font-weight:600}
+.user-row .u-role{font-size:.65rem;padding:2px 8px;border-radius:10px;background:var(--sf3);color:var(--tx2)}
+.user-row .u-role.admin{color:var(--gold);border:1px solid rgba(255,215,0,.3)}
+.user-row .u-pending{color:var(--orange);font-size:.7rem}
+.user-row button{padding:4px 10px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf3);color:var(--tx2);font-size:.7rem;cursor:pointer}
+.user-row button.approve{border-color:var(--green);color:var(--green)}
+.user-row button.reject{border-color:var(--red);color:var(--red)}
+
+.stabs{display:flex;gap:4px;margin-bottom:14px;overflow-x:auto;flex-shrink:0}
+.stab{padding:8px 14px;border-radius:20px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s}
+.stab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+
 /* Misc */
 .mb8{margin-bottom:8px}.mb16{margin-bottom:16px}.mt8{margin-top:8px}.mt16{margin-top:16px}
 .flex-c{display:flex;align-items:center;gap:8px}
@@ -212,11 +250,39 @@ main{flex:1;overflow:hidden;position:relative}
 <header>
   <button id="btn-back" onclick="goBack()">←</button>
   <div id="hdr-title">📖 Словарь</div>
+  <span id="hdr-user" onclick="openUserMenu()" style="display:none"></span>
   <button class="hdr-btn" id="btn-sync" onclick="syncData()" title="Синхронизация">🔄</button>
 </header>
 
 <!-- Content -->
 <main>
+  <!-- === LOGIN VIEW === -->
+  <section id="v-login" class="view">
+    <div class="login-wrap">
+      <div class="login-box">
+        <div class="login-logo"><div class="em">📖</div><h2>Словарь</h2><p>Войдите для продолжения</p></div>
+        <div class="input-group"><label>Логин</label><input type="text" id="inp-login" placeholder="Имя пользователя" autocomplete="username"></div>
+        <div class="input-group"><label>Пароль</label><input type="password" id="inp-pass" placeholder="Пароль" autocomplete="current-password"></div>
+        <button class="btn btn-primary mt8" onclick="doLogin()">Войти</button>
+        <button class="btn btn-ghost mt8" onclick="showRegister()">Регистрация</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- === REGISTER VIEW === -->
+  <section id="v-register" class="view">
+    <div class="login-wrap">
+      <div class="login-box">
+        <div class="login-logo"><div class="em">📝</div><h2>Регистрация</h2><p>Создайте аккаунт</p></div>
+        <div class="input-group"><label>Логин</label><input type="text" id="inp-reg-login" placeholder="Имя пользователя" autocomplete="username"></div>
+        <div class="input-group"><label>Пароль</label><input type="password" id="inp-reg-pass" placeholder="Пароль" autocomplete="new-password"></div>
+        <div class="input-group"><label>Пароль ещё раз</label><input type="password" id="inp-reg-pass2" placeholder="Подтвердите пароль" autocomplete="new-password"></div>
+        <button class="btn btn-primary mt8" onclick="doRegister()">Зарегистрироваться</button>
+        <button class="btn btn-ghost mt8" onclick="showLogin()">Уже есть аккаунт</button>
+      </div>
+    </div>
+  </section>
+
   <!-- === SETUP VIEW === -->
   <section id="v-setup" class="view">
     <div style="text-align:center;padding:20px 0 30px">
@@ -233,6 +299,8 @@ main{flex:1;overflow:hidden;position:relative}
       <textarea id="inp-sa" rows="6" placeholder='Вставьте содержимое .json файла сервисного аккаунта...'></textarea>
     </div>
     <button class="btn btn-primary mt8" onclick="saveSetup()">Подключиться</button>
+    <button class="btn btn-orange mt8" onclick="initSheets()">🗃 Инициализировать таблицы</button>
+    <p style="font-size:.68rem;color:var(--tx3);margin-top:6px;text-align:center">Создаст листы languages, categories, words, users, ratings если их нет</p>
     <button class="help-toggle mt8" onclick="toggleHelp()">📋 Инструкция по настройке</button>
     <div class="help-box" id="help-box" style="display:none">
       <b>1.</b> Создайте Google Таблицу с 3 листами:<br>
@@ -351,49 +419,23 @@ main{flex:1;overflow:hidden;position:relative}
     </div>
   </section>
 
+  <!-- === RATING VIEW === -->
+  <section id="v-rating" class="view">
+    <div class="section-title">🏆 Рейтинг пользователей</div>
+    <div id="rating-list"></div>
+  </section>
+
   <!-- === SETTINGS VIEW === -->
   <section id="v-settings" class="view">
-    <div class="set-section">
-      <h3>🔗 Подключение</h3>
-      <div class="input-group">
-        <label>ID Таблицы</label>
-        <input type="text" id="s-sid">
-      </div>
-      <div class="set-row"><span>Сервисный аккаунт</span><span class="badge" id="s-sa-email">—</span></div>
-      <button class="btn btn-ghost btn-sm mt8" onclick="openChangeSA()">Изменить сервисный аккаунт</button>
-      <button class="btn btn-primary btn-sm mt8" onclick="saveSettings()">Сохранить ID таблицы</button>
+    <div class="stabs" id="settings-tabs">
+      <div class="stab active" onclick="setSettingsTab('general')">Общие</div>
+      <div class="stab" onclick="setSettingsTab('langs')">Языки</div>
+      <div class="stab" onclick="setSettingsTab('cats')">Категории</div>
+      <div class="stab" onclick="setSettingsTab('data')">Данные</div>
+      <div class="stab" onclick="setSettingsTab('impexp')">Импорт/Экспорт</div>
+      <div class="stab" onclick="setSettingsTab('admin')" id="stab-admin" style="display:none">Админ</div>
     </div>
-
-    <div class="set-section">
-      <h3>🌐 Языки</h3>
-      <div id="s-langs" class="tag-list"></div>
-      <button class="btn btn-ghost btn-sm" onclick="openAddLang()">+ Добавить язык</button>
-    </div>
-
-    <div class="set-section">
-      <h3>📁 Категории</h3>
-      <div id="s-cats" class="tag-list"></div>
-      <button class="btn btn-ghost btn-sm" onclick="openAddCat()">+ Добавить категорию</button>
-    </div>
-
-    <div class="set-section">
-      <h3>📊 Данные</h3>
-      <div class="set-row"><span>Слова в кэше</span><span class="badge" id="s-cached">0</span></div>
-      <div class="set-row"><span>Прогресс</span><span class="badge" id="s-progress">0 слов</span></div>
-      <button class="btn btn-ghost btn-sm mt8" onclick="syncData()">🔄 Обновить данные</button>
-      <button class="btn btn-red btn-sm mt8" onclick="clearProgress()">Сбросить прогресс</button>
-    </div>
-
-    <div class="set-section">
-      <h3>📝 Массовый импорт</h3>
-      <p style="font-size:.72rem;color:var(--tx2);margin-bottom:10px">Вставьте слова (по одной паре на строку, через табуляцию или |)</p>
-      <div class="input-group"><label>Категория</label><select id="imp-cat"></select></div>
-      <div class="input-group">
-        <label>Текст (слово_от | слово_до | транскрипция)</label>
-        <textarea id="imp-text" placeholder="Яблоко | Apple | ˈæpəl&#10;Хлеб | Bread | brɛd"></textarea>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="bulkImport()">Импортировать</button>
-    </div>
+    <div id="settings-content"></div>
   </section>
 </main>
 
@@ -402,23 +444,27 @@ main{flex:1;overflow:hidden;position:relative}
   <button data-v="home" class="active" onclick="navigate('home')"><span class="ico">📚</span>Словарь</button>
   <button data-v="cards" onclick="navigate('cards')"><span class="ico">🎴</span>Карточки</button>
   <button data-v="quiz" onclick="navigate('quiz')"><span class="ico">❓</span>Тест</button>
+  <button data-v="rating" onclick="navigate('rating')"><span class="ico">🏆</span>Рейтинг</button>
   <button data-v="settings" onclick="navigate('settings')"><span class="ico">⚙️</span>Настройки</button>
 </nav>
 
 <script>
 /* ===== CONSTANTS ===== */
-const LS_CFG='wl_config', LS_CACHE='wl_cache', LS_PROG='wl_progress', LS_SA='wl_sa';
+const LS_CFG='wl_config', LS_CACHE='wl_cache', LS_PROG='wl_progress', LS_SA='wl_sa', LS_USER='wl_user';
 const SHEETS_BASE='https://sheets.googleapis.com/v4/spreadsheets';
 const TOKEN_URI='https://oauth2.googleapis.com/token';
 const SCOPE='https://www.googleapis.com/auth/spreadsheets';
 const LANG_CODES={ru:'ru-RU',en:'en-US',ko:'ko-KR',fr:'fr-FR',de:'de-DE',es:'es-ES',it:'it-IT',ja:'ja-JP',zh:'zh-CN',ar:'ar-SA',tr:'tr-TR',pt:'pt-BR',hi:'hi-IN',pl:'pl-PL',uk:'uk-UA',kk:'kk-KZ',ky:'ky-KG'};
+const ALL_SHEETS=['languages','categories','words','users','ratings'];
+const SHEET_HEADERS={languages:['code','name'],categories:['id','name','icon'],words:['category','lang_from','word_from','lang_to','word_to','transcription'],users:['login','password','role','status'],ratings:['login','words_learned','quizzes_done','quiz_score','last_active']};
 
 /* ===== STATE ===== */
 let cfg={spreadsheetId:''};
 let sa=null; // service account parsed JSON
-let data={languages:[],categories:[],words:[]};
-let ui={view:'home',langFrom:'ru',langTo:'en',category:null};
+let data={languages:[],categories:[],words:[],users:[],ratings:[]};
+let ui={view:'home',langFrom:'ru',langTo:'en',category:null,settingsTab:'general'};
 let progress={};
+let currentUser=null;
 let accessToken=null;
 let tokenExpiry=0;
 let navStack=['home'];
@@ -432,7 +478,7 @@ let qz={words:[],index:0,score:0,answered:false,total:10};
 function init(){
   loadConfig();
   loadSA();
-  // Migrate old config: if apiKey looks like JSON, move it to SA
+  // Migrate old config
   if(cfg.apiKey){
     try{
       const parsed=JSON.parse(cfg.apiKey);
@@ -443,11 +489,13 @@ function init(){
   }
   loadProgress();
   loadCache();
+  loadUser();
   if(!sa||!cfg.spreadsheetId){
     showView('setup');
+  } else if(!currentUser){
+    showView('login');
   } else {
-    showView('home');
-    syncData();
+    afterLogin();
   }
   initLangSelectors();
   document.getElementById('sel-from').addEventListener('change',onLangChange);
@@ -491,12 +539,24 @@ function loadCache(){
   try{const s=localStorage.getItem(LS_CACHE);if(s) data=JSON.parse(s)}catch(e){}
 }
 function saveCache(){localStorage.setItem(LS_CACHE,JSON.stringify(data))}
+function loadUser(){try{const s=localStorage.getItem(LS_USER);if(s)currentUser=JSON.parse(s)}catch(e){}}
+function saveUser(){if(currentUser)localStorage.setItem(LS_USER,JSON.stringify(currentUser));else localStorage.removeItem(LS_USER)}
+
+function afterLogin(){
+  document.getElementById('hdr-user').textContent=currentUser.login;
+  document.getElementById('hdr-user').style.display='inline';
+  if(currentUser.role==='admin')document.getElementById('stab-admin').style.display='';
+  showView('home');
+  syncData();
+}
 
 /* ===== NAVIGATION ===== */
 function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   const el=document.getElementById('v-'+name);
   if(el){el.classList.add('active');if(name==='cards')el.style.display='flex'}
+  const noNav=['login','register','setup'];
+  document.getElementById('bnav').style.display=noNav.includes(name)?'none':'flex';
 }
 
 function navigate(name,params){
@@ -519,6 +579,7 @@ function navigate(name,params){
   else if(name==='words') renderWords();
   else if(name==='cards') initCards();
   else if(name==='quiz') initQuiz();
+  else if(name==='rating') renderRating();
   else if(name==='settings') renderSettings();
 }
 
@@ -598,25 +659,169 @@ async function apiAppend(range,values){
   return r.json();
 }
 
+async function apiUpdate(range,values){
+  const token=await ensureAuth();
+  const body=Array.isArray(values)?{values:[values]}:{values:[[values]]};
+  const url=`${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
+  const r=await fetch(url,{method:'PUT',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error('Update failed');return r.json();
+}
+
+async function apiClearRow(sheet,rowIndex){
+  const token=await ensureAuth();
+  const range=sheet+'!'+rowIndex+':'+rowIndex;
+  const url=`${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}:clear`;
+  const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
+  if(!r.ok)throw new Error('Clear failed');
+}
+
+async function apiBatchUpdate(requests){
+  const token=await ensureAuth();
+  const url=`${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}:batchUpdate`;
+  const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({requests})});
+  if(!r.ok)throw new Error('BatchUpdate failed');return r.json();
+}
+
+async function apiGetSheets(){
+  const token=await ensureAuth();
+  const url=`${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}?fields=sheets.properties.title`;
+  const r=await fetch(url,{headers:{'Authorization':'Bearer '+token}});
+  const d=await r.json();return(d.sheets||[]).map(s=>s.properties.title);
+}
+
+/* ===== INIT SHEETS ===== */
+async function initSheets(){
+  showLoader(true);
+  try{
+    const existing=await apiGetSheets();
+    const reqs=[];
+    for(const name of ALL_SHEETS){if(!existing.includes(name))reqs.push({addSheet:{properties:{title:name}}})}
+    if(reqs.length)await apiBatchUpdate(reqs);
+    for(const name of ALL_SHEETS){
+      const rows=await apiRead(name+'!1:1');
+      if(!rows.values||!rows.values.length)await apiAppend(name+'!A1',[SHEET_HEADERS[name]]);
+    }
+    const users=await apiRead('users!A2:D');
+    if(!users.values||!users.values.length)await apiAppend('users!A:D',[['Kutman','123','admin','active']]);
+    toast('Таблицы инициализированы','ok');
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+/* ===== AUTH ===== */
+function showLogin(){showView('login')}
+function showRegister(){showView('register')}
+
+async function ensureUsersLoaded(){
+  if(data.users.length)return;
+  try{
+    const res=await apiRead('users!A2:D');
+    if(res.values&&res.values.length){
+      data.users=res.values.filter(r=>r[0]).map(r=>({login:r[0],password:r[1]||'',role:r[2]||'user',status:r[3]||'active'}));
+      saveCache();
+    }
+  }catch(e){}
+  if(!data.users.length){data.users=[{login:'Kutman',password:'123',role:'admin',status:'active'}]}
+}
+
+async function doLogin(){
+  const login=document.getElementById('inp-login').value.trim();
+  const pass=document.getElementById('inp-pass').value.trim();
+  if(!login||!pass){toast('Введите логин и пароль','err');return}
+  showLoader(true);
+  try{
+    await ensureUsersLoaded();
+    const u=data.users.find(x=>x.login.toLowerCase()===login.toLowerCase());
+    if(!u){toast('Пользователь не найден','err');showLoader(false);return}
+    if(u.password!==pass){toast('Неверный пароль','err');showLoader(false);return}
+    if(u.status==='pending'){toast('Аккаунт ожидает подтверждения','err');showLoader(false);return}
+    if(u.status==='rejected'){toast('Аккаунт отклонён','err');showLoader(false);return}
+    currentUser={login:u.login,role:u.role};saveUser();
+    toast('Добро пожаловать, '+u.login+'!','ok');
+    afterLogin();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+async function doRegister(){
+  const login=document.getElementById('inp-reg-login').value.trim();
+  const pass=document.getElementById('inp-reg-pass').value.trim();
+  const pass2=document.getElementById('inp-reg-pass2').value.trim();
+  if(!login||!pass){toast('Заполните все поля','err');return}
+  if(pass!==pass2){toast('Пароли не совпадают','err');return}
+  showLoader(true);
+  try{
+    await ensureUsersLoaded();
+    if(data.users.find(x=>x.login.toLowerCase()===login.toLowerCase())){toast('Логин занят','err');showLoader(false);return}
+    await apiAppend('users!A:D',[[login,pass,'user','pending']]);
+    data.users.push({login,password:pass,role:'user',status:'pending'});saveCache();
+    toast('Регистрация отправлена. Ожидайте подтверждения.','ok');
+    showLogin();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+function openUserMenu(){
+  if(!currentUser)return;
+  showModal(`
+    <h3>${esc(currentUser.login)}</h3>
+    <p style="color:var(--tx2);font-size:.82rem;margin-bottom:16px">Роль: ${esc(currentUser.role)}</p>
+    <button class="btn btn-ghost mb8" onclick="openChangePass()">Сменить пароль</button>
+    <button class="btn btn-red" onclick="doLogout()">Выйти</button>
+  `);
+}
+
+function openChangePass(){
+  closeModal();
+  showModal(`
+    <h3>Смена пароля</h3>
+    <div class="input-group"><label>Текущий пароль</label><input type="password" id="m-old-pass"></div>
+    <div class="input-group"><label>Новый пароль</label><input type="password" id="m-new-pass"></div>
+    <div class="input-group"><label>Повтор</label><input type="password" id="m-new-pass2"></div>
+    <button class="btn btn-primary" onclick="doChangePass()">Сохранить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+
+async function doChangePass(){
+  const old=document.getElementById('m-old-pass').value;
+  const np=document.getElementById('m-new-pass').value;
+  const np2=document.getElementById('m-new-pass2').value;
+  if(!old||!np){toast('Заполните поля','err');return}
+  if(np!==np2){toast('Пароли не совпадают','err');return}
+  const idx=data.users.findIndex(u=>u.login===currentUser.login);
+  if(idx<0){toast('Пользователь не найден','err');return}
+  if(data.users[idx].password!==old){toast('Неверный текущий пароль','err');return}
+  showLoader(true);
+  try{await apiUpdate('users!B'+(idx+2),np);data.users[idx].password=np;saveCache();toast('Пароль изменён','ok');closeModal()}catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+
+function doLogout(){currentUser=null;saveUser();closeModal();showLogin()}
+
 /* ===== SYNC ===== */
 async function syncData(){
   showLoader(true);
   try{
-    const [langs,cats,words]=await Promise.all([
+    const results=await Promise.allSettled([
       apiRead('languages!A2:B100'),
       apiRead('categories!A2:C100'),
-      apiRead('words!A2:F5000')
+      apiRead('words!A2:F5000'),
+      apiRead('users!A2:D'),
+      apiRead('ratings!A2:E')
     ]);
-    data.languages=(langs.values||[]).map(r=>({code:(r[0]||'').trim(),name:(r[1]||'').trim()})).filter(l=>l.code&&l.name);
-    data.categories=(cats.values||[]).map(r=>({id:(r[0]||'').trim(),name:(r[1]||'').trim(),icon:(r[2]||'📁').trim()})).filter(c=>c.id&&c.name);
-    data.words=(words.values||[]).map(r=>({
+    if(results[0].status==='fulfilled'){const v=results[0].value;data.languages=(v.values||[]).map(r=>({code:(r[0]||'').trim(),name:(r[1]||'').trim()})).filter(l=>l.code&&l.name)}
+    if(results[1].status==='fulfilled'){const v=results[1].value;data.categories=(v.values||[]).map(r=>({id:(r[0]||'').trim(),name:(r[1]||'').trim(),icon:(r[2]||'📁').trim()})).filter(c=>c.id&&c.name)}
+    if(results[2].status==='fulfilled'){const v=results[2].value;data.words=(v.values||[]).map(r=>({
       category:(r[0]||'').trim(),
       langFrom:(r[1]||'').trim(),
       wordFrom:(r[2]||'').trim(),
       langTo:(r[3]||'').trim(),
       wordTo:(r[4]||'').trim(),
       transcription:(r[5]||'').trim()
-    })).filter(w=>w.wordFrom&&w.wordTo);
+    })).filter(w=>w.wordFrom&&w.wordTo)}
+    if(results[3].status==='fulfilled'){const v=results[3].value;if(v.values&&v.values.length)data.users=v.values.filter(r=>r[0]).map(r=>({login:r[0],password:r[1]||'',role:r[2]||'user',status:r[3]||'active'}))}
+    if(results[4].status==='fulfilled'){const v=results[4].value;if(v.values&&v.values.length)data.ratings=v.values.filter(r=>r[0]).map(r=>({login:r[0],words_learned:parseInt(r[1])||0,quizzes_done:parseInt(r[2])||0,quiz_score:parseInt(r[3])||0,last_active:r[4]||''}))}
     saveCache();
     initLangSelectors();
     toast('Данные обновлены ✓','ok');
@@ -756,7 +961,10 @@ function renderWords(){
   words.forEach(w=>list.appendChild(createWordItem(w)));
 }
 
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
 function createWordItem(w){
+  const idx=data.words.indexOf(w);
   const d=document.createElement('div');
   d.className='word-item';
   const lvl=getLevel(w);
@@ -768,10 +976,13 @@ function createWordItem(w){
   const to=document.createElement('div');to.className='w-to';to.textContent=w.wordTo;
   main.appendChild(from);main.appendChild(to);
   if(w.transcription){const tr=document.createElement('div');tr.className='w-tr';tr.textContent=w.transcription;main.appendChild(tr)}
+  const editBtn=document.createElement('button');
+  editBtn.className='w-edit';editBtn.textContent='✏';
+  editBtn.addEventListener('click',e=>{e.stopPropagation();openEditWord(idx)});
   const spk=document.createElement('button');
   spk.className='w-speak';spk.textContent='🔊';
   spk.addEventListener('click',e=>{e.stopPropagation();speak(w.wordTo,w.langTo)});
-  d.appendChild(dot);d.appendChild(main);d.appendChild(spk);
+  d.appendChild(dot);d.appendChild(main);d.appendChild(editBtn);d.appendChild(spk);
   return d;
 }
 
@@ -946,47 +1157,175 @@ function showQuizDone(){
   document.querySelector('#v-quiz .quiz-score').style.display='none';
   document.querySelector('#v-quiz .quiz-lang').style.display='none';
   document.querySelector('#v-quiz .quiz-question').style.display='none';
+  updateRating();
 }
 
 /* ===== SETTINGS VIEW ===== */
-function renderSettings(){
-  document.getElementById('s-sid').value=cfg.spreadsheetId||'';
-  document.getElementById('s-sa-email').textContent=sa?.client_email||'Не настроен';
-
-  // Languages
-  const sl=document.getElementById('s-langs');
-  sl.innerHTML='';
-  data.languages.forEach(l=>{
-    const t=document.createElement('span');t.className='tag';
-    t.textContent=l.name+' ('+l.code+')';
-    sl.appendChild(t);
-  });
-
-  // Categories
-  const sc=document.getElementById('s-cats');
-  sc.innerHTML='';
-  data.categories.forEach(c=>{
-    const t=document.createElement('span');t.className='tag';
-    t.textContent=c.icon+' '+c.name;
-    sc.appendChild(t);
-  });
-
-  // Import category dropdown
-  const ic=document.getElementById('imp-cat');
-  ic.innerHTML='';
-  data.categories.forEach(c=>ic.appendChild(new Option(c.icon+' '+c.name,c.id)));
-
-  // Stats
-  document.getElementById('s-cached').textContent=data.words.length;
-  document.getElementById('s-progress').textContent=Object.keys(progress).length+' слов';
+function setSettingsTab(tab){
+  ui.settingsTab=tab;
+  document.querySelectorAll('#settings-tabs .stab').forEach(s=>s.classList.toggle('active',s.textContent.trim()==={general:'Общие',langs:'Языки',cats:'Категории',data:'Данные',impexp:'Импорт/Экспорт',admin:'Админ'}[tab]));
+  renderSettings();
 }
 
-function saveSettings(){
-  cfg.spreadsheetId=document.getElementById('s-sid').value.trim();
-  saveCfg();
-  accessToken=null; tokenExpiry=0;
-  toast('Настройки сохранены','ok');
-  syncData();
+function renderSettings(){
+  const c=document.getElementById('settings-content');
+  if(!c)return;
+  const tab=ui.settingsTab||'general';
+  if(tab==='general') renderSettingsGeneral(c);
+  else if(tab==='langs') renderSettingsLangs(c);
+  else if(tab==='cats') renderSettingsCats(c);
+  else if(tab==='data') renderSettingsData(c);
+  else if(tab==='impexp') renderSettingsImpExp(c);
+  else if(tab==='admin') renderSettingsAdmin(c);
+}
+
+function renderSettingsGeneral(c){
+  c.innerHTML=`
+    <div class="set-section">
+      <h3>📋 Подключение</h3>
+      <div class="set-row"><span>Spreadsheet ID</span><span class="badge">${cfg.spreadsheetId?cfg.spreadsheetId.slice(0,12)+'…':'Не задан'}</span></div>
+      <div class="set-row"><span>Сервисный аккаунт</span><span class="badge">${sa?.client_email||'Не настроен'}</span></div>
+      <button class="btn btn-sm btn-ghost mt8" onclick="openChangeSID()">Изменить ID</button>
+      <button class="btn btn-sm btn-ghost mt8" onclick="openChangeSA()">Изменить SA</button>
+      <button class="btn btn-sm btn-orange mt8" onclick="initSheetsFromSettings()">🗃 Инициализировать таблицы</button>
+    </div>
+    <div class="set-section">
+      <h3>📊 Статистика</h3>
+      <div class="set-row"><span>Слов в кэше</span><span class="badge">${data.words.length}</span></div>
+      <div class="set-row"><span>Прогресс</span><span class="badge">${Object.keys(progress).length} слов</span></div>
+      <div class="set-row"><span>Языки</span><span class="badge">${data.languages.length}</span></div>
+      <div class="set-row"><span>Категории</span><span class="badge">${data.categories.length}</span></div>
+    </div>
+    <button class="btn btn-red mt8" onclick="clearProgress()">🗑 Сбросить прогресс</button>`;
+}
+
+function renderSettingsLangs(c){
+  let html='<div class="set-section"><h3>🌍 Языки</h3><div class="tag-list">';
+  data.languages.forEach((l,i)=>{
+    html+=`<span class="tag">${esc(l.name)} (${esc(l.code)}) <button class="edit" onclick="openEditLang(${i})">✏</button></span>`;
+  });
+  html+=`</div><button class="btn btn-sm btn-primary mt8" onclick="openAddLang()">+ Добавить язык</button></div>`;
+  c.innerHTML=html;
+}
+
+function renderSettingsCats(c){
+  let html='<div class="set-section"><h3>📂 Категории</h3><div class="tag-list">';
+  data.categories.forEach((cat,i)=>{
+    html+=`<span class="tag">${esc(cat.icon)} ${esc(cat.name)} <button class="edit" onclick="openEditCat(${i})">✏</button></span>`;
+  });
+  html+=`</div><button class="btn btn-sm btn-primary mt8" onclick="openAddCat()">+ Добавить категорию</button></div>`;
+  c.innerHTML=html;
+}
+
+function renderSettingsData(c){
+  const catsOpts=data.categories.map(cat=>`<option value="${esc(cat.id)}">${esc(cat.icon+' '+cat.name)}</option>`).join('');
+  c.innerHTML=`
+    <div class="set-section">
+      <h3>📝 Массовый импорт</h3>
+      <div class="input-group"><label>Категория</label><select id="imp-cat">${catsOpts}</select></div>
+      <div class="input-group"><label>Слова (формат: слово|перевод|транскрипция)</label><textarea id="imp-text" rows="6" placeholder="apple|яблоко|ˈæpəl"></textarea></div>
+      <button class="btn btn-sm btn-primary" onclick="bulkImport()">Импортировать</button>
+      <div class="prompt-box mt8" id="import-prompt">Пример:\napple|яблоко|ˈæpəl\nbanana|банан|bəˈnænə\ncat|кошка</div>
+    </div>`;
+}
+
+function renderSettingsImpExp(c){
+  const langsOpts=data.languages.map(l=>`<option value="${esc(l.code)}">${esc(l.name)}</option>`).join('');
+  const catsOpts='<option value="">Все категории</option>'+data.categories.map(cat=>`<option value="${esc(cat.id)}">${esc(cat.icon+' '+cat.name)}</option>`).join('');
+  c.innerHTML=`
+    <div class="set-section">
+      <h3>📤 Экспорт JSON</h3>
+      <div class="input-group"><label>Язык (от)</label><select id="exp-lf">${langsOpts}</select></div>
+      <div class="input-group"><label>Язык (до)</label><select id="exp-lt">${langsOpts}</select></div>
+      <div class="input-group"><label>Категория</label><select id="exp-cat">${catsOpts}</select></div>
+      <button class="btn btn-sm btn-primary mb8" onclick="exportJSON()">Скачать JSON</button>
+      <button class="btn btn-sm btn-ghost" onclick="exportToClipboard()">📋 Копировать в буфер</button>
+    </div>
+    <div class="set-section">
+      <h3>📥 Импорт JSON</h3>
+      <p style="font-size:.78rem;color:var(--tx2);margin-bottom:10px">Умный импорт: новые слова добавятся, существующие обновятся, дубликаты пропустятся</p>
+      <input type="file" id="imp-file" accept=".json" onchange="onImportFile(event)" style="display:none">
+      <button class="btn btn-sm btn-primary" onclick="document.getElementById('imp-file').click()">Выбрать файл .json</button>
+    </div>`;
+  document.getElementById('exp-lf').value=ui.langFrom;
+  document.getElementById('exp-lt').value=ui.langTo;
+}
+
+function renderSettingsAdmin(c){
+  if(!currentUser||currentUser.role!=='admin'){c.innerHTML='<p style="color:var(--tx2)">Доступ только для администраторов</p>';return}
+  let html='<div class="set-section"><h3>👥 Пользователи</h3>';
+  data.users.forEach((u,i)=>{
+    const isPending=u.status==='pending';
+    const roleClass=u.role==='admin'?'admin':'';
+    html+=`<div class="user-row">
+      <span class="u-name">${esc(u.login)}${isPending?' <span class="u-pending">(ожидает)</span>':''}</span>
+      <span class="u-role ${roleClass}">${esc(u.role)}</span>`;
+    if(isPending){
+      html+=`<button class="approve" onclick="approveUser(${i})">✓</button><button class="reject" onclick="rejectUser(${i})">✗</button>`;
+    }else if(u.login!==currentUser.login){
+      html+=`<button onclick="toggleRole(${i})">${u.role==='admin'?'→user':'→admin'}</button>`;
+      html+=`<button class="reject" onclick="deleteUser(${i})">🗑</button>`;
+    }
+    html+=`</div>`;
+  });
+  html+=`</div>`;
+  c.innerHTML=html;
+}
+
+function openChangeSID(){
+  showModal(`
+    <h3>Spreadsheet ID</h3>
+    <div class="input-group"><label>ID таблицы</label><input type="text" id="m-new-sid" value="${esc(cfg.spreadsheetId||'')}"></div>
+    <button class="btn btn-primary" onclick="saveSID()">Сохранить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+function saveSID(){
+  cfg.spreadsheetId=document.getElementById('m-new-sid').value.trim();
+  saveCfg();accessToken=null;tokenExpiry=0;
+  toast('ID сохранён','ok');closeModal();syncData();
+}
+
+function initSheetsFromSettings(){initSheets()}
+
+/* ===== ADMIN FUNCTIONS ===== */
+async function approveUser(idx){
+  showLoader(true);
+  try{
+    await apiUpdate('users!D'+(idx+2),'active');
+    data.users[idx].status='active';saveCache();
+    toast('Пользователь одобрен','ok');renderSettings();
+  }catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+async function rejectUser(idx){
+  showLoader(true);
+  try{
+    await apiUpdate('users!D'+(idx+2),'rejected');
+    data.users[idx].status='rejected';saveCache();
+    toast('Пользователь отклонён','ok');renderSettings();
+  }catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+async function toggleRole(idx){
+  const newRole=data.users[idx].role==='admin'?'user':'admin';
+  showLoader(true);
+  try{
+    await apiUpdate('users!C'+(idx+2),newRole);
+    data.users[idx].role=newRole;saveCache();
+    toast('Роль изменена','ok');renderSettings();
+  }catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+async function deleteUser(idx){
+  if(!confirm('Удалить пользователя '+data.users[idx].login+'?'))return;
+  showLoader(true);
+  try{
+    await apiClearRow('users',idx+2);
+    data.users.splice(idx,1);saveCache();
+    toast('Пользователь удалён','ok');renderSettings();
+  }catch(e){toast('Ошибка','err')}
+  showLoader(false);
 }
 
 function openChangeSA(){
@@ -1024,8 +1363,7 @@ function saveSetup(){
   }catch(e){toast('Ошибка парсинга JSON','err');return}
   cfg.spreadsheetId=sid;
   saveCfg();
-  navigate('home');
-  syncData();
+  showLogin();
 }
 
 function clearProgress(){
@@ -1142,6 +1480,132 @@ async function addWord(){
   showLoader(false);
 }
 
+/* ===== EDIT / DELETE LANGUAGE ===== */
+function openEditLang(idx){
+  const l=data.languages[idx];if(!l)return;
+  showModal(`
+    <h3>Редактировать язык</h3>
+    <div class="input-group"><label>Код</label><input type="text" id="m-el-code" value="${esc(l.code)}" maxlength="5"></div>
+    <div class="input-group"><label>Название</label><input type="text" id="m-el-name" value="${esc(l.name)}"></div>
+    <button class="btn btn-primary" onclick="saveLang(${idx})">Сохранить</button>
+    <button class="btn btn-red mt8" onclick="deleteLang(${idx})">Удалить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+async function saveLang(idx){
+  const code=document.getElementById('m-el-code').value.trim().toLowerCase();
+  const name=document.getElementById('m-el-name').value.trim();
+  if(!code||!name){toast('Заполните все поля','err');return}
+  showLoader(true);
+  try{
+    await apiUpdate('languages!A'+(idx+2)+':B'+(idx+2),[code,name]);
+    data.languages[idx]={code,name};saveCache();initLangSelectors();
+    toast('Язык обновлён','ok');closeModal();if(ui.view==='settings')renderSettings();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+async function deleteLang(idx){
+  if(!confirm('Удалить язык '+data.languages[idx].name+'?'))return;
+  showLoader(true);
+  try{
+    await apiClearRow('languages',idx+2);
+    data.languages.splice(idx,1);saveCache();initLangSelectors();
+    toast('Язык удалён','ok');closeModal();if(ui.view==='settings')renderSettings();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+/* ===== EDIT / DELETE CATEGORY ===== */
+function openEditCat(idx){
+  const c=data.categories[idx];if(!c)return;
+  showModal(`
+    <h3>Редактировать категорию</h3>
+    <div class="input-group"><label>ID</label><input type="text" id="m-ec-id" value="${esc(c.id)}"></div>
+    <div class="input-group"><label>Название</label><input type="text" id="m-ec-name" value="${esc(c.name)}"></div>
+    <div class="input-group"><label>Иконка</label><input type="text" id="m-ec-icon" value="${esc(c.icon)}" maxlength="4"></div>
+    <button class="btn btn-primary" onclick="saveCat(${idx})">Сохранить</button>
+    <button class="btn btn-red mt8" onclick="deleteCat(${idx})">Удалить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+async function saveCat(idx){
+  const id=document.getElementById('m-ec-id').value.trim().toLowerCase();
+  const name=document.getElementById('m-ec-name').value.trim();
+  const icon=document.getElementById('m-ec-icon').value.trim()||'📁';
+  if(!id||!name){toast('Заполните ID и название','err');return}
+  showLoader(true);
+  try{
+    await apiUpdate('categories!A'+(idx+2)+':C'+(idx+2),[id,name,icon]);
+    data.categories[idx]={id,name,icon};saveCache();
+    toast('Категория обновлена','ok');closeModal();
+    if(ui.view==='settings')renderSettings();if(ui.view==='home')renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+async function deleteCat(idx){
+  if(!confirm('Удалить категорию '+data.categories[idx].name+'?'))return;
+  showLoader(true);
+  try{
+    await apiClearRow('categories',idx+2);
+    data.categories.splice(idx,1);saveCache();
+    toast('Категория удалена','ok');closeModal();
+    if(ui.view==='settings')renderSettings();if(ui.view==='home')renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+/* ===== EDIT / DELETE WORD ===== */
+function openEditWord(idx){
+  const w=data.words[idx];if(!w)return;
+  const catsOpts=data.categories.map(c=>`<option value="${esc(c.id)}"${c.id===w.category?' selected':''}>${esc(c.icon+' '+c.name)}</option>`).join('');
+  const langsOpts=data.languages.map(l=>`<option value="${esc(l.code)}">${esc(l.name)}</option>`).join('');
+  showModal(`
+    <h3>Редактировать слово</h3>
+    <div class="input-group"><label>Категория</label><select id="m-ew-cat">${catsOpts}</select></div>
+    <div class="row">
+      <div class="input-group"><label>Язык (от)</label><select id="m-ew-lf">${langsOpts}</select></div>
+      <div class="input-group"><label>Язык (до)</label><select id="m-ew-lt">${langsOpts}</select></div>
+    </div>
+    <div class="input-group"><label>Слово (оригинал)</label><input type="text" id="m-ew-from" value="${esc(w.wordFrom)}"></div>
+    <div class="input-group"><label>Перевод</label><input type="text" id="m-ew-to" value="${esc(w.wordTo)}"></div>
+    <div class="input-group"><label>Транскрипция</label><input type="text" id="m-ew-tr" value="${esc(w.transcription||'')}"></div>
+    <button class="btn btn-primary" onclick="saveWord(${idx})">Сохранить</button>
+    <button class="btn btn-red mt8" onclick="deleteWord(${idx})">Удалить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+  document.getElementById('m-ew-lf').value=w.langFrom;
+  document.getElementById('m-ew-lt').value=w.langTo;
+}
+async function saveWord(idx){
+  const cat=document.getElementById('m-ew-cat').value;
+  const lf=document.getElementById('m-ew-lf').value;
+  const lt=document.getElementById('m-ew-lt').value;
+  const wf=document.getElementById('m-ew-from').value.trim();
+  const wt=document.getElementById('m-ew-to').value.trim();
+  const tr=document.getElementById('m-ew-tr').value.trim();
+  if(!wf||!wt){toast('Введите слово и перевод','err');return}
+  showLoader(true);
+  try{
+    const row=idx+2;
+    await apiUpdate('words!A'+row+':F'+row,[cat,lf,wf,lt,wt,tr]);
+    data.words[idx]={category:cat,langFrom:lf,wordFrom:wf,langTo:lt,wordTo:wt,transcription:tr};
+    saveCache();toast('Слово обновлено','ok');closeModal();
+    if(ui.view==='words')renderWords();if(ui.view==='home')renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+async function deleteWord(idx){
+  if(!confirm('Удалить слово "'+data.words[idx].wordFrom+'"?'))return;
+  showLoader(true);
+  try{
+    await apiClearRow('words',idx+2);
+    data.words.splice(idx,1);saveCache();
+    toast('Слово удалено','ok');closeModal();
+    if(ui.view==='words')renderWords();if(ui.view==='home')renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
 /* ===== BULK IMPORT ===== */
 async function bulkImport(){
   const cat=document.getElementById('imp-cat').value;
@@ -1169,6 +1633,112 @@ async function bulkImport(){
     if(ui.view==='home') renderHome();
   }catch(e){toast('Ошибка: '+e.message,'err')}
   showLoader(false);
+}
+
+/* ===== JSON EXPORT / IMPORT ===== */
+function exportJSON(){
+  const lf=document.getElementById('exp-lf').value;
+  const lt=document.getElementById('exp-lt').value;
+  const cat=document.getElementById('exp-cat').value;
+  const words=data.words.filter(w=>w.langFrom===lf&&w.langTo===lt&&(!cat||w.category===cat));
+  if(!words.length){toast('Нет слов для экспорта','err');return}
+  const exportData={langFrom:lf,langTo:lt,category:cat||'all',exported:new Date().toISOString(),words:words.map(w=>({category:w.category,wordFrom:w.wordFrom,wordTo:w.wordTo,transcription:w.transcription||''}))};
+  const blob=new Blob([JSON.stringify(exportData,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`words_${lf}_${lt}${cat?'_'+cat:''}_${Date.now()}.json`;
+  a.click();URL.revokeObjectURL(a.href);
+  toast('Экспортировано '+words.length+' слов','ok');
+}
+
+function exportToClipboard(){
+  const lf=document.getElementById('exp-lf').value;
+  const lt=document.getElementById('exp-lt').value;
+  const cat=document.getElementById('exp-cat').value;
+  const words=data.words.filter(w=>w.langFrom===lf&&w.langTo===lt&&(!cat||w.category===cat));
+  if(!words.length){toast('Нет слов для экспорта','err');return}
+  const exportData={langFrom:lf,langTo:lt,category:cat||'all',words:words.map(w=>({category:w.category,wordFrom:w.wordFrom,wordTo:w.wordTo,transcription:w.transcription||''}))};
+  navigator.clipboard.writeText(JSON.stringify(exportData,null,2)).then(()=>toast('Скопировано в буфер обмена','ok')).catch(()=>toast('Не удалось скопировать','err'));
+}
+
+function onImportFile(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const json=JSON.parse(e.target.result);
+      importJSON(json);
+    }catch(err){toast('Ошибка парсинга JSON','err')}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+async function importJSON(json){
+  if(!json.words||!Array.isArray(json.words)){toast('Неверный формат JSON','err');return}
+  const lf=json.langFrom||ui.langFrom;
+  const lt=json.langTo||ui.langTo;
+  let added=0,updated=0,skipped=0;
+  const newRows=[];
+  showLoader(true);
+  for(const w of json.words){
+    if(!w.wordFrom||!w.wordTo){skipped++;continue}
+    const cat=w.category||json.category||'general';
+    const existing=data.words.findIndex(x=>x.langFrom===lf&&x.langTo===lt&&x.wordFrom.toLowerCase()===w.wordFrom.toLowerCase());
+    if(existing>=0){
+      const old=data.words[existing];
+      if(old.wordTo===w.wordTo&&old.transcription===(w.transcription||'')){skipped++;continue}
+      try{
+        await apiUpdate('words!A'+(existing+2)+':F'+(existing+2),[cat,lf,w.wordFrom,lt,w.wordTo,w.transcription||'']);
+        data.words[existing]={category:cat,langFrom:lf,wordFrom:w.wordFrom,langTo:lt,wordTo:w.wordTo,transcription:w.transcription||''};
+        updated++;
+      }catch(e){skipped++}
+    }else{
+      newRows.push([cat,lf,w.wordFrom,lt,w.wordTo,w.transcription||'']);
+      data.words.push({category:cat,langFrom:lf,wordFrom:w.wordFrom,langTo:lt,wordTo:w.wordTo,transcription:w.transcription||''});
+      added++;
+    }
+  }
+  if(newRows.length){try{await apiAppend('words!A:F',newRows)}catch(e){toast('Ошибка при добавлении','err')}}
+  saveCache();
+  toast(`Импорт: +${added} новых, ↻${updated} обновлено, =${skipped} пропущено`,'ok');
+  showLoader(false);
+  if(ui.view==='home')renderHome();
+}
+
+/* ===== RATING ===== */
+async function updateRating(){
+  if(!currentUser)return;
+  const login=currentUser.login;
+  const wordsLearned=Object.values(progress).filter(p=>p.known>=3).length;
+  const idx=data.ratings.findIndex(r=>r.login===login);
+  const now=new Date().toISOString().slice(0,10);
+  if(idx>=0){
+    data.ratings[idx].words_learned=wordsLearned;
+    data.ratings[idx].quizzes_done=(data.ratings[idx].quizzes_done||0)+1;
+    data.ratings[idx].quiz_score=Math.round(qz.score/qz.words.length*100);
+    data.ratings[idx].last_active=now;
+    try{await apiUpdate('ratings!A'+(idx+2)+':E'+(idx+2),[login,String(wordsLearned),String(data.ratings[idx].quizzes_done),String(data.ratings[idx].quiz_score),now])}catch(e){}
+  }else{
+    const entry={login,words_learned:wordsLearned,quizzes_done:1,quiz_score:Math.round(qz.score/qz.words.length*100),last_active:now};
+    data.ratings.push(entry);
+    try{await apiAppend('ratings!A:E',[[login,String(wordsLearned),'1',String(entry.quiz_score),now]])}catch(e){}
+  }
+  saveCache();
+}
+
+function renderRating(){
+  const list=document.getElementById('rating-list');
+  list.innerHTML='';
+  const sorted=[...data.ratings].sort((a,b)=>(b.words_learned||0)-(a.words_learned||0)||(b.quiz_score||0)-(a.quiz_score||0));
+  if(!sorted.length){list.innerHTML='<div class="empty"><div class="em-icon">🏆</div><p>Нет данных рейтинга.<br>Пройдите тест, чтобы появиться здесь.</p></div>';return}
+  sorted.forEach((r,i)=>{
+    const d=document.createElement('div');d.className='rating-item';
+    const posClass=i<3?'p'+(i+1):'';
+    d.innerHTML=`<div class="rating-pos ${posClass}">${i+1}</div>
+      <div class="rating-name">${esc(r.login)}<div class="rating-detail">Тестов: ${r.quizzes_done||0} · Последний: ${r.last_active||'—'}</div></div>
+      <div><div class="rating-score">${r.words_learned||0} слов</div><div class="rating-detail">${r.quiz_score||0}%</div></div>`;
+    list.appendChild(d);
+  });
 }
 
 /* ===== TTS ===== */
