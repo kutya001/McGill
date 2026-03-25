@@ -5,6 +5,13 @@
       "label": "🎯 Другое",
       "games": [
         {
+          "id": "wordlearning",
+          "name": "Словарь",
+          "icon": "📖",
+          "desc": "Учи слова на разных языках с Google Таблицами.",
+          "file": "WordLearning.html"
+        },
+        {
           "id": "tpb",
           "name": "Конструктор Тренировочной Программы",
           "icon": "🤾",
