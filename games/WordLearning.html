@@ -225,16 +225,12 @@ main{flex:1;overflow:hidden;position:relative}
       <p style="font-size:.82rem;color:var(--tx2)">Учи слова на разных языках<br>с помощью Google Таблиц</p>
     </div>
     <div class="input-group">
-      <label>API Ключ Google</label>
-      <input type="text" id="inp-api" placeholder="AIzaSy...">
-    </div>
-    <div class="input-group">
       <label>ID Google Таблицы</label>
       <input type="text" id="inp-sid" placeholder="1BxiMVs0XRA5nFMdKvBd...">
     </div>
     <div class="input-group">
-      <label>Client ID (необязательно, для записи)</label>
-      <input type="text" id="inp-cid" placeholder="123456789.apps.googleusercontent.com">
+      <label>JSON сервисного аккаунта</label>
+      <textarea id="inp-sa" rows="6" placeholder='Вставьте содержимое .json файла сервисного аккаунта...'></textarea>
     </div>
     <button class="btn btn-primary mt8" onclick="saveSetup()">Подключиться</button>
     <button class="help-toggle mt8" onclick="toggleHelp()">📋 Инструкция по настройке</button>
@@ -248,9 +244,10 @@ main{flex:1;overflow:hidden;position:relative}
       &nbsp;&nbsp;<code>food | ru | Яблоко | en | Apple | ˈæpəl</code><br><br>
       <b>4.</b> Откройте <code>console.cloud.google.com</code><br>
       &nbsp;&nbsp;• Создайте проект → Включите Google Sheets API<br>
-      &nbsp;&nbsp;• Создайте API Key (Credentials → API Key)<br>
-      &nbsp;&nbsp;• Для записи: создайте OAuth Client ID (Web)<br><br>
-      <b>5.</b> Откройте доступ к таблице: «Все у кого есть ссылка — Читатель»<br><br>
+      &nbsp;&nbsp;• Создайте Service Account (IAM → Service Accounts)<br>
+      &nbsp;&nbsp;• Создайте JSON ключ для сервисного аккаунта<br><br>
+      <b>5.</b> Откройте доступ к таблице для email сервисного аккаунта:<br>
+      &nbsp;&nbsp;<code>...@...iam.gserviceaccount.com</code> — Редактор<br><br>
       <b>6.</b> ID таблицы — часть URL:<br>
       &nbsp;&nbsp;<code>docs.google.com/spreadsheets/d/<b>{ID}</b>/edit</code>
     </div>
@@ -359,18 +356,12 @@ main{flex:1;overflow:hidden;position:relative}
     <div class="set-section">
       <h3>🔗 Подключение</h3>
       <div class="input-group">
-        <label>API Ключ</label>
-        <input type="text" id="s-api">
-      </div>
-      <div class="input-group">
         <label>ID Таблицы</label>
         <input type="text" id="s-sid">
       </div>
-      <div class="input-group">
-        <label>Client ID (для записи)</label>
-        <input type="text" id="s-cid">
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="saveSettings()">Сохранить</button>
+      <div class="set-row"><span>Сервисный аккаунт</span><span class="badge" id="s-sa-email">—</span></div>
+      <button class="btn btn-ghost btn-sm mt8" onclick="openChangeSA()">Изменить сервисный аккаунт</button>
+      <button class="btn btn-primary btn-sm mt8" onclick="saveSettings()">Сохранить ID таблицы</button>
     </div>
 
     <div class="set-section">
@@ -416,17 +407,20 @@ main{flex:1;overflow:hidden;position:relative}
 
 <script>
 /* ===== CONSTANTS ===== */
-const LS_CFG='wl_config', LS_CACHE='wl_cache', LS_PROG='wl_progress';
+const LS_CFG='wl_config', LS_CACHE='wl_cache', LS_PROG='wl_progress', LS_SA='wl_sa';
 const SHEETS_BASE='https://sheets.googleapis.com/v4/spreadsheets';
+const TOKEN_URI='https://oauth2.googleapis.com/token';
+const SCOPE='https://www.googleapis.com/auth/spreadsheets';
 const LANG_CODES={ru:'ru-RU',en:'en-US',ko:'ko-KR',fr:'fr-FR',de:'de-DE',es:'es-ES',it:'it-IT',ja:'ja-JP',zh:'zh-CN',ar:'ar-SA',tr:'tr-TR',pt:'pt-BR',hi:'hi-IN',pl:'pl-PL',uk:'uk-UA',kk:'kk-KZ',ky:'ky-KG'};
 
 /* ===== STATE ===== */
-let cfg={apiKey:'',spreadsheetId:'',clientId:''};
+let cfg={spreadsheetId:''};
+let sa=null; // service account parsed JSON
 let data={languages:[],categories:[],words:[]};
 let ui={view:'home',langFrom:'ru',langTo:'en',category:null};
 let progress={};
 let accessToken=null;
-let tokenClient=null;
+let tokenExpiry=0;
 let navStack=['home'];
 
 /* Cards state */
@@ -437,9 +431,10 @@ let qz={words:[],index:0,score:0,answered:false,total:10};
 /* ===== INIT ===== */
 function init(){
   loadConfig();
+  loadSA();
   loadProgress();
   loadCache();
-  if(!cfg.apiKey||!cfg.spreadsheetId){
+  if(!sa||!cfg.spreadsheetId){
     showView('setup');
   } else {
     showView('home');
@@ -471,6 +466,13 @@ function loadConfig(){
 function saveCfg(){
   cfg.langFrom=ui.langFrom; cfg.langTo=ui.langTo;
   localStorage.setItem(LS_CFG,JSON.stringify(cfg));
+}
+function loadSA(){
+  try{const s=localStorage.getItem(LS_SA);if(s)sa=JSON.parse(s)}catch(e){}
+}
+function saveSA(){
+  if(sa) localStorage.setItem(LS_SA,JSON.stringify(sa));
+  else localStorage.removeItem(LS_SA);
 }
 function loadProgress(){
   try{const s=localStorage.getItem(LS_PROG);if(s)progress=JSON.parse(s)}catch(e){}
@@ -519,30 +521,60 @@ function goBack(){
   navigate(prev);
 }
 
-/* ===== GOOGLE SHEETS API ===== */
-async function apiRead(range){
-  const url=`${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}?key=${encodeURIComponent(cfg.apiKey)}`;
-  const r=await fetch(url);
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`)}
-  return r.json();
+/* ===== JWT / SERVICE ACCOUNT AUTH ===== */
+function b64url(input){
+  const str=input instanceof ArrayBuffer
+    ? String.fromCharCode(...new Uint8Array(input))
+    : typeof input==='string'? input : JSON.stringify(input);
+  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+function pemToArrayBuffer(pem){
+  const b64=pem.replace(/-----BEGIN PRIVATE KEY-----/,'').replace(/-----END PRIVATE KEY-----/,'').replace(/\s/g,'');
+  const bin=atob(b64);
+  const buf=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+  return buf.buffer;
+}
+
+async function importPrivateKey(pem){
+  const keyData=pemToArrayBuffer(pem);
+  return crypto.subtle.importKey('pkcs8',keyData,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+}
+
+async function createSignedJWT(){
+  if(!sa) throw new Error('Сервисный аккаунт не настроен');
+  const header={alg:'RS256',typ:'JWT'};
+  const now=Math.floor(Date.now()/1000);
+  const claim={iss:sa.client_email,scope:SCOPE,aud:TOKEN_URI,iat:now,exp:now+3600};
+  const input=b64url(JSON.stringify(header))+'.'+b64url(JSON.stringify(claim));
+  const key=await importPrivateKey(sa.private_key);
+  const sig=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,new TextEncoder().encode(input));
+  return input+'.'+b64url(sig);
 }
 
 async function ensureAuth(){
-  if(accessToken) return accessToken;
-  if(!cfg.clientId){toast('Client ID не указан. Добавьте в настройках для записи данных.','err');throw new Error('No client ID')}
-  return new Promise((resolve,reject)=>{
-    if(!window.google?.accounts?.oauth2){toast('Google Identity Services не загружен','err');reject(new Error('GIS not loaded'));return}
-    tokenClient=google.accounts.oauth2.initTokenClient({
-      client_id:cfg.clientId,
-      scope:'https://www.googleapis.com/auth/spreadsheets',
-      callback:resp=>{
-        if(resp.error){reject(new Error(resp.error));return}
-        accessToken=resp.access_token;
-        resolve(accessToken);
-      }
-    });
-    tokenClient.requestAccessToken();
+  if(accessToken && Date.now()<tokenExpiry) return accessToken;
+  const jwt=await createSignedJWT();
+  const r=await fetch(TOKEN_URI,{
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion='+jwt
   });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error_description||e.error||`HTTP ${r.status}`)}
+  const d=await r.json();
+  accessToken=d.access_token;
+  tokenExpiry=Date.now()+(d.expires_in-60)*1000;
+  return accessToken;
+}
+
+/* ===== GOOGLE SHEETS API ===== */
+async function apiRead(range){
+  const token=await ensureAuth();
+  const url=`${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}`;
+  const r=await fetch(url,{headers:{'Authorization':'Bearer '+token}});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`)}
+  return r.json();
 }
 
 async function apiAppend(range,values){
@@ -909,9 +941,8 @@ function showQuizDone(){
 
 /* ===== SETTINGS VIEW ===== */
 function renderSettings(){
-  document.getElementById('s-api').value=cfg.apiKey||'';
   document.getElementById('s-sid').value=cfg.spreadsheetId||'';
-  document.getElementById('s-cid').value=cfg.clientId||'';
+  document.getElementById('s-sa-email').textContent=sa?.client_email||'Не настроен';
 
   // Languages
   const sl=document.getElementById('s-langs');
@@ -942,20 +973,47 @@ function renderSettings(){
 }
 
 function saveSettings(){
-  cfg.apiKey=document.getElementById('s-api').value.trim();
   cfg.spreadsheetId=document.getElementById('s-sid').value.trim();
-  cfg.clientId=document.getElementById('s-cid').value.trim();
   saveCfg();
-  accessToken=null;
+  accessToken=null; tokenExpiry=0;
   toast('Настройки сохранены','ok');
   syncData();
 }
 
+function openChangeSA(){
+  showModal(`
+    <h3>Сервисный аккаунт</h3>
+    <div class="input-group"><label>JSON сервисного аккаунта</label>
+    <textarea id="m-sa-json" rows="8" placeholder='Вставьте содержимое .json...'></textarea></div>
+    <button class="btn btn-primary" onclick="updateSA()">Сохранить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+
+function updateSA(){
+  const raw=document.getElementById('m-sa-json').value.trim();
+  if(!raw){toast('Вставьте JSON','err');return}
+  try{
+    const parsed=JSON.parse(raw);
+    if(!parsed.client_email||!parsed.private_key){toast('Некорректный JSON: нет client_email/private_key','err');return}
+    sa=parsed; saveSA();
+    accessToken=null; tokenExpiry=0;
+    toast('Сервисный аккаунт обновлён','ok');
+    closeModal(); renderSettings();
+  }catch(e){toast('Ошибка парсинга JSON','err')}
+}
+
 function saveSetup(){
-  cfg.apiKey=document.getElementById('inp-api').value.trim();
-  cfg.spreadsheetId=document.getElementById('inp-sid').value.trim();
-  cfg.clientId=document.getElementById('inp-cid').value.trim();
-  if(!cfg.apiKey||!cfg.spreadsheetId){toast('Введите API ключ и ID таблицы','err');return}
+  const sid=document.getElementById('inp-sid').value.trim();
+  const saRaw=document.getElementById('inp-sa').value.trim();
+  if(!sid){toast('Введите ID таблицы','err');return}
+  if(!saRaw){toast('Вставьте JSON сервисного аккаунта','err');return}
+  try{
+    const parsed=JSON.parse(saRaw);
+    if(!parsed.client_email||!parsed.private_key){toast('Некорректный JSON: нет client_email/private_key','err');return}
+    sa=parsed; saveSA();
+  }catch(e){toast('Ошибка парсинга JSON','err');return}
+  cfg.spreadsheetId=sid;
   saveCfg();
   navigate('home');
   syncData();
@@ -1135,14 +1193,6 @@ function toggleHelp(){
 
 /* ===== START ===== */
 document.addEventListener('DOMContentLoaded',init);
-
-// Load Google Identity Services dynamically (for write operations)
-(function(){
-  const s=document.createElement('script');
-  s.src='https://accounts.google.com/gsi/client';
-  s.async=true;s.defer=true;
-  document.head.appendChild(s);
-})();
 </script>
 </body>
 </html>
