@@ -281,7 +281,7 @@
                     <button class="btn-primary" id="btn-do-login">Войти</button>
                     <button class="btn-secondary" id="btn-show-reg">Регистрация</button>
                     <div class="auth-sep"></div>
-                    <button class="auth-link" id="btn-goto-setup">⚙ Настройки подключения</button>
+                    <button class="auth-link" id="btn-goto-setup" style="display:none">⚙ Настройки подключения</button>
                 </div>
             </div>
             <div id="reg-form" style="display:none">
@@ -382,7 +382,8 @@ const DB_SYSTEM_SCHEMA = {
 /* ══════════════════════════════════════════════════════════════════
  * STATE
  * ═════════════════════════════════════════════════════════════════ */
-let cfg = { gasUrl: '' };
+const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycbz1UKFwY4nUUQkVVSgupHY6SREofWFy2qDhlEhpP7dUaUIKmjdO-k7GqPKw0QHC0aj1yg/exec';
+let cfg = { gasUrl: HARDCODED_GAS_URL };
 let currentUser    = null;
 let appsData       = null;
 let searchQuery    = '';
@@ -453,7 +454,7 @@ function setLastLaunch(appId) {
 /* ══════════════════════════════════════════════════════════════════
  * CONFIG / STORAGE
  * ═════════════════════════════════════════════════════════════════ */
-function loadCfg()  { try { const s = localStorage.getItem(LS_CFG);  if (s) cfg = JSON.parse(s); } catch {} }
+function loadCfg()  { try { const s = localStorage.getItem(LS_CFG);  if (s) cfg = JSON.parse(s); } catch {} cfg.gasUrl = HARDCODED_GAS_URL; }
 function saveCfg()  { localStorage.setItem(LS_CFG, JSON.stringify(cfg)); }
 function loadUser() { try { const s = localStorage.getItem(LS_USER); if (s) currentUser = JSON.parse(s); } catch {} }
 function saveUser() { if (currentUser) localStorage.setItem(LS_USER, JSON.stringify(currentUser)); else localStorage.removeItem(LS_USER); }
