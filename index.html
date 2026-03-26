@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>McGill</title>
+    <title>KuApp</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0a0a0f">
     <style>
@@ -250,7 +250,7 @@
         <div class="auth-card">
             <div class="auth-logo">
                 <div class="auth-logo-icon">🏋️</div>
-                <div class="auth-logo-name">McGill</div>
+                <div class="auth-logo-name">KuApp</div>
                 <div class="auth-logo-sub">Первоначальная настройка</div>
             </div>
             <div class="inp-group">
@@ -273,7 +273,7 @@
         <div class="auth-card">
             <div class="auth-logo">
                 <div class="auth-logo-icon">🏋️</div>
-                <div class="auth-logo-name">McGill</div>
+                <div class="auth-logo-name">KuApp</div>
                 <div class="auth-logo-sub" id="login-sub-text">Вход в систему</div>
             </div>
             <div id="login-form">
@@ -305,7 +305,7 @@
     <div class="plat-layout">
         <!-- Sidebar (desktop) -->
         <aside class="sidebar">
-            <div class="side-brand"><span class="side-brand-icon">🏋️</span> McGill</div>
+            <div class="side-brand"><span class="side-brand-icon">🏋️</span> KuApp</div>
             <nav class="side-nav">
                 <button class="side-item active" data-tab="apps" onclick="switchTab('apps')"><span class="ico">📱</span>Приложения</button>
                 <button class="side-item" data-tab="stats" onclick="switchTab('stats')"><span class="ico">📊</span>Статистика</button>
@@ -1373,7 +1373,7 @@ function renderSettUpdate(c) {
         </div>
         <div class="panel-sec">
             <h3>ℹ️ Информация</h3>
-            <div class="panel-row"><span>Платформа</span><span class="panel-badge">McGill v2.0</span></div>
+            <div class="panel-row"><span>Платформа</span><span class="panel-badge">KuApp v2.0</span></div>
             <div class="panel-row"><span>Режим</span><span class="panel-badge">PWA / Offline</span></div>
         </div>`;
     if ('serviceWorker' in navigator) {
@@ -1421,7 +1421,7 @@ async function forceUpdateAll() {
 
 /* ── Settings: Dev Guide ── */
 function renderSettDevGuide(c) {
-    const guide = `# Руководство по разработке приложений для McGill Platform
+    const guide = `# Руководство по разработке приложений для KuApp Platform
 
 ## Архитектура
 
@@ -1548,7 +1548,7 @@ Platform.ui.openSettings();                     // открыть настрой
     async function init() {
       if (!Platform) {
         document.getElementById('app').textContent =
-          'Откройте через платформу McGill';
+          'Откройте через платформу KuApp';
         return;
       }
       const profile = Platform.user.getProfile();
@@ -1577,7 +1577,7 @@ Platform.ui.openSettings();                     // открыть настрой
     c.innerHTML = `
         <div class="panel-sec">
             <h3>📝 Инструкция для разработчиков</h3>
-            <p style="font-size:.78rem;color:var(--text-2);margin-bottom:8px">Скопируйте промт ниже и используйте его при создании новых приложений для платформы McGill.</p>
+            <p style="font-size:.78rem;color:var(--text-2);margin-bottom:8px">Скопируйте промт ниже и используйте его при создании новых приложений для платформы KuApp.</p>
             <button class="copy-btn" onclick="copyDevGuide()">📋 Копировать полный промт</button>
         </div>
         <div class="devguide" id="devguide-text">${renderMarkdown(guide)}</div>

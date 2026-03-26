@@ -368,7 +368,7 @@ main{flex:1;overflow:hidden;position:relative}
   <section id="v-setup" class="view">
     <div style="padding:60px 20px;text-align:center">
       <div style="font-size:2.5rem;margin-bottom:16px">📖</div>
-      <p style="font-size:.9rem;color:var(--tx2)">Откройте приложение через платформу McGill</p>
+      <p style="font-size:.9rem;color:var(--tx2)">Откройте приложение через платформу KuApp</p>
     </div>
   </section>
 
@@ -545,13 +545,13 @@ function init(){
   loadCache();
   if (!Platform) {
     const el=document.getElementById('v-setup');
-    if(el) el.innerHTML='<div style="padding:60px 20px;text-align:center"><div style="font-size:2.5rem;margin-bottom:16px">📖</div><p style="color:#ff6b6b;font-size:.9rem">Откройте приложение через платформу McGill</p></div>';
+    if(el) el.innerHTML='<div style="padding:60px 20px;text-align:center"><div style="font-size:2.5rem;margin-bottom:16px">📖</div><p style="color:#ff6b6b;font-size:.9rem">Откройте приложение через платформу KuApp</p></div>';
     showView('setup'); return;
   }
   const profile = Platform.user.getProfile();
   if (!profile) {
     const el=document.getElementById('v-setup');
-    if(el) el.innerHTML='<div style="padding:60px 20px;text-align:center"><div style="font-size:2.5rem;margin-bottom:16px">📖</div><p style="color:#ff6b6b;font-size:.9rem">Войдите в платформу McGill</p></div>';
+    if(el) el.innerHTML='<div style="padding:60px 20px;text-align:center"><div style="font-size:2.5rem;margin-bottom:16px">📖</div><p style="color:#ff6b6b;font-size:.9rem">Войдите в платформу KuApp</p></div>';
     showView('setup'); return;
   }
   currentUser = { login: profile.login, role: profile.role || 'user', status: 'active' };

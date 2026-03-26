@@ -1,7 +1,7 @@
 {
-  "name": "McGill Тренер",
-  "short_name": "McGill",
-  "description": "Фитнес-таймер с протоколом Большой тройки МакГилла",
+  "name": "KuApp",
+  "short_name": "KuApp",
+  "description": "Фитнес-платформа: тренер, словарь, игры",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
