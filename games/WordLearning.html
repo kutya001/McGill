@@ -1214,6 +1214,7 @@ function renderSettingsGeneral(c){
 }
 
 function renderSettingsLangs(c){
+  if(currentUser?.role!=='admin'){c.innerHTML=adminOnly();return}
   let html='<div class="set-section"><h3>🌍 Языки</h3><div class="tag-list">';
   data.languages.forEach((l,i)=>{
     html+=`<span class="tag">${esc(l.name)} (${esc(l.code)}) <button class="edit" onclick="openEditLang(${i})">✏</button></span>`;
@@ -1223,6 +1224,7 @@ function renderSettingsLangs(c){
 }
 
 function renderSettingsCats(c){
+  if(currentUser?.role!=='admin'){c.innerHTML=adminOnly();return}
   let html='<div class="set-section"><h3>📂 Категории</h3><div class="tag-list">';
   data.categories.forEach((cat,i)=>{
     html+=`<span class="tag">${esc(cat.icon)} ${esc(cat.name)} <button class="edit" onclick="openEditCat(${i})">✏</button></span>`;
@@ -1232,6 +1234,7 @@ function renderSettingsCats(c){
 }
 
 function renderSettingsData(c){
+  if(currentUser?.role!=='admin'){c.innerHTML=adminOnly();return}
   const catsOpts=data.categories.map(cat=>`<option value="${esc(cat.id)}">${esc(cat.icon+' '+cat.name)}</option>`).join('');
   c.innerHTML=`
     <div class="set-section">
@@ -1243,7 +1246,10 @@ function renderSettingsData(c){
     </div>`;
 }
 
+function adminOnly(){return'<div class="empty"><div class="em-icon">🔒</div><p style="color:var(--tx2)">Только для администраторов</p></div>'}
+
 function renderSettingsImpExp(c){
+  if(currentUser?.role!=='admin'){c.innerHTML=adminOnly();return}
   const langsOpts=data.languages.map(l=>`<option value="${esc(l.code)}">${esc(l.name)}</option>`).join('');
   const catsOpts='<option value="">Все категории</option>'+data.categories.map(cat=>`<option value="${esc(cat.id)}">${esc(cat.icon+' '+cat.name)}</option>`).join('');
   const promptCatsOpts='<option value="">— выбрать —</option>'+data.categories.map(cat=>`<option value="${esc(cat.id)}">${esc(cat.icon+' '+cat.name)}</option>`).join('');
@@ -1260,7 +1266,14 @@ function renderSettingsImpExp(c){
       <h3>📥 Импорт JSON</h3>
       <p style="font-size:.78rem;color:var(--tx2);margin-bottom:10px">Умный импорт: новые слова добавятся, существующие обновятся, дубликаты пропустятся</p>
       <input type="file" id="imp-file" accept=".json" onchange="onImportFile(event)" style="display:none">
-      <button class="btn btn-sm btn-primary" onclick="document.getElementById('imp-file').click()">Выбрать файл .json</button>
+      <div class="flex-c gap8 mb8">
+        <button class="btn btn-sm btn-primary" onclick="document.getElementById('imp-file').click()">📂 Выбрать файл .json</button>
+        <button class="btn btn-sm btn-ghost" onclick="togglePasteArea()">📋 Вставить текст</button>
+      </div>
+      <div id="imp-paste-wrap" style="display:none">
+        <div class="input-group" style="margin-bottom:8px"><label>Вставьте JSON</label><textarea id="imp-paste-text" rows="7" placeholder='{"langFrom":"ru","langTo":"en","words":[...]}'></textarea></div>
+        <button class="btn btn-sm btn-primary" onclick="importFromPaste()">Импортировать из текста</button>
+      </div>
     </div>
     <div class="set-section">
       <h3>🤖 Промт для ИИ</h3>
@@ -1326,6 +1339,25 @@ function copyAiPrompt(){
   navigator.clipboard.writeText(box.textContent)
     .then(()=>toast('Промт скопирован в буфер обмена','ok'))
     .catch(()=>toast('Не удалось скопировать','err'));
+}
+
+function togglePasteArea(){
+  const w=document.getElementById('imp-paste-wrap');
+  if(!w)return;
+  const show=w.style.display==='none';
+  w.style.display=show?'block':'none';
+  if(show)document.getElementById('imp-paste-text').focus();
+}
+
+function importFromPaste(){
+  const raw=document.getElementById('imp-paste-text')?.value.trim();
+  if(!raw){toast('Вставьте JSON-текст','err');return}
+  try{
+    const json=JSON.parse(raw);
+    importJSON(json);
+    document.getElementById('imp-paste-text').value='';
+    document.getElementById('imp-paste-wrap').style.display='none';
+  }catch(e){toast('Ошибка: неверный JSON','err')}
 }
 
 function renderSettingsAdmin(c){
