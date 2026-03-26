@@ -49,10 +49,11 @@
         .side-brand{padding:18px 16px;font-weight:800;font-size:1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
         .side-brand-icon{font-size:1.3rem}
         .side-nav{flex:1;padding:8px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
-        .side-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text-2);font:inherit;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s;text-align:left}
+        .side-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text-2);font:inherit;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s;text-align:left;width:100%}
         .side-item:hover{background:var(--surface-2);color:var(--text)}
         .side-item.active{background:rgba(91,140,255,.12);color:var(--c-prep);font-weight:600}
         .side-item .ico{font-size:1.1rem;width:24px;text-align:center;flex-shrink:0}
+        .side-sep{height:1px;background:var(--border);margin:6px 12px}
         .side-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
         .side-user{flex:1;font-size:.72rem;color:var(--text-2);font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -92,7 +93,7 @@
         .app-category{margin-bottom:20px}
         .app-cat-label{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);font-family:'JetBrains Mono',monospace;padding:0 4px 8px}
         .apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
-        .app-tile{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 10px 12px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;user-select:none;position:relative;overflow:hidden}
+        .app-tile{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 10px 12px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;user-select:none;position:relative;overflow:hidden}
         .app-tile::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(91,140,255,.06),transparent 70%);opacity:0;transition:opacity .2s}
         .app-tile:hover{background:var(--surface-3);border-color:var(--border-hi);transform:translateY(-1px)}
         .app-tile:hover::before{opacity:1}
@@ -100,18 +101,19 @@
         .app-tile-icon{font-size:2rem;line-height:1}
         .app-tile-name{font-size:.78rem;font-weight:700;color:var(--text);line-height:1.3}
         .app-tile-desc{font-size:.66rem;color:var(--text-3);line-height:1.4;display:none}
+        .app-tile-time{font-size:.58rem;color:var(--text-3);font-family:'JetBrains Mono',monospace}
         .app-tile-play{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(91,140,255,.15);border:1px solid rgba(91,140,255,.3);color:var(--c-prep);margin-top:2px}
         .app-tile-play svg{width:10px;height:10px;fill:currentColor;stroke:none}
         @media(min-width:600px){
             .apps-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
-            .app-tile{padding:18px 14px 14px;gap:10px}
+            .app-tile{padding:18px 14px 14px;gap:8px}
             .app-tile-icon{font-size:2.4rem}
             .app-tile-name{font-size:.82rem}
             .app-tile-desc{display:block}
             #apps-scroll{padding:16px 16px 32px}
         }
 
-        /* ── PANEL SECTIONS (Admin, Logs, Leaderboard) ── */
+        /* ── PANEL SECTIONS ── */
         .panel-sec{padding:14px 18px;border-bottom:1px solid var(--border)}
         .panel-sec h3{font-size:.72rem;font-weight:700;color:var(--text-3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
         .panel-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:.82rem;color:var(--text-2)}
@@ -124,10 +126,11 @@
         /* ── DATA TABLE ── */
         .table-scroll{overflow-x:auto}
         .data-table{width:100%;border-collapse:collapse;font-size:.75rem;min-width:480px}
-        .data-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-3);font-size:.63rem;text-transform:uppercase;letter-spacing:.04em}
+        .data-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-3);font-size:.63rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
         .data-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-2)}
         .data-table td.nowrap{white-space:nowrap}
         .data-table td.ellipsis{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .data-table tr:hover td{background:var(--surface-2)}
 
         /* ── ADMIN USERS ── */
         .users-list{display:flex;flex-direction:column;gap:6px}
@@ -147,8 +150,10 @@
 
         /* ── LEADERBOARD ── */
         .board-list{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
-        .board-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm)}
+        .board-item{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
         .board-item.self{border-color:var(--c-prep);background:rgba(91,140,255,.06)}
+        .board-head{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;transition:background .15s}
+        .board-head:hover{background:var(--surface-3)}
         .board-pos{width:30px;height:30px;border-radius:50%;background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
         .board-pos.top1{background:var(--c-finish);color:#000}
         .board-pos.top2{background:#b0b0b0;color:#000}
@@ -156,11 +161,65 @@
         .board-info{flex:1;min-width:0}
         .board-name{font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .board-meta{font-size:.65rem;color:var(--text-3);margin-top:2px}
-        .board-xp{font-size:1.1rem;font-weight:800;color:var(--c-prep);flex-shrink:0;text-align:right}
-        .board-xp small{font-size:.6rem;font-weight:400;color:var(--text-2)}
+        .board-time{font-size:1rem;font-weight:800;color:var(--c-prep);flex-shrink:0;text-align:right}
+        .board-time small{font-size:.6rem;font-weight:400;color:var(--text-2)}
+        .board-expand{display:none;padding:0 12px 12px;border-top:1px solid var(--border);margin-top:0}
+        .board-expand.open{display:block}
+        .board-app-row{display:flex;justify-content:space-between;padding:6px 0;font-size:.78rem;color:var(--text-2);border-bottom:1px solid var(--border)}
+        .board-app-row:last-child{border-bottom:none}
         .role-tag{font-size:.55rem;background:rgba(91,140,255,.15);color:var(--c-prep);padding:1px 6px;border-radius:3px;vertical-align:middle;margin-left:4px}
         .empty-state{padding:40px 20px;text-align:center;color:var(--text-2);font-size:.85rem}
         .empty-ico{font-size:2rem;margin-bottom:8px}
+
+        /* ── STAT CARDS ── */
+        .stat-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding:12px 16px}
+        .stat-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center}
+        .stat-card-val{font-size:1.3rem;font-weight:800;color:var(--c-prep)}
+        .stat-card-lbl{font-size:.65rem;color:var(--text-3);margin-top:3px}
+
+        /* ── SETTINGS SUB-TABS ── */
+        .sett-tabs{display:flex;gap:0;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+        .sett-tab{padding:10px 14px;font-size:.78rem;font-weight:600;color:var(--text-3);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;font-family:inherit}
+        .sett-tab:hover{color:var(--text-2)}
+        .sett-tab.active{color:var(--c-prep);border-bottom-color:var(--c-prep)}
+
+        /* ── CACHE EDITOR ── */
+        .cache-list{display:flex;flex-direction:column;gap:4px;padding:12px 16px}
+        .cache-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.78rem;cursor:pointer;transition:background .15s}
+        .cache-item:hover{background:var(--surface-3)}
+        .cache-key{flex:1;font-weight:600;font-family:'JetBrains Mono',monospace;font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .cache-size{font-size:.62rem;color:var(--text-3);font-family:'JetBrains Mono',monospace;flex-shrink:0}
+        .cache-edit{display:flex;flex-direction:column;gap:8px;padding:12px 16px}
+        .cache-edit-ta{width:100%;min-height:200px;background:var(--surface-2);border:1px solid var(--border-hi);border-radius:var(--radius-sm);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.72rem;line-height:1.5;padding:10px;resize:vertical;outline:none}
+        .cache-edit-ta:focus{border-color:var(--c-prep)}
+        .cache-actions{display:flex;gap:8px;flex-wrap:wrap}
+        .cache-btn{padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--border-hi);background:var(--surface-2);color:var(--text);font:inherit;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s}
+        .cache-btn:hover{background:var(--surface-3)}
+        .cache-btn.pr{background:var(--c-prep);border-color:var(--c-prep);color:#fff}
+        .cache-btn.dn{color:var(--c-danger);border-color:rgba(255,68,102,.3)}
+
+        /* ── DATA BROWSER ── */
+        .data-sheets{display:flex;flex-direction:column;gap:4px;padding:12px 16px}
+        .data-sheet-group{margin-bottom:12px}
+        .data-sheet-group-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);padding:0 0 6px;font-family:'JetBrains Mono',monospace}
+        .data-sheet-item{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.82rem;transition:all .15s;margin-bottom:4px}
+        .data-sheet-item:hover{background:var(--surface-3);border-color:var(--border-hi)}
+        .data-sheet-item .ico{flex-shrink:0}
+        .data-sheet-name{flex:1;font-weight:600}
+        .data-sheet-arrow{color:var(--text-3);flex-shrink:0}
+        .data-back{display:flex;align-items:center;gap:6px;padding:10px 16px;font-size:.82rem;font-weight:600;color:var(--c-prep);cursor:pointer;border-bottom:1px solid var(--border)}
+        .data-back:hover{background:var(--surface-2)}
+        .data-toolbar{display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+        .data-toolbar .cache-btn{padding:6px 12px;font-size:.72rem}
+        .data-cell-edit{background:var(--surface-2);border:1px solid var(--c-prep);border-radius:2px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:4px 6px;width:100%;min-width:60px;outline:none}
+
+        /* ── DEV GUIDE ── */
+        .devguide{padding:16px;font-size:.78rem;line-height:1.7;color:var(--text-2)}
+        .devguide pre{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;overflow-x:auto;margin:8px 0;font-family:'JetBrains Mono',monospace;font-size:.68rem;line-height:1.5;color:var(--text);white-space:pre-wrap;word-break:break-word}
+        .devguide h4{color:var(--text);font-size:.85rem;margin:14px 0 6px}
+        .devguide code{background:var(--surface-2);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:.72rem}
+        .copy-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);background:var(--c-prep);color:#fff;border:none;font:inherit;font-size:.78rem;font-weight:600;cursor:pointer;transition:opacity .15s;margin:8px 0}
+        .copy-btn:hover{opacity:.85}
 
         /* ── IMMERSIVE CONTAINER ── */
         #immersive-container{display:none;position:fixed;inset:0;z-index:9999;background:var(--bg)}
@@ -181,15 +240,6 @@
         @keyframes spin{to{transform:rotate(360deg)}}
 
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:2px}
-
-        /* ── PLATFORM SETTINGS PANEL ── */
-        #psett-bg{position:fixed;inset:0;background:rgba(10,10,15,.75);z-index:5000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-        #psett-bg.show{display:flex}
-        #psett-panel{width:100%;max-width:480px;max-height:85vh;background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;border-top:1px solid var(--border-hi);display:flex;flex-direction:column;overflow:hidden}
-        .psett-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
-        .psett-hdr h2{font-size:.95rem;font-weight:700}
-        .psett-close{width:30px;height:30px;border-radius:50%;background:var(--surface-2);border:none;color:var(--text-2);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
-        .psett-body{overflow-y:auto;flex:1;padding:0 0 max(16px,env(safe-area-inset-bottom))}
     </style>
 </head>
 <body>
@@ -258,15 +308,14 @@
             <div class="side-brand"><span class="side-brand-icon">🏋️</span> McGill</div>
             <nav class="side-nav">
                 <button class="side-item active" data-tab="apps" onclick="switchTab('apps')"><span class="ico">📱</span>Приложения</button>
-                <button class="side-item" data-tab="admin" onclick="switchTab('admin')"><span class="ico">🔧</span>Администрирование</button>
-                <button class="side-item" data-tab="logs" onclick="switchTab('logs')"><span class="ico">📋</span>Журнал</button>
+                <button class="side-item" data-tab="stats" onclick="switchTab('stats')"><span class="ico">📊</span>Статистика</button>
                 <button class="side-item" data-tab="board" onclick="switchTab('board')"><span class="ico">🏆</span>Рейтинг</button>
+                <button class="side-item" data-tab="data" onclick="switchTab('data')"><span class="ico">📚</span>Справочники</button>
+                <div class="side-sep"></div>
+                <button class="side-item" data-tab="settings" onclick="switchTab('settings')"><span class="ico">⚙️</span>Настройки</button>
             </nav>
             <div class="side-footer">
                 <span class="side-user" id="side-user-name"></span>
-                <button class="btn-icon" onclick="openPlatformSettings()" title="Настройки">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 10 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                </button>
                 <button class="btn-icon" onclick="doLogout()" title="Выйти">
                     <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 </button>
@@ -278,9 +327,6 @@
             <header class="plat-header">
                 <div class="plat-title" id="content-title">Приложения</div>
                 <span class="hdr-user mob-only" id="hdr-user-name"></span>
-                <button class="btn-icon mob-only" onclick="openPlatformSettings()" title="Настройки">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 10 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                </button>
                 <button class="btn-icon mob-only" onclick="doLogout()" title="Выйти">
                     <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 </button>
@@ -290,18 +336,23 @@
                 <div id="apps-search-bar"><input type="search" class="search-input" id="apps-search" placeholder="Поиск приложения…" autocomplete="off"></div>
                 <div id="apps-scroll"><div style="color:var(--text-3);font-size:.82rem;padding:20px 4px">Загрузка…</div></div>
             </div>
-            <div class="tab-panel" id="tab-admin"><div class="tab-scroll" id="admin-content"></div></div>
-            <div class="tab-panel" id="tab-logs"><div class="tab-scroll" id="logs-content"></div></div>
+            <div class="tab-panel" id="tab-stats"><div class="tab-scroll" id="stats-content"></div></div>
             <div class="tab-panel" id="tab-board"><div class="tab-scroll" id="board-content"></div></div>
+            <div class="tab-panel" id="tab-data"><div class="tab-scroll" id="data-content"></div></div>
+            <div class="tab-panel" id="tab-settings">
+                <div class="sett-tabs" id="sett-tabs"></div>
+                <div class="tab-scroll" id="settings-content"></div>
+            </div>
         </div>
     </div>
 
     <!-- Bottom nav (mobile) -->
     <nav class="bnav">
         <button class="bnav-item active" data-tab="apps" onclick="switchTab('apps')"><span class="ico">📱</span>Приложения</button>
-        <button class="bnav-item" data-tab="admin" onclick="switchTab('admin')"><span class="ico">🔧</span>Админ</button>
-        <button class="bnav-item" data-tab="logs" onclick="switchTab('logs')"><span class="ico">📋</span>Журнал</button>
+        <button class="bnav-item" data-tab="stats" onclick="switchTab('stats')"><span class="ico">📊</span>Стат</button>
         <button class="bnav-item" data-tab="board" onclick="switchTab('board')"><span class="ico">🏆</span>Рейтинг</button>
+        <button class="bnav-item" data-tab="data" onclick="switchTab('data')"><span class="ico">📚</span>Данные</button>
+        <button class="bnav-item" data-tab="settings" onclick="switchTab('settings')"><span class="ico">⚙️</span>Ещё</button>
     </nav>
 </div>
 
@@ -309,14 +360,6 @@
 <div id="immersive-container">
     <button id="btn-float-back" title="Закрыть приложение">←</button>
     <iframe id="app-iframe" sandbox="allow-scripts allow-same-origin" allowfullscreen></iframe>
-</div>
-
-<!-- ═══ PLATFORM SETTINGS ═══ -->
-<div id="psett-bg" onclick="if(event.target===this)closePlatformSettings()">
-    <div id="psett-panel">
-        <div class="psett-hdr"><h2>⚙️ Настройки</h2><button class="psett-close" onclick="closePlatformSettings()">✕</button></div>
-        <div class="psett-body" id="psett-body"></div>
-    </div>
 </div>
 
 <div id="toast"></div>
@@ -331,6 +374,7 @@
 const LS_CFG  = 'mcg_config';
 const LS_SA   = 'wl_sa';
 const LS_USER = 'mcg_user';
+const LS_LAUNCHES = 'mcg_launches';
 const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 const TOKEN_URI   = 'https://oauth2.googleapis.com/token';
 const SCOPE       = 'https://www.googleapis.com/auth/spreadsheets';
@@ -355,9 +399,15 @@ let searchQuery    = '';
 let currentSession = { appId: null, startTime: null };
 let swRegistration = null;
 let activeTab      = 'apps';
-let _dbSheetCache  = null;   // Set<string> — cached sheet names
-let _adminUsers    = [];     // cached rows for admin user management
-let _logsRawRows   = [];     // cached rows for logs tab
+let _dbSheetCache  = null;   // Set<string>
+let _dbSheetMeta   = null;   // Map<title, sheetId>
+let _adminUsers    = [];
+let _logsRawRows   = [];
+let _settTab       = 'general';
+let _dataViewSheet = null;   // currently viewed sheet name
+let _dataRows      = [];
+let _dataHeaders   = [];
+let _cacheEditKey  = null;
 
 /* ══════════════════════════════════════════════════════════════════
  * UTILS
@@ -378,6 +428,36 @@ function showLoader(on) { $('loader').classList.toggle('show', !!on); }
 function formatTs(ts) {
     try { return new Date(ts).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); }
     catch { return ts || ''; }
+}
+
+function formatDuration(sec) {
+    sec = Math.round(sec);
+    if (sec < 60) return sec + ' сек';
+    const m = Math.floor(sec / 60);
+    if (m < 60) return m + ' мин ' + (sec % 60 ? (sec % 60) + ' сек' : '');
+    const h = Math.floor(m / 60);
+    return h + ' ч ' + (m % 60 ? (m % 60) + ' мин' : '');
+}
+
+function formatRelative(ts) {
+    if (!ts) return '';
+    const diff = Date.now() - ts;
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return 'только что';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return min + ' мин. назад';
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + ' ч. назад';
+    const days = Math.floor(hr / 24);
+    if (days === 1) return 'вчера';
+    return days + ' дн. назад';
+}
+
+function getLastLaunch(appId) {
+    try { return JSON.parse(localStorage.getItem(LS_LAUNCHES) || '{}')[appId] || null; } catch { return null; }
+}
+function setLastLaunch(appId) {
+    try { const d = JSON.parse(localStorage.getItem(LS_LAUNCHES) || '{}'); d[appId] = Date.now(); localStorage.setItem(LS_LAUNCHES, JSON.stringify(d)); } catch {}
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -498,11 +578,12 @@ function validateSheetRange(range) {
 }
 async function refreshDbCache() {
     const token = await ensureAuth();
-    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}?fields=sheets.properties.title`;
+    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}?fields=sheets.properties`;
     const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) throw new Error('Ошибка метаданных таблицы');
     const sheets = (await res.json()).sheets || [];
     _dbSheetCache = new Set(sheets.map(s => s.properties.title));
+    _dbSheetMeta = new Map(sheets.map(s => [s.properties.title, s.properties.sheetId]));
     return _dbSheetCache;
 }
 
@@ -510,22 +591,17 @@ async function refreshDbCache() {
  * DB INITIALIZATION — ensureTables
  * ═════════════════════════════════════════════════════════════════ */
 async function dbEnsureTables(tablesConfig) {
-    // Validate all names first
     for (const t of tablesConfig) validateSheetName(t.name);
-    // Use cached sheet list or fetch
     if (!_dbSheetCache) await refreshDbCache();
     const missing = tablesConfig.filter(t => !_dbSheetCache.has(t.name));
     if (!missing.length) return;
-    // Create missing sheets in one batch
     const createReqs = missing.map(t => ({ addSheet: { properties: { title: t.name } } }));
     await apiBatchStructural(createReqs);
-    // Write headers
     for (const t of missing) {
-        try {
-            await apiAppend(`${t.name}!A1`, [t.headers]);
-        } catch {}
+        try { await apiAppend(`${t.name}!A1`, [t.headers]); } catch {}
         _dbSheetCache.add(t.name);
     }
+    await refreshDbCache();
 }
 
 async function dbInitAllSheets() {
@@ -536,9 +612,9 @@ async function dbInitAllSheets() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
- * USER AUTH (against sys_Users sheet)
- * sys_Users columns: [ID, Email, Password, Role, TotalXP, CreatedAt, Status]
- *                     0    1      2         3     4        5          6
+ * USER AUTH
+ * sys_Users: [ID, Email, Password, Role, TotalXP, CreatedAt, Status]
+ *             0    1      2         3     4        5          6
  * ═════════════════════════════════════════════════════════════════ */
 async function loginUser(email, password) {
     const res  = await apiRead('sys_Users!A2:G5000');
@@ -579,13 +655,9 @@ window.PlatformAPI = {
         batchStructural: async (requests) => apiBatchStructural(requests),
         ensureTables: async (tablesConfig) => {
             showLoader(true);
-            try {
-                await dbEnsureTables(tablesConfig);
-                toast('✓ Таблицы готовы', 'ok');
-            } catch (e) {
-                toast('Ошибка БД: ' + e.message, 'err');
-                throw e;
-            } finally { showLoader(false); }
+            try { await dbEnsureTables(tablesConfig); toast('✓ Таблицы готовы', 'ok'); }
+            catch (e) { toast('Ошибка БД: ' + e.message, 'err'); throw e; }
+            finally { showLoader(false); }
         },
         getSpreadsheetId: () => cfg.spreadsheetId
     },
@@ -621,7 +693,7 @@ window.PlatformAPI = {
     ui: {
         showToast:  (msg, type) => toast(msg, type),
         showLoader: (on)        => showLoader(on),
-        openSettings: ()        => openPlatformSettings()
+        openSettings: ()        => switchTab('settings')
     }
 };
 
@@ -636,11 +708,12 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab-panel').forEach(p => {
         p.classList.toggle('active', p.id === 'tab-' + tabName);
     });
-    const titles = { apps: 'Приложения', admin: 'Администрирование', logs: 'Журнал', board: 'Рейтинг' };
+    const titles = { apps: 'Приложения', stats: 'Статистика', board: 'Рейтинг', data: 'Справочники', settings: 'Настройки' };
     $('content-title').textContent = titles[tabName] || '';
-    if (tabName === 'admin') renderAdminTab();
-    else if (tabName === 'logs') renderLogsTab();
+    if (tabName === 'stats') renderStatsTab();
     else if (tabName === 'board') renderBoardTab();
+    else if (tabName === 'data') renderDataTab();
+    else if (tabName === 'settings') renderSettingsTab();
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -648,6 +721,7 @@ function switchTab(tabName) {
  * ═════════════════════════════════════════════════════════════════ */
 function launchApp(file, appId) {
     currentSession = { appId, startTime: Date.now() };
+    setLastLaunch(appId);
     $('app-iframe').src = `./apps/${file}`;
     $('immersive-container').style.display = 'block';
 }
@@ -662,6 +736,7 @@ $('btn-float-back').addEventListener('click', () => {
     currentSession = { appId: null, startTime: null };
     $('immersive-container').style.display = 'none';
     $('app-iframe').src = 'about:blank';
+    if (activeTab === 'apps') renderAppsGrid();
 });
 
 /* ══════════════════════════════════════════════════════════════════
@@ -704,10 +779,14 @@ function renderAppsGrid() {
         if (!apps.length) return;
         html += `<div class="app-category"><div class="app-cat-label">${cat.label}</div><div class="apps-grid">`;
         apps.forEach(g => {
-            html += `<div class="app-tile" data-file="${g.file}" data-id="${g.id || ''}" data-name="${g.name}" role="button" tabindex="0">
+            const appId = g.id || g.file;
+            const ll = getLastLaunch(appId);
+            const llText = ll ? formatRelative(ll) : '';
+            html += `<div class="app-tile" data-file="${g.file}" data-id="${appId}" data-name="${g.name}" role="button" tabindex="0">
                 <div class="app-tile-icon">${g.icon || '🎮'}</div>
                 <div class="app-tile-name">${g.name}</div>
                 <div class="app-tile-desc">${g.desc || ''}</div>
+                ${llText ? `<div class="app-tile-time">🕐 ${llText}</div>` : ''}
                 <div class="app-tile-play"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
             </div>`;
         });
@@ -725,15 +804,355 @@ function renderAppsGrid() {
 $('apps-search').addEventListener('input', e => { searchQuery = e.target.value; renderAppsGrid(); });
 
 /* ══════════════════════════════════════════════════════════════════
- * ADMIN TAB
+ * STATS TAB — Session statistics
  * ═════════════════════════════════════════════════════════════════ */
-function renderAdminTab() {
-    const c = $('admin-content');
+async function renderStatsTab() {
+    const c = $('stats-content');
+    c.innerHTML = '<div class="empty-state"><div class="loader-spin" style="margin:0 auto"></div></div>';
+    try {
+        const res = await apiRead('sys_Logs!A2:E5000');
+        const allRows = (res.values || []).filter(r => r[0] && r[3] === 'session');
+
+        if (!allRows.length) {
+            c.innerHTML = '<div class="empty-state"><div class="empty-ico">📊</div>Нет данных о сессиях</div>';
+            return;
+        }
+
+        // Summary cards
+        const totalSessions = allRows.length;
+        const totalSec = allRows.reduce((s, r) => s + (parseInt(r[4]) || 0), 0);
+        const uniqueUsers = new Set(allRows.map(r => r[1])).size;
+        const uniqueApps = new Set(allRows.map(r => r[2])).size;
+
+        // Per-user per-app aggregation
+        const agg = {};
+        allRows.forEach(r => {
+            const user = r[1] || '?', app = r[2] || '?', sec = parseInt(r[4]) || 0, ts = r[0];
+            const key = user + '|' + app;
+            if (!agg[key]) agg[key] = { user, app, count: 0, totalSec: 0, lastTs: '' };
+            agg[key].count++;
+            agg[key].totalSec += sec;
+            if (ts > agg[key].lastTs) agg[key].lastTs = ts;
+        });
+
+        const rows = Object.values(agg).sort((a, b) => b.totalSec - a.totalSec);
+
+        // Filters
+        const appIds = [...new Set(allRows.map(r => r[2]).filter(Boolean))];
+        const users  = [...new Set(allRows.map(r => r[1]).filter(Boolean))];
+
+        let html = `
+        <div class="stat-cards">
+            <div class="stat-card"><div class="stat-card-val">${totalSessions}</div><div class="stat-card-lbl">Сессий</div></div>
+            <div class="stat-card"><div class="stat-card-val">${formatDuration(totalSec)}</div><div class="stat-card-lbl">Общее время</div></div>
+            <div class="stat-card"><div class="stat-card-val">${uniqueUsers}</div><div class="stat-card-lbl">Пользователей</div></div>
+            <div class="stat-card"><div class="stat-card-val">${uniqueApps}</div><div class="stat-card-lbl">Приложений</div></div>
+        </div>
+        <div class="logs-filters">
+            <select id="stats-f-app" onchange="filterStatsTable()"><option value="">Все приложения</option>${appIds.map(id => `<option value="${esc(id)}">${esc(id)}</option>`).join('')}</select>
+            <select id="stats-f-user" onchange="filterStatsTable()"><option value="">Все пользователи</option>${users.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('')}</select>
+        </div>
+        <div style="flex:1;overflow:auto;padding:0 16px 16px"><div class="table-scroll">
+        <table class="data-table" id="stats-table">
+            <tr><th>Пользователь</th><th>Приложение</th><th>Сессий</th><th>Общее время</th><th>Последний запуск</th></tr>`;
+        rows.forEach(r => {
+            html += `<tr data-app="${esc(r.app)}" data-user="${esc(r.user)}">
+                <td>${esc(r.user)}</td>
+                <td>${esc(r.app)}</td>
+                <td>${r.count}</td>
+                <td class="nowrap">${formatDuration(r.totalSec)}</td>
+                <td class="nowrap">${formatTs(r.lastTs)}</td>
+            </tr>`;
+        });
+        html += '</table></div></div>';
+        c.innerHTML = html;
+    } catch (e) {
+        c.innerHTML = `<div class="empty-state" style="color:var(--c-danger)">Ошибка: ${esc(e.message)}</div>`;
+    }
+}
+
+function filterStatsTable() {
+    const fApp = $('stats-f-app')?.value || '';
+    const fUser = $('stats-f-user')?.value || '';
+    document.querySelectorAll('#stats-table tr[data-app]').forEach(tr => {
+        const matchApp = !fApp || tr.dataset.app === fApp;
+        const matchUser = !fUser || tr.dataset.user === fUser;
+        tr.style.display = (matchApp && matchUser) ? '' : 'none';
+    });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * LEADERBOARD TAB — by time spent, expandable
+ * ═════════════════════════════════════════════════════════════════ */
+async function renderBoardTab() {
+    const c = $('board-content');
+    c.innerHTML = '<div class="empty-state"><div class="loader-spin" style="margin:0 auto"></div></div>';
+    try {
+        const res = await apiRead('sys_Logs!A2:E5000');
+        const sessions = (res.values || []).filter(r => r[0] && r[3] === 'session');
+        if (!sessions.length) {
+            c.innerHTML = '<div class="empty-state"><div class="empty-ico">🏆</div>Нет данных для рейтинга</div>';
+            return;
+        }
+
+        // Aggregate per user
+        const userMap = {};
+        sessions.forEach(r => {
+            const user = r[1] || '?', app = r[2] || '?', sec = parseInt(r[4]) || 0;
+            if (!userMap[user]) userMap[user] = { totalSec: 0, apps: {} };
+            userMap[user].totalSec += sec;
+            if (!userMap[user].apps[app]) userMap[user].apps[app] = 0;
+            userMap[user].apps[app] += sec;
+        });
+
+        const sorted = Object.entries(userMap).sort((a, b) => b[1].totalSec - a[1].totalSec);
+
+        let html = '<div class="board-list">';
+        sorted.forEach(([user, data], i) => {
+            const pos = i + 1;
+            const posClass = pos <= 3 ? ' top' + pos : '';
+            const isSelf = user === currentUser?.login;
+            const appEntries = Object.entries(data.apps).sort((a, b) => b[1] - a[1]);
+
+            html += `<div class="board-item${isSelf ? ' self' : ''}">
+                <div class="board-head" onclick="this.nextElementSibling.classList.toggle('open')">
+                    <div class="board-pos${posClass}">${pos}</div>
+                    <div class="board-info">
+                        <div class="board-name">${esc(user)}${isSelf ? '<span class="role-tag">вы</span>' : ''}</div>
+                        <div class="board-meta">${appEntries.length} приложений · ${sessions.filter(r => r[1] === user).length} сессий</div>
+                    </div>
+                    <div class="board-time">${formatDuration(data.totalSec)}</div>
+                </div>
+                <div class="board-expand">`;
+            appEntries.forEach(([app, sec]) => {
+                html += `<div class="board-app-row"><span>${esc(app)}</span><span>${formatDuration(sec)}</span></div>`;
+            });
+            html += '</div></div>';
+        });
+        html += '</div>';
+        c.innerHTML = html;
+    } catch (e) {
+        c.innerHTML = `<div class="empty-state" style="color:var(--c-danger)">Ошибка: ${esc(e.message)}</div>`;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * DATA TAB — Full CRUD on all sheets
+ * ═════════════════════════════════════════════════════════════════ */
+function renderDataTab() {
+    if (_dataViewSheet) { renderDataSheet(); return; }
+    const c = $('data-content');
+    if (!_dbSheetCache || !_dbSheetCache.size) {
+        c.innerHTML = '<div class="empty-state"><div class="empty-ico">📚</div>Нет листов. Откройте настройки и инициализируйте БД.</div>';
+        return;
+    }
+    // Group sheets by prefix
+    const groups = {};
+    for (const name of _dbSheetCache) {
+        const prefix = name.includes('_') ? name.split('_')[0] : 'other';
+        if (!groups[prefix]) groups[prefix] = [];
+        groups[prefix].push(name);
+    }
+
+    let html = '<div class="data-sheets">';
+    for (const [prefix, sheets] of Object.entries(groups).sort()) {
+        html += `<div class="data-sheet-group"><div class="data-sheet-group-title">${esc(prefix)}</div>`;
+        sheets.sort().forEach(name => {
+            html += `<div class="data-sheet-item" onclick="openDataSheet('${esc(name)}')">
+                <span class="ico">📄</span><span class="data-sheet-name">${esc(name)}</span><span class="data-sheet-arrow">→</span>
+            </div>`;
+        });
+        html += '</div>';
+    }
+    html += `<div style="padding:12px 0">
+        <button class="panel-btn accent" onclick="createNewSheet()">+ Создать новый лист</button>
+        <button class="panel-btn" onclick="refreshDataSheets()">🔄 Обновить список</button>
+    </div></div>`;
+    c.innerHTML = html;
+}
+
+async function openDataSheet(name) {
+    _dataViewSheet = name;
+    const c = $('data-content');
+    c.innerHTML = '<div class="empty-state"><div class="loader-spin" style="margin:0 auto"></div></div>';
+    try {
+        const res = await apiRead(`${name}!A1:ZZ5000`);
+        const all = res.values || [];
+        _dataHeaders = all.length > 0 ? all[0] : [];
+        _dataRows = all.slice(1);
+        renderDataSheet();
+    } catch (e) {
+        c.innerHTML = `<div class="data-back" onclick="closeDataSheet()">← Назад к листам</div><div class="empty-state" style="color:var(--c-danger)">Ошибка: ${esc(e.message)}</div>`;
+    }
+}
+
+function closeDataSheet() { _dataViewSheet = null; renderDataTab(); }
+
+function renderDataSheet() {
+    const c = $('data-content');
+    const name = _dataViewSheet;
+    const sheetId = _dbSheetMeta?.get(name);
+
+    let html = `<div class="data-back" onclick="closeDataSheet()">← ${esc(name)}</div>`;
+    html += `<div class="data-toolbar">
+        <button class="cache-btn" onclick="addDataRow()">+ Строка</button>
+        <button class="cache-btn" onclick="openDataSheet('${esc(name)}')">🔄 Обновить</button>
+        ${sheetId !== undefined ? `<button class="cache-btn dn" onclick="deleteSheet('${esc(name)}',${sheetId})">🗑 Удалить лист</button>` : ''}
+    </div>`;
+
+    if (!_dataHeaders.length && !_dataRows.length) {
+        html += '<div class="empty-state">Лист пуст</div>';
+    } else {
+        html += '<div style="flex:1;overflow:auto;padding:0 12px 16px"><div class="table-scroll"><table class="data-table">';
+        if (_dataHeaders.length) {
+            html += '<tr><th>#</th>';
+            _dataHeaders.forEach(h => { html += `<th>${esc(h)}</th>`; });
+            html += '<th></th></tr>';
+        }
+        _dataRows.forEach((row, i) => {
+            const rowNum = i + 2; // 1-indexed, row 1 is header
+            html += `<tr><td style="color:var(--text-3);font-size:.65rem">${rowNum}</td>`;
+            const maxCols = Math.max(_dataHeaders.length, row.length);
+            for (let col = 0; col < maxCols; col++) {
+                const val = row[col] || '';
+                const colLetter = colToLetter(col);
+                html += `<td class="ellipsis" ondblclick="editDataCell(this,'${esc(name)}','${colLetter}${rowNum}','${esc(val)}')" title="${esc(val)}" style="cursor:text">${esc(val)}</td>`;
+            }
+            html += `<td><button style="background:none;border:none;color:var(--c-danger);cursor:pointer;font-size:.8rem" onclick="deleteDataRow('${esc(name)}',${sheetId},${rowNum})" title="Удалить строку">✕</button></td></tr>`;
+        });
+        html += '</table></div></div>';
+    }
+    c.innerHTML = html;
+}
+
+function colToLetter(col) {
+    let s = '';
+    col++;
+    while (col > 0) { col--; s = String.fromCharCode(65 + (col % 26)) + s; col = Math.floor(col / 26); }
+    return s;
+}
+
+function editDataCell(td, sheet, cellRef, oldVal) {
+    const input = document.createElement('input');
+    input.className = 'data-cell-edit';
+    input.value = oldVal;
+    td.textContent = '';
+    td.appendChild(input);
+    input.focus();
+    input.select();
+    const save = async () => {
+        const newVal = input.value;
+        td.textContent = newVal;
+        if (newVal !== oldVal) {
+            try { await apiUpdate(`${sheet}!${cellRef}`, newVal); toast('✓ Сохранено', 'ok'); }
+            catch (e) { toast('Ошибка: ' + e.message, 'err'); td.textContent = oldVal; }
+        }
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') { td.textContent = oldVal; } });
+}
+
+async function addDataRow() {
+    const name = _dataViewSheet;
+    if (!name) return;
+    const colCount = Math.max(_dataHeaders.length, 1);
+    const emptyRow = Array(colCount).fill('');
+    showLoader(true);
+    try {
+        await apiAppend(`${name}!A1`, [emptyRow]);
+        toast('✓ Строка добавлена', 'ok');
+        await openDataSheet(name);
+    } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    showLoader(false);
+}
+
+async function deleteDataRow(sheet, sheetId, rowNum) {
+    if (!confirm(`Удалить строку ${rowNum}?`)) return;
+    showLoader(true);
+    try {
+        await apiBatchStructural([{
+            deleteDimension: { range: { sheetId: sheetId, dimension: 'ROWS', startIndex: rowNum - 1, endIndex: rowNum } }
+        }]);
+        toast('✓ Строка удалена', 'ok');
+        await openDataSheet(sheet);
+    } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    showLoader(false);
+}
+
+async function createNewSheet() {
+    const name = prompt('Имя нового листа (латиница, цифры, _):');
+    if (!name) return;
+    try { validateSheetName(name); } catch (e) { toast(e.message, 'err'); return; }
+    showLoader(true);
+    try {
+        await apiBatchStructural([{ addSheet: { properties: { title: name } } }]);
+        await refreshDbCache();
+        toast('✓ Лист создан: ' + name, 'ok');
+        renderDataTab();
+    } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    showLoader(false);
+}
+
+async function deleteSheet(name, sheetId) {
+    if (!confirm(`Удалить лист "${name}" полностью?`)) return;
+    showLoader(true);
+    try {
+        await apiBatchStructural([{ deleteSheet: { sheetId: sheetId } }]);
+        await refreshDbCache();
+        _dataViewSheet = null;
+        toast('✓ Лист удалён', 'ok');
+        renderDataTab();
+    } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    showLoader(false);
+}
+
+async function refreshDataSheets() {
+    showLoader(true);
+    try { await refreshDbCache(); renderDataTab(); toast('✓ Обновлено', 'ok'); }
+    catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    showLoader(false);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * SETTINGS TAB — with sub-tabs
+ * ═════════════════════════════════════════════════════════════════ */
+function renderSettingsTab() {
+    const tabs = [
+        { id: 'general', label: '⚙️ Общие' },
+        { id: 'cache',   label: '💾 Кэш' },
+        { id: 'update',  label: '🔄 Обновление' },
+        { id: 'devguide', label: '📝 Разработчику' }
+    ];
+    $('sett-tabs').innerHTML = tabs.map(t =>
+        `<button class="sett-tab${_settTab === t.id ? ' active' : ''}" onclick="switchSettTab('${t.id}')">${t.label}</button>`
+    ).join('');
+    renderSettContent();
+}
+
+function switchSettTab(id) { _settTab = id; renderSettingsTab(); }
+
+function renderSettContent() {
+    const c = $('settings-content');
+    if (_settTab === 'general') renderSettGeneral(c);
+    else if (_settTab === 'cache') renderSettCache(c);
+    else if (_settTab === 'update') renderSettUpdate(c);
+    else if (_settTab === 'devguide') renderSettDevGuide(c);
+}
+
+/* ── Settings: General ── */
+function renderSettGeneral(c) {
     const isAdmin = currentUser?.role === 'admin';
     const sid = cfg.spreadsheetId || '';
     const saEmail = sa?.client_email || '';
 
     let html = `
+        <div class="panel-sec">
+            <h3>👤 Аккаунт</h3>
+            <div class="panel-row"><span>Логин</span><span class="panel-badge">${esc(currentUser?.login || '—')}</span></div>
+            <div class="panel-row"><span>Роль</span><span class="panel-badge">${esc(currentUser?.role || 'user')}</span></div>
+            <div class="panel-row"><span>XP</span><span class="panel-badge">${currentUser?.total_xp || 0}</span></div>
+            <button class="panel-btn danger" onclick="doLogout()">🚪 Выйти из аккаунта</button>
+        </div>
         <div class="panel-sec">
             <h3>🔌 Подключение</h3>
             <div class="panel-row"><span>Spreadsheet ID</span><span class="panel-badge">${sid ? esc(sid.slice(0, 20)) + '…' : '—'}</span></div>
@@ -751,12 +1170,21 @@ function renderAdminTab() {
     if (isAdmin) {
         html += `<div class="panel-sec"><h3>👥 Управление пользователями</h3><div id="admin-users">Загрузка…</div></div>`;
     }
+
+    html += `
+        <div class="panel-sec">
+            <h3>📋 Журнал событий</h3>
+            <button class="panel-btn" onclick="renderLogsInSettings()">📋 Загрузить журнал</button>
+            <div id="logs-container"></div>
+        </div>`;
+
     c.innerHTML = html;
     if (isAdmin) loadAdminUsers();
 }
 
 async function loadAdminUsers() {
     const c = $('admin-users');
+    if (!c) return;
     try {
         const res = await apiRead('sys_Users!A2:G5000');
         _adminUsers = res.values || [];
@@ -788,145 +1216,400 @@ async function loadAdminUsers() {
 }
 
 async function adminToggleRole(idx) {
-    const r = _adminUsers[idx];
-    if (!r) return;
+    const r = _adminUsers[idx]; if (!r) return;
     const newRole = (r[3] || 'user') === 'admin' ? 'user' : 'admin';
     showLoader(true);
-    try {
-        await apiUpdate(`sys_Users!D${idx + 2}`, newRole);
-        toast('Роль изменена', 'ok');
-        loadAdminUsers();
-    } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    try { await apiUpdate(`sys_Users!D${idx + 2}`, newRole); toast('Роль изменена', 'ok'); loadAdminUsers(); }
+    catch (e) { toast('Ошибка: ' + e.message, 'err'); }
     showLoader(false);
 }
 
 async function adminToggleBlock(idx) {
-    const r = _adminUsers[idx];
-    if (!r) return;
+    const r = _adminUsers[idx]; if (!r) return;
     const newStatus = (r[6] || 'active') === 'blocked' ? 'active' : 'blocked';
     showLoader(true);
-    try {
-        await apiUpdate(`sys_Users!G${idx + 2}`, newStatus);
-        toast(newStatus === 'blocked' ? 'Пользователь заблокирован' : 'Пользователь разблокирован', 'ok');
-        loadAdminUsers();
-    } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    try { await apiUpdate(`sys_Users!G${idx + 2}`, newStatus); toast(newStatus === 'blocked' ? 'Заблокирован' : 'Разблокирован', 'ok'); loadAdminUsers(); }
+    catch (e) { toast('Ошибка: ' + e.message, 'err'); }
     showLoader(false);
 }
 
 async function doInitSheets() {
     showLoader(true);
-    try {
-        await dbInitAllSheets();
-        toast('✓ Системные таблицы инициализированы', 'ok');
-        renderAdminTab();
-    } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    try { await dbInitAllSheets(); toast('✓ Таблицы инициализированы', 'ok'); renderSettContent(); }
+    catch (e) { toast('Ошибка: ' + e.message, 'err'); }
     showLoader(false);
 }
 
 async function doRefreshCache() {
     showLoader(true);
-    try {
-        await refreshDbCache();
-        toast('✓ Кэш обновлён (' + _dbSheetCache.size + ' листов)', 'ok');
-        renderAdminTab();
-    } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
+    try { await refreshDbCache(); toast('✓ Кэш обновлён (' + _dbSheetCache.size + ' листов)', 'ok'); renderSettContent(); }
+    catch (e) { toast('Ошибка: ' + e.message, 'err'); }
     showLoader(false);
 }
 
-/* ══════════════════════════════════════════════════════════════════
- * LOGS TAB
- * ═════════════════════════════════════════════════════════════════ */
-async function renderLogsTab() {
-    const c = $('logs-content');
-    if (currentUser?.role !== 'admin') {
-        c.innerHTML = '<div class="empty-state"><div class="empty-ico">🔒</div>Только для администраторов</div>';
-        return;
-    }
-    c.innerHTML = '<div class="empty-state"><div class="loader-spin" style="margin:0 auto"></div></div>';
+async function renderLogsInSettings() {
+    const c = $('logs-container');
+    if (!c) return;
+    if (currentUser?.role !== 'admin') { c.innerHTML = '<p style="font-size:.78rem;color:var(--c-danger)">Только для администраторов</p>'; return; }
+    c.innerHTML = '<div class="loader-spin" style="margin:8px auto;width:24px;height:24px"></div>';
     try {
         const res = await apiRead('sys_Logs!A2:E5000');
-        _logsRawRows = [...(res.values || [])].filter(r => r[0]).reverse();
-        renderLogsTable();
-    } catch (e) {
-        c.innerHTML = `<div class="empty-state" style="color:var(--c-danger)">Ошибка: ${esc(e.message)}</div>`;
-    }
+        const rows = [...(res.values || [])].filter(r => r[0]).reverse().slice(0, 200);
+        if (!rows.length) { c.innerHTML = '<p style="font-size:.78rem;color:var(--text-2)">Журнал пуст</p>'; return; }
+        let html = '<div class="table-scroll" style="margin-top:8px"><table class="data-table"><tr><th>Время</th><th>Пользователь</th><th>Приложение</th><th>Событие</th><th>Детали</th></tr>';
+        rows.forEach(r => {
+            html += `<tr><td class="nowrap">${esc(formatTs(r[0]))}</td><td>${esc(r[1]||'')}</td><td>${esc(r[2]||'')}</td><td>${esc(r[3]||'')}</td><td class="ellipsis" title="${esc(r[4]||'')}">${esc(r[4]||'')}</td></tr>`;
+        });
+        html += '</table></div>';
+        c.innerHTML = html;
+    } catch (e) { c.innerHTML = `<p style="color:var(--c-danger);font-size:.78rem">Ошибка: ${esc(e.message)}</p>`; }
 }
 
-function renderLogsTable() {
-    const c = $('logs-content');
-    const rows = _logsRawRows;
-    if (!rows.length) {
-        c.innerHTML = '<div class="empty-state"><div class="empty-ico">📋</div>Журнал пуст</div>';
-        return;
-    }
-    const appIds = [...new Set(rows.map(r => r[2] || '').filter(Boolean))];
-    const users  = [...new Set(rows.map(r => r[1] || '').filter(Boolean))];
-    const fApp   = $('logs-filter-app')?.value || '';
-    const fUser  = $('logs-filter-user')?.value || '';
-    const filtered = rows.filter(r => (!fApp || r[2] === fApp) && (!fUser || r[1] === fUser));
+/* ── Settings: Cache Management ── */
+function renderSettCache(c) {
+    if (_cacheEditKey !== null) { renderCacheEditor(c); return; }
 
-    let html = `<div class="logs-filters">
-        <select id="logs-filter-app" onchange="renderLogsTable()">
-            <option value="">Все приложения</option>
-            ${appIds.map(id => `<option value="${esc(id)}"${fApp === id ? ' selected' : ''}>${esc(id)}</option>`).join('')}
-        </select>
-        <select id="logs-filter-user" onchange="renderLogsTable()">
-            <option value="">Все пользователи</option>
-            ${users.map(u => `<option value="${esc(u)}"${fUser === u ? ' selected' : ''}>${esc(u)}</option>`).join('')}
-        </select>
-    </div>
-    <div class="logs-info">${filtered.length} из ${rows.length} записей</div>
-    <div style="flex:1;overflow:auto;padding:0 16px 16px"><div class="table-scroll">
-    <table class="data-table">
-        <tr><th>Время</th><th>Пользователь</th><th>Приложение</th><th>Событие</th><th>Детали</th></tr>`;
-    filtered.slice(0, 300).forEach(r => {
-        html += `<tr>
-            <td class="nowrap">${esc(formatTs(r[0]))}</td>
-            <td>${esc(r[1] || '')}</td>
-            <td>${esc(r[2] || '')}</td>
-            <td>${esc(r[3] || '')}</td>
-            <td class="ellipsis" title="${esc(r[4] || '')}">${esc(r[4] || '')}</td>
-        </tr>`;
+    const keys = Object.keys(localStorage).sort();
+    let totalBytes = 0;
+    keys.forEach(k => totalBytes += ((localStorage.getItem(k) || '').length * 2));
+
+    let html = `
+        <div class="panel-sec">
+            <h3>💾 Управление кэшем</h3>
+            <div class="panel-row"><span>Всего ключей</span><span class="panel-badge">${keys.length}</span></div>
+            <div class="panel-row"><span>Размер</span><span class="panel-badge">~${(totalBytes / 1024).toFixed(1)} КБ</span></div>
+            <button class="panel-btn accent" onclick="createCacheKey()">+ Создать новый ключ</button>
+            <button class="panel-btn" onclick="clearAppCache()">🧹 Очистить кэш приложений</button>
+            <button class="panel-btn danger" onclick="resetAllData()">⚠️ Сбросить ВСЕ данные</button>
+        </div>
+        <div class="cache-list">`;
+    keys.forEach(k => {
+        const val = localStorage.getItem(k) || '';
+        const size = (val.length * 2);
+        const sizeLabel = size < 1024 ? size + ' B' : (size / 1024).toFixed(1) + ' KB';
+        html += `<div class="cache-item" onclick="openCacheKey('${esc(k)}')">
+            <span class="cache-key">${esc(k)}</span>
+            <span class="cache-size">${sizeLabel}</span>
+            <span style="color:var(--text-3)">→</span>
+        </div>`;
     });
-    html += '</table></div></div>';
+    html += '</div>';
     c.innerHTML = html;
 }
 
-/* ══════════════════════════════════════════════════════════════════
- * LEADERBOARD TAB
- * ═════════════════════════════════════════════════════════════════ */
-async function renderBoardTab() {
-    const c = $('board-content');
-    c.innerHTML = '<div class="empty-state"><div class="loader-spin" style="margin:0 auto"></div></div>';
-    try {
-        const res = await apiRead('sys_Users!A2:G5000');
-        const users = (res.values || []).filter(r => r[1] && (r[6] || 'active') !== 'blocked');
-        users.sort((a, b) => (parseInt(b[4]) || 0) - (parseInt(a[4]) || 0));
-        if (!users.length) {
-            c.innerHTML = '<div class="empty-state"><div class="empty-ico">🏆</div>Нет данных для рейтинга</div>';
-            return;
-        }
-        let html = '<div class="board-list">';
-        users.forEach((r, i) => {
-            const [id, email, pwd, role, xp, created, status] = [...r, '', '', '', '', '', '', ''];
-            const pos = i + 1;
-            const posClass = pos <= 3 ? ' top' + pos : '';
-            const isSelf = email === currentUser?.login;
-            html += `<div class="board-item${isSelf ? ' self' : ''}">
-                <div class="board-pos${posClass}">${pos}</div>
-                <div class="board-info">
-                    <div class="board-name">${esc(email)}${role === 'admin' ? '<span class="role-tag">admin</span>' : ''}</div>
-                    <div class="board-meta">${created ? 'С ' + formatTs(created) : ''}</div>
-                </div>
-                <div class="board-xp">${parseInt(xp) || 0} <small>XP</small></div>
-            </div>`;
-        });
-        html += '</div>';
-        c.innerHTML = html;
-    } catch (e) {
-        c.innerHTML = `<div class="empty-state" style="color:var(--c-danger)">Ошибка: ${esc(e.message)}</div>`;
+function openCacheKey(key) { _cacheEditKey = key; renderSettingsTab(); }
+
+function renderCacheEditor(c) {
+    const key = _cacheEditKey;
+    const val = localStorage.getItem(key) || '';
+    let formatted = val;
+    try { formatted = JSON.stringify(JSON.parse(val), null, 2); } catch {}
+
+    c.innerHTML = `
+        <div class="data-back" onclick="closeCacheEditor()">← ${esc(key)}</div>
+        <div class="cache-edit">
+            <textarea class="cache-edit-ta" id="cache-val">${esc(formatted)}</textarea>
+            <div class="cache-actions">
+                <button class="cache-btn pr" onclick="saveCacheKey()">💾 Сохранить</button>
+                <button class="cache-btn dn" onclick="deleteCacheKey()">🗑 Удалить</button>
+                <button class="cache-btn" onclick="closeCacheEditor()">Отмена</button>
+            </div>
+        </div>`;
+}
+
+function closeCacheEditor() { _cacheEditKey = null; renderSettingsTab(); }
+
+function saveCacheKey() {
+    const key = _cacheEditKey;
+    const val = $('cache-val').value;
+    localStorage.setItem(key, val);
+    toast('✓ Сохранено: ' + key, 'ok');
+    closeCacheEditor();
+}
+
+function deleteCacheKey() {
+    const key = _cacheEditKey;
+    if (!confirm(`Удалить ключ "${key}"?`)) return;
+    localStorage.removeItem(key);
+    toast('✓ Удалён: ' + key, 'ok');
+    closeCacheEditor();
+}
+
+function createCacheKey() {
+    const key = prompt('Имя нового ключа:');
+    if (!key || !key.trim()) return;
+    if (localStorage.getItem(key.trim()) !== null) {
+        openCacheKey(key.trim());
+    } else {
+        localStorage.setItem(key.trim(), '');
+        openCacheKey(key.trim());
     }
 }
+
+function clearAppCache() {
+    const keep = new Set([LS_CFG, LS_SA, LS_USER, LS_LAUNCHES]);
+    for (const k of Object.keys(localStorage)) if (!keep.has(k)) localStorage.removeItem(k);
+    if ('caches' in window) caches.keys().then(names => names.forEach(n => caches.delete(n)));
+    toast('Кэш приложений очищен', 'ok');
+    renderSettingsTab();
+}
+
+function resetAllData() {
+    if (!confirm('Удалить ВСЕ данные платформы? Потребуется настройка заново.')) return;
+    localStorage.clear();
+    if ('caches' in window) caches.keys().then(names => names.forEach(n => caches.delete(n)));
+    location.reload();
+}
+
+/* ── Settings: Update ── */
+function renderSettUpdate(c) {
+    c.innerHTML = `
+        <div class="panel-sec">
+            <h3>🔄 Обновление приложения</h3>
+            <div class="panel-row"><span>Service Worker</span><span class="panel-badge" id="sw-badge">…</span></div>
+            <button class="panel-btn accent" onclick="checkForUpdate()">🔍 Проверить обновление</button>
+            <button class="panel-btn" onclick="forceUpdateAll()">⚡ Принудительное обновление всех файлов</button>
+            <button class="panel-btn" onclick="location.reload()">↺ Перезагрузить приложение</button>
+        </div>
+        <div class="panel-sec">
+            <h3>ℹ️ Информация</h3>
+            <div class="panel-row"><span>Платформа</span><span class="panel-badge">McGill v2.0</span></div>
+            <div class="panel-row"><span>Режим</span><span class="panel-badge">PWA / Offline</span></div>
+        </div>`;
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            const el = $('sw-badge'); if (!el) return;
+            if (!reg) { el.textContent = 'Не активен'; return; }
+            if (reg.waiting) { el.textContent = '⚡ Обновление ждёт'; el.style.color = 'var(--c-work)'; return; }
+            el.textContent = '✓ Актуально';
+        }).catch(() => { const el = $('sw-badge'); if (el) el.textContent = '—'; });
+    }
+}
+
+async function checkForUpdate() {
+    if (!swRegistration) { toast('Service Worker не активен', ''); return; }
+    showLoader(true);
+    try {
+        await swRegistration.update();
+        showLoader(false);
+        if (swRegistration.waiting) {
+            toast('Обновление готово — перезагрузите', 'ok');
+            swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } else {
+            toast('Версия актуальна', 'ok');
+        }
+        renderSettContent();
+    } catch (e) { showLoader(false); toast('Ошибка: ' + e.message, 'err'); }
+}
+
+async function forceUpdateAll() {
+    showLoader(true);
+    try {
+        if ('caches' in window) {
+            const names = await caches.keys();
+            await Promise.all(names.map(n => caches.delete(n)));
+        }
+        if (swRegistration) {
+            await swRegistration.update();
+            if (swRegistration.waiting) swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+        showLoader(false);
+        toast('Кэши очищены — перезагружаю…', 'ok');
+        setTimeout(() => location.reload(true), 800);
+    } catch (e) { showLoader(false); toast('Ошибка: ' + e.message, 'err'); }
+}
+
+/* ── Settings: Dev Guide ── */
+function renderSettDevGuide(c) {
+    const guide = `# Руководство по разработке приложений для McGill Platform
+
+## Архитектура
+
+Каждое приложение — это отдельный HTML-файл в папке \`apps/\`.
+Приложение загружается внутри \`<iframe>\` с sandbox="allow-scripts allow-same-origin".
+Платформа предоставляет API через \`window.parent.PlatformAPI\`.
+
+## Доступ к PlatformAPI
+
+\`\`\`javascript
+const Platform = window.parent?.PlatformAPI || null;
+if (!Platform) {
+  // Приложение открыто вне платформы — показать заглушку
+}
+\`\`\`
+
+## API: Пользователь
+
+\`\`\`javascript
+// Получить профиль текущего пользователя
+const profile = Platform.user.getProfile();
+// → { login: "user@email.com", role: "admin", total_xp: 150 }
+
+// Проверка роли
+Platform.user.isAdmin()  // → true/false
+Platform.user.getRole()  // → "admin" | "user"
+\`\`\`
+
+## API: База данных (Google Sheets)
+
+\`\`\`javascript
+// Создать таблицы (вызывать один раз при инициализации)
+await Platform.db.ensureTables([
+  { name: 'myapp_scores', headers: ['User','Score','Date'] },
+  { name: 'myapp_config', headers: ['Key','Value'] }
+]);
+
+// Чтение данных
+const res = await Platform.db.read('myapp_scores!A2:C5000');
+const rows = res.values || [];
+
+// Добавление строки
+await Platform.db.append('myapp_scores!A:C', [
+  ['user@email.com', '100', new Date().toISOString()]
+]);
+
+// Обновление ячейки
+await Platform.db.update('myapp_config!B2', 'new_value');
+
+// Пакетное обновление
+await Platform.db.batchValues([
+  { range: 'myapp_scores!B2', values: [['200']] },
+  { range: 'myapp_scores!B3', values: [['300']] }
+]);
+\`\`\`
+
+## API: Очки и XP
+
+\`\`\`javascript
+// Отправить результат игры
+await Platform.gameplay.submitScore('my_app_id', rawScore, xpEarned);
+\`\`\`
+
+## API: Логирование
+
+\`\`\`javascript
+// Сессии трекаются автоматически платформой (session + длительность в секундах)
+// Для кастомных событий:
+await Platform.system.log('my_app_id', 'achievement', 'Прошёл уровень 5');
+\`\`\`
+
+## API: UI
+
+\`\`\`javascript
+Platform.ui.showToast('Сохранено!', 'ok');    // ok | err | ''
+Platform.ui.showLoader(true);                   // показать/скрыть лоадер
+Platform.ui.openSettings();                     // открыть настройки платформы
+\`\`\`
+
+## Именование таблиц
+
+Используйте префикс приложения: \`myapp_tablename\`.
+Разрешены только: латиница, цифры, подчёркивание [a-zA-Z0-9_].
+
+Примеры: \`dict_words\`, \`tetris_scores\`, \`trainer_sessions\`.
+
+Системные таблицы: \`sys_Users\`, \`sys_Logs\`, \`sys_Scores\`.
+
+## Регистрация приложения
+
+Добавьте запись в \`apps/index.json\`:
+
+\`\`\`json
+{
+  "id": "myapp",
+  "name": "Моё Приложение",
+  "icon": "🎮",
+  "desc": "Описание.",
+  "file": "myapp.html"
+}
+\`\`\`
+
+## Ролевая модель
+
+Роль пользователя определяется платформой и хранится в sys_Users.
+Для проверки используйте \`Platform.user.isAdmin()\`.
+Не реализуйте собственную авторизацию — доверяйте платформе.
+
+## Шаблон приложения
+
+\`\`\`html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>My App</title>
+</head>
+<body>
+  <div id="app">Загрузка...</div>
+  <script>
+    const Platform = window.parent?.PlatformAPI || null;
+
+    async function init() {
+      if (!Platform) {
+        document.getElementById('app').textContent =
+          'Откройте через платформу McGill';
+        return;
+      }
+      const profile = Platform.user.getProfile();
+      if (!profile) {
+        document.getElementById('app').textContent =
+          'Войдите в платформу';
+        return;
+      }
+
+      // Инициализация таблиц
+      await Platform.db.ensureTables([
+        { name: 'myapp_data', headers: ['Col1','Col2'] }
+      ]);
+
+      // Запуск приложения
+      document.getElementById('app').textContent =
+        'Привет, ' + profile.login + '!';
+    }
+
+    init();
+  <\/script>
+</body>
+</html>
+\`\`\``;
+
+    c.innerHTML = `
+        <div class="panel-sec">
+            <h3>📝 Инструкция для разработчиков</h3>
+            <p style="font-size:.78rem;color:var(--text-2);margin-bottom:8px">Скопируйте промт ниже и используйте его при создании новых приложений для платформы McGill.</p>
+            <button class="copy-btn" onclick="copyDevGuide()">📋 Копировать полный промт</button>
+        </div>
+        <div class="devguide" id="devguide-text">${renderMarkdown(guide)}</div>
+        <textarea id="devguide-raw" style="display:none">${esc(guide)}</textarea>`;
+}
+
+function renderMarkdown(md) {
+    return md
+        .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre>${esc(code.trim())}</pre>`)
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/^# (.+)$/gm, '<h4 style="font-size:1rem;margin-top:0">$1</h4>')
+        .replace(/^## (.+)$/gm, '<h4>$1</h4>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+}
+
+function copyDevGuide() {
+    const raw = $('devguide-raw').value;
+    navigator.clipboard.writeText(raw).then(() => toast('✓ Скопировано!', 'ok')).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = raw; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('✓ Скопировано!', 'ok');
+    });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * Backward compat: openPlatformSettings (called by apps)
+ * ═════════════════════════════════════════════════════════════════ */
+function openPlatformSettings() { switchTab('settings'); }
+function closePlatformSettings() {} // no-op now
 
 /* ══════════════════════════════════════════════════════════════════
  * SETUP HANDLER
@@ -988,10 +1671,7 @@ async function doLoginAction() {
         saveUser();
         showLoader(false);
         afterLogin();
-    } catch (e) {
-        showLoader(false);
-        errEl.textContent = 'Ошибка: ' + e.message;
-    }
+    } catch (e) { showLoader(false); errEl.textContent = 'Ошибка: ' + e.message; }
 }
 
 async function doRegisterAction() {
@@ -1008,10 +1688,7 @@ async function doRegisterAction() {
         saveUser();
         showLoader(false);
         afterLogin();
-    } catch (e) {
-        showLoader(false);
-        errEl.textContent = 'Ошибка: ' + e.message;
-    }
+    } catch (e) { showLoader(false); errEl.textContent = 'Ошибка: ' + e.message; }
 }
 
 $('btn-do-login').addEventListener('click', doLoginAction);
@@ -1045,14 +1722,12 @@ function afterLogin() {
     showView('platform');
     switchTab('apps');
     fetchAndRenderApps();
-    // Pre-cache DB sheet list
     refreshDbCache().catch(() => {});
 }
 
 (function init() {
     loadCfg(); loadSA(); loadUser();
 
-    // Migrate old wl_config spreadsheetId if mcg_config is empty
     if (!cfg.spreadsheetId) {
         try {
             const old = JSON.parse(localStorage.getItem('wl_config') || 'null');
@@ -1072,70 +1747,6 @@ function afterLogin() {
 })();
 
 /* ══════════════════════════════════════════════════════════════════
- * PLATFORM SETTINGS PANEL
- * ═════════════════════════════════════════════════════════════════ */
-function openPlatformSettings() {
-    renderPlatformSettings();
-    $('psett-bg').classList.add('show');
-}
-function closePlatformSettings() {
-    $('psett-bg').classList.remove('show');
-}
-function renderPlatformSettings() {
-    let lsBytes = 0;
-    try { for (const k of Object.keys(localStorage)) lsBytes += (localStorage.getItem(k) || '').length * 2; } catch {}
-    const lsKb = (lsBytes / 1024).toFixed(1);
-    $('psett-body').innerHTML = `
-        <div class="panel-sec">
-            <h3>🗑 Кэш и данные</h3>
-            <div class="panel-row"><span>LocalStorage</span><span class="panel-badge">~${lsKb} КБ</span></div>
-            <button class="panel-btn" onclick="clearPlatformCache()">🧹 Очистить кэш приложений</button>
-            <button class="panel-btn danger" onclick="resetPlatformData()">⚠️ Сбросить все данные</button>
-        </div>
-        <div class="panel-sec">
-            <h3>🔄 Обновление приложения</h3>
-            <div class="panel-row"><span>Service Worker</span><span class="panel-badge" id="psett-sw-badge">…</span></div>
-            <button class="panel-btn" onclick="checkForUpdate()">🔍 Проверить обновление</button>
-            <button class="panel-btn" onclick="location.reload()">↺ Перезагрузить приложение</button>
-        </div>`;
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistration().then(reg => {
-            const el = $('psett-sw-badge'); if (!el) return;
-            if (!reg) { el.textContent = 'Не активен'; return; }
-            if (reg.waiting) { el.textContent = '⚡ Обновление ждёт'; el.style.color = 'var(--c-work)'; return; }
-            el.textContent = '✓ Актуально';
-        }).catch(() => { const el = $('psett-sw-badge'); if (el) el.textContent = '—'; });
-    } else {
-        const el = $('psett-sw-badge'); if (el) el.textContent = 'Не поддерживается';
-    }
-}
-
-function clearPlatformCache() {
-    const keep = new Set([LS_CFG, LS_SA, LS_USER]);
-    for (const k of Object.keys(localStorage)) if (!keep.has(k)) localStorage.removeItem(k);
-    if ('caches' in window) caches.keys().then(names => names.forEach(n => caches.delete(n)));
-    toast('Кэш приложений очищен', 'ok');
-    closePlatformSettings();
-}
-function resetPlatformData() {
-    if (!confirm('Удалить ВСЕ данные платформы? Потребуется настройка заново.')) return;
-    localStorage.clear();
-    if ('caches' in window) caches.keys().then(names => names.forEach(n => caches.delete(n)));
-    location.reload();
-}
-async function checkForUpdate() {
-    if (!swRegistration) { toast('Service Worker не активен', ''); return; }
-    try {
-        showLoader(true);
-        await swRegistration.update();
-        showLoader(false);
-        if (swRegistration.waiting) toast('Обновление готово — перезагрузите приложение', 'ok');
-        else toast('Версия актуальна', 'ok');
-        renderPlatformSettings();
-    } catch (e) { showLoader(false); toast('Ошибка: ' + e.message, 'err'); }
-}
-
-/* ══════════════════════════════════════════════════════════════════
  * SERVICE WORKER
  * ═════════════════════════════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
@@ -1152,6 +1763,9 @@ if ('serviceWorker' in navigator) {
                 });
             })
             .catch(e => console.error('SW error:', e));
+        navigator.serviceWorker.addEventListener('message', e => {
+            if (e.data?.type === 'CACHE_UPDATED') toast('Файлы обновлены', 'ok');
+        });
     });
 }
 </script>
