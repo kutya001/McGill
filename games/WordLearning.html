@@ -681,7 +681,17 @@ async function apiBatchUpdate(requests){
   const token=await ensureAuth();
   const url=`${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}:batchUpdate`;
   const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({requests})});
-  if(!r.ok)throw new Error('BatchUpdate failed');return r.json();
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`)}
+  return r.json();
+}
+
+async function apiBatchValueUpdate(data){
+  // data = [{range, values:[[]]}]
+  const token=await ensureAuth();
+  const url=`${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values:batchUpdate`;
+  const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({valueInputOption:'RAW',data})});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`)}
+  return r.json();
 }
 
 async function apiGetSheets(){
@@ -1856,8 +1866,9 @@ async function importJSON(json){
   const lf=json.langFrom||ui.langFrom;
   const lt=json.langTo||ui.langTo;
   let added=0,updated=0,skipped=0;
+  // Collect new rows and updates WITHOUT touching data.words yet
   const newRows=[];
-  showLoader(true);
+  const updates=[];     // {range, values, idx, obj} for batch value update
   for(const w of json.words){
     if(!w.wordFrom||!w.wordTo){skipped++;continue}
     const cat=w.category||json.category||'general';
@@ -1865,22 +1876,36 @@ async function importJSON(json){
     if(existing>=0){
       const old=data.words[existing];
       if(old.wordTo===w.wordTo&&old.transcription===(w.transcription||'')){skipped++;continue}
-      try{
-        await apiUpdate('words!A'+(existing+2)+':F'+(existing+2),[cat,lf,w.wordFrom,lt,w.wordTo,w.transcription||'']);
-        data.words[existing]={category:cat,langFrom:lf,wordFrom:w.wordFrom,langTo:lt,wordTo:w.wordTo,transcription:w.transcription||''};
-        updated++;
-      }catch(e){skipped++}
+      updates.push({range:'words!A'+(existing+2)+':F'+(existing+2),values:[[cat,lf,w.wordFrom,lt,w.wordTo,w.transcription||'']],idx:existing,obj:{category:cat,langFrom:lf,wordFrom:w.wordFrom,langTo:lt,wordTo:w.wordTo,transcription:w.transcription||''}});
+      updated++;
     }else{
       newRows.push([cat,lf,w.wordFrom,lt,w.wordTo,w.transcription||'']);
-      data.words.push({category:cat,langFrom:lf,wordFrom:w.wordFrom,langTo:lt,wordTo:w.wordTo,transcription:w.transcription||''});
       added++;
     }
   }
-  if(newRows.length){try{await apiAppend('words!A:F',newRows)}catch(e){toast('Ошибка при добавлении','err')}}
-  saveCache();
-  toast(`Импорт: +${added} новых, ↻${updated} обновлено, =${skipped} пропущено`,'ok');
+  if(!added&&!updated){
+    toast(`Нечего импортировать: все ${skipped} слов уже в базе`,'ok');
+    return;
+  }
+  showLoader(true);
+  try{
+    // 1. Append new rows
+    if(newRows.length){
+      await apiAppend('words!A:F',newRows);
+      newRows.forEach(r=>data.words.push({category:r[0],langFrom:r[1],wordFrom:r[2],langTo:r[3],wordTo:r[4],transcription:r[5]}));
+    }
+    // 2. Batch-update changed rows (single API call)
+    if(updates.length){
+      await apiBatchValueUpdate(updates.map(u=>({range:u.range,values:u.values})));
+      updates.forEach(u=>{data.words[u.idx]=u.obj});
+    }
+    saveCache();
+    toast(`Импорт: +${added} новых, ↻${updated} обновлено, =${skipped} пропущено`,'ok');
+    if(ui.view==='home')renderHome();
+  }catch(e){
+    toast('Ошибка импорта: '+e.message,'err');
+  }
   showLoader(false);
-  if(ui.view==='home')renderHome();
 }
 
 /* ===== RATING ===== */
