@@ -228,6 +228,20 @@ main{flex:1;overflow:hidden;position:relative}
 .stab{padding:8px 14px;border-radius:20px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s}
 .stab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 
+/* Session config */
+.sconf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.sconf-chip{padding:10px 6px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);font-size:.78rem;font-weight:600;text-align:center;cursor:pointer;transition:all .15s}
+.sconf-chip.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
+.sconf-chip:active{transform:scale(.95)}
+.sconf-cats{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:4px;padding-right:2px}
+.sconf-cat-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);cursor:pointer;transition:all .15s}
+.sconf-cat-row.sel{border-color:var(--blue);background:rgba(91,140,255,.1)}
+.sconf-cat-row .sci{font-size:1.2rem;flex-shrink:0}
+.sconf-cat-row .scn{flex:1;font-size:.85rem;font-weight:600}
+.sconf-cat-row .scc{font-size:.65rem;color:var(--tx2)}
+.sconf-cat-row .schk{width:18px;height:18px;border-radius:50%;border:2px solid var(--bd);flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center;font-size:.6rem}
+.sconf-cat-row.sel .schk{background:var(--blue);border-color:var(--blue);color:#fff}
+
 /* Misc */
 .mb8{margin-bottom:8px}.mb16{margin-bottom:16px}.mt8{margin-top:8px}.mt16{margin-top:16px}
 .flex-c{display:flex;align-items:center;gap:8px}
@@ -363,8 +377,8 @@ main{flex:1;overflow:hidden;position:relative}
     <div class="flex-c mb16" style="justify-content:space-between">
       <div style="font-size:.72rem;color:var(--tx2)" id="words-subtitle"></div>
       <div class="flex-c gap8">
-        <button class="btn btn-sm btn-primary" onclick="startCards()">🎴 Карточки</button>
-        <button class="btn btn-sm btn-ghost" onclick="startQuiz()">❓ Тест</button>
+        <button class="btn btn-sm btn-primary" onclick="openSessionConfig('cards')">🎴 Карточки</button>
+        <button class="btn btn-sm btn-ghost" onclick="openSessionConfig('quiz')">❓ Тест</button>
       </div>
     </div>
     <div id="words-list"></div>
@@ -410,7 +424,7 @@ main{flex:1;overflow:hidden;position:relative}
         <div class="ds"><b id="ds-learning" style="color:var(--orange)">0</b><span>Учить</span></div>
         <div class="ds"><b id="ds-total">0</b><span>Всего</span></div>
       </div>
-      <button class="btn btn-primary" onclick="startCards()">Ещё раз</button>
+      <button class="btn btn-primary" onclick="openSessionConfig('cards')">🔄 Повторить</button>
       <button class="btn btn-ghost mt8" onclick="navigate('words')">К списку слов</button>
     </div>
   </section>
@@ -434,7 +448,7 @@ main{flex:1;overflow:hidden;position:relative}
         <div class="ds"><b id="qzd-wrong" style="color:var(--red)">0</b><span>Ошибки</span></div>
         <div class="ds"><b id="qzd-pct" style="color:var(--blue)">0%</b><span>Результат</span></div>
       </div>
-      <button class="btn btn-primary" onclick="startQuiz()">Ещё раз</button>
+      <button class="btn btn-primary" onclick="openSessionConfig('quiz')">🔄 Повторить</button>
       <button class="btn btn-ghost mt8" onclick="navigate('words')">К списку слов</button>
     </div>
   </section>
@@ -463,8 +477,8 @@ main{flex:1;overflow:hidden;position:relative}
 <!-- Bottom Nav -->
 <nav id="bnav">
   <button data-v="home" class="active" onclick="navigate('home')"><span class="ico">📚</span>Словарь</button>
-  <button data-v="cards" onclick="navigate('cards')"><span class="ico">🎴</span>Карточки</button>
-  <button data-v="quiz" onclick="navigate('quiz')"><span class="ico">❓</span>Тест</button>
+  <button data-v="cards" onclick="openSessionConfig('cards')"><span class="ico">🎴</span>Карточки</button>
+  <button data-v="quiz" onclick="openSessionConfig('quiz')"><span class="ico">❓</span>Тест</button>
   <button data-v="rating" onclick="navigate('rating')"><span class="ico">🏆</span>Рейтинг</button>
   <button data-v="settings" onclick="navigate('settings')"><span class="ico">⚙️</span>Настройки</button>
 </nav>
@@ -603,8 +617,8 @@ function navigate(name,params){
   // Render
   if(name==='home') renderHome();
   else if(name==='words') renderWords();
-  else if(name==='cards') initCards();
-  else if(name==='quiz') initQuiz();
+  else if(name==='cards'){if(!params?._skipInit) initCards();}
+  else if(name==='quiz'){if(!params?._skipInit) initQuiz();}
   else if(name==='rating') renderRating();
   else if(name==='settings') renderSettings();
 }
@@ -1050,18 +1064,117 @@ function createWordItem(w){
 }
 
 /* ===== FLASHCARDS ===== */
-function initCards(){
-  const words=getWords(ui.category);
-  if(words.length===0){
-    toast('Нет слов для изучения','err');
-    goBack();return;
+function openSessionConfig(mode){
+  // Build available categories based on current lang pair
+  const allWords=getWords();
+  const usedCatIds=[...new Set(allWords.map(w=>w.category))];
+  const cats=data.categories.filter(c=>usedCatIds.includes(c.id));
+  const defaultCat=ui.category||'_all';
+  const wordCounts=[10,20,30,50,100,'Все'];
+  const modeLabel=mode==='cards'?'🎴 Карточки':'❓ Тест';
+  const modeColor=mode==='cards'?'var(--blue)':'var(--orange)';
+
+  const catRows=`
+    <div class="sconf-cat-row sel" data-cat="_all" onclick="_scToggleCat(this,'_all')">
+      <span class="sci">📚</span>
+      <span class="scn">Все категории</span>
+      <span class="scc">${allWords.length} слов</span>
+      <div class="schk">✓</div>
+    </div>`+cats.map(c=>{
+      const cnt=getWords(c.id).length;
+      const sel=defaultCat===c.id;
+      return `<div class="sconf-cat-row${sel?' sel':''}" data-cat="${esc(c.id)}" onclick="_scToggleCat(this,'${esc(c.id)}')"><span class="sci">${c.icon}</span><span class="scn">${esc(c.name)}</span><span class="scc">${cnt} слов</span><div class="schk">${sel?'✓':''}</div></div>`;
+    }).join('');
+
+  const getDefault=()=>{
+    const pool=allWords;
+    const d=Math.min(20,pool.length);
+    const opts=[10,20,30,50,100];
+    return opts.find(n=>n>=pool.length)||d;
+  };
+
+  const chipHtml=wordCounts.map(n=>{
+    const label=n==='Все'?'Все':n;
+    return `<div class="sconf-chip" data-n="${n}" onclick="_scSelectN(this,${n==='Все'?9999:n})">${label}</div>`;
+  }).join('');
+
+  showModal(`
+    <h3 style="color:${modeColor}">${modeLabel}</h3>
+    <div class="input-group" style="margin-bottom:8px"><label>Категория</label></div>
+    <div class="sconf-cats" id="sc-cats">${catRows}</div>
+    <div class="input-group" style="margin-top:12px;margin-bottom:8px"><label>Количество слов</label></div>
+    <div class="sconf-grid" id="sc-chips">${chipHtml}</div>
+    <div style="font-size:.72rem;color:var(--tx2);margin:8px 0 14px" id="sc-avail"></div>
+    <button class="btn btn-primary" style="background:${modeColor}" onclick="_scStart('${mode}')">
+      ${mode==='cards'?'Начать карточки':'Начать тест'} →
+    </button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+
+  // Pre-select default chip + default cat row
+  if(defaultCat!=='_all'){
+    const allRow=document.querySelector('.sconf-cat-row[data-cat="_all"]');
+    if(allRow){allRow.classList.remove('sel');allRow.querySelector('.schk').textContent='';}
   }
-  // Prioritize: new words first, then learning, then mastered (shuffled within groups)
+  _scUpdateAvail();
+  // Auto-select closest word count chip
+  const curPool=_scGetPool();
+  const best=[10,20,30,50,100].reduce((a,b)=>Math.abs(b-curPool.length)<Math.abs(a-curPool.length)?b:a,20);
+  const chips=document.querySelectorAll('#sc-chips .sconf-chip');
+  const selChip=[...chips].find(c=>parseInt(c.dataset.n)===best||(best>=100&&c.dataset.n==='100')||c.dataset.n==='Все'&&curPool.length<10)||chips[1]||chips[0];
+  if(selChip)selChip.classList.add('sel');
+}
+
+function _scToggleCat(el,catId){
+  document.querySelectorAll('#sc-cats .sconf-cat-row').forEach(r=>{r.classList.remove('sel');r.querySelector('.schk').textContent=''});
+  el.classList.add('sel');
+  el.querySelector('.schk').textContent='✓';
+  _scUpdateAvail();
+}
+
+function _scSelectN(el,n){
+  document.querySelectorAll('#sc-chips .sconf-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  _scUpdateAvail();
+}
+
+function _scGetPool(){
+  const selCat=document.querySelector('#sc-cats .sconf-cat-row.sel')?.dataset.cat||'_all';
+  const catId=selCat==='_all'?null:selCat;
+  return getWords(catId);
+}
+
+function _scUpdateAvail(){
+  const pool=_scGetPool();
+  const selN=document.querySelector('#sc-chips .sconf-chip.sel')?.dataset.n||'20';
+  const n=selN==='Все'?pool.length:parseInt(selN);
+  const actual=Math.min(n,pool.length);
+  const box=document.getElementById('sc-avail');
+  if(box) box.textContent=`Будет ${actual} из ${pool.length} доступных слов`;
+}
+
+function _scStart(mode){
+  const selCat=document.querySelector('#sc-cats .sconf-cat-row.sel')?.dataset.cat||'_all';
+  const catId=selCat==='_all'?null:selCat;
+  const selN=document.querySelector('#sc-chips .sconf-chip.sel')?.dataset.n||'20';
+  const limit=selN==='Все'?99999:parseInt(selN);
+  ui.category=catId;
+  closeModal();
+  if(mode==='cards') initCards(limit);
+  else initQuiz(limit);
+  navigate(mode,{_skipInit:true});
+}
+
+function initCards(limit){
+  limit=limit||99999;
+  const words=getWords(ui.category);
+  if(words.length===0){toast('Нет слов для изучения','err');goBack();return;}
   const newW=words.filter(w=>getLevel(w)===0);
   const learnW=words.filter(w=>{const l=getLevel(w);return l>=1&&l<3});
   const mastW=words.filter(w=>getLevel(w)>=3);
-  const shuffled=[...shuffle(newW),...shuffle(learnW),...shuffle(mastW).slice(0,5)];
-  fc={words:shuffled.length?shuffled:shuffle([...words]),index:0,flipped:false,reverse:document.getElementById('fc-reverse').classList.contains('on'),known:0,learning:0};
+  const ordered=[...shuffle(newW),...shuffle(learnW),...shuffle(mastW)];
+  const sliced=ordered.slice(0,limit);
+  fc={words:sliced.length?sliced:shuffle([...words]).slice(0,limit),index:0,flipped:false,reverse:document.getElementById('fc-reverse').classList.contains('on'),known:0,learning:0};
   document.getElementById('fc-total').textContent=fc.words.length;
   document.getElementById('fc-done').style.display='none';
   document.getElementById('fc-actions').style.display='flex';
@@ -1069,7 +1182,7 @@ function initCards(){
   showCard();
 }
 
-function startCards(){navigate('cards')}
+function startCards(){openSessionConfig('cards')}
 
 function showCard(){
   if(fc.index>=fc.words.length){showCardsDone();return}
@@ -1139,16 +1252,17 @@ function speakWord(isBack){
 }
 
 /* ===== QUIZ ===== */
-function initQuiz(){
+function initQuiz(limit){
+  limit=limit||99999;
   const words=getWords(ui.category);
   if(words.length<2){toast('Нужно минимум 2 слова для теста','err');goBack();return}
-  qz={words:shuffle([...words]).slice(0,Math.min(words.length,20)),index:0,score:0,answered:false,allWords:words};
+  qz={words:shuffle([...words]).slice(0,Math.min(words.length,limit)),index:0,score:0,answered:false,allWords:words};
   document.getElementById('qz-done').style.display='none';
   document.getElementById('qz-total').textContent=qz.words.length;
   showQuizQ();
 }
 
-function startQuiz(){navigate('quiz')}
+function startQuiz(){openSessionConfig('quiz')}
 
 function showQuizQ(){
   if(qz.index>=qz.words.length){showQuizDone();return}
