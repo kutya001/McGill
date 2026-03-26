@@ -564,7 +564,9 @@ async function registerUser(email, password) {
  * ═════════════════════════════════════════════════════════════════ */
 window.PlatformAPI = {
     user: {
-        getProfile: () => currentUser ? { login: currentUser.login, role: currentUser.role, total_xp: currentUser.total_xp } : null
+        getProfile: () => currentUser ? { login: currentUser.login, role: currentUser.role, total_xp: currentUser.total_xp } : null,
+        isAdmin: () => (currentUser?.role || '').toLowerCase() === 'admin',
+        getRole: () => (currentUser?.role || 'user').toLowerCase()
     },
     db: {
         read: async (range) => { validateSheetRange(range); return apiRead(range); },

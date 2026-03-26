@@ -531,60 +531,15 @@ let _pendingImport=null;
 /* ===== INIT ===== */
 const Platform = window.parent?.PlatformAPI || null;
 
-function normalizeRole(role){
-  const r=String(role||'').trim().toLowerCase();
-  return (r==='admin'||r==='administrator'||r==='superadmin')?'admin':'user';
-}
-
+/* ===== ROLE — single source of truth is the Platform ===== */
 function isAdmin(){
-  return normalizeRole(currentUser?.role)==='admin';
+  // Primary: ask platform directly (always fresh)
+  if(Platform?.user?.isAdmin) return Platform.user.isAdmin();
+  // Fallback: use local currentUser (set from getProfile on init)
+  return (currentUser?.role||'').toLowerCase()==='admin';
 }
 
-function normalizeProfile(profile){
-  const login=String(profile?.login||profile?.email||profile?.username||'').trim()||'user';
-  const role=normalizeRole(profile?.role||profile?.userRole||profile?.user_role);
-  const status=String(profile?.status||'active');
-  return {login,role,status};
-}
-
-async function resolveCurrentUser(profile){
-  const user=normalizeProfile(profile);
-  // If platform already says admin – trust it
-  if(normalizeRole(user.role)==='admin') return user;
-  // Otherwise try to verify against sys_Users directly
-  if(Platform?.db?.read){
-    try{
-      const res=await Platform.db.read('sys_Users!A2:G5000');
-      const rows=res.values||[];
-      const match=rows.find(r=>String(r[1]||'').trim().toLowerCase()===user.login.toLowerCase());
-      if(match){
-        const sheetRole=normalizeRole(match[3]);
-        if(sheetRole==='admin') user.role='admin';
-      }
-    }catch(e){
-      console.warn('resolveCurrentUser fallback failed:',e);
-    }
-  }
-  return user;
-}
-
-async function refreshRole(){
-  if(!Platform){toast('Нет подключения к платформе','err');return;}
-  const profile=Platform.user.getProfile();
-  if(!profile){toast('Не авторизован','err');return;}
-  showLoader(true);
-  try{
-    currentUser=await resolveCurrentUser(profile);
-    const role=normalizeRole(currentUser.role);
-    toast(role==='admin'?'✓ Права администратора подтверждены':'Роль: '+role, role==='admin'?'ok':'info');
-    renderSettings();
-  }catch(e){
-    toast('Ошибка проверки роли','err');
-  }
-  showLoader(false);
-}
-
-async function init(){
+function init(){
   loadConfig();
   loadProgress();
   loadCache();
@@ -599,7 +554,7 @@ async function init(){
     if(el) el.innerHTML='<div style="padding:60px 20px;text-align:center"><div style="font-size:2.5rem;margin-bottom:16px">📖</div><p style="color:#ff6b6b;font-size:.9rem">Войдите в платформу McGill</p></div>';
     showView('setup'); return;
   }
-  currentUser = await resolveCurrentUser(profile);
+  currentUser = { login: profile.login, role: profile.role || 'user', status: 'active' };
   afterLogin();
   initLangSelectors();
   document.getElementById('sel-from').addEventListener('change',onLangChange);
@@ -703,7 +658,7 @@ function openUserMenu(){
   if(!currentUser)return;
   showModal(`
     <h3>${esc(currentUser.login)}</h3>
-    <p style="color:var(--tx2);font-size:.82rem;margin-bottom:16px">Роль: ${esc(normalizeRole(currentUser.role))}</p>
+    <p style="color:var(--tx2);font-size:.82rem;margin-bottom:16px">Роль: ${esc(Platform?.user?.getRole?.() || currentUser?.role || 'user')}</p>
     <button class="btn btn-ghost mb8" onclick="Platform?.ui?.openSettings?.();closeModal()">⚙️ Настройки платформы</button>
   `);
 }
@@ -1203,7 +1158,7 @@ function renderSettings(){
 }
 
 function renderSettingsGeneral(c){
-  const role=normalizeRole(currentUser?.role);
+  const role=Platform?.user?.getRole?.() || (currentUser?.role||'user').toLowerCase();
   const roleColor=role==='admin'?'var(--green)':'var(--orange)';
   const roleIcon=role==='admin'?'👑':'👤';
   c.innerHTML=`
@@ -1219,7 +1174,6 @@ function renderSettingsGeneral(c){
       <div class="set-row"><span>Языки</span><span class="badge">${data.languages.length}</span></div>
       <div class="set-row"><span>Категории</span><span class="badge">${data.categories.length}</span></div>
     </div>
-    <button class="btn btn-ghost mt8" onclick="refreshRole()">🔄 Проверить / обновить права доступа</button>
     <button class="btn btn-ghost mt8" onclick="Platform?.ui?.openSettings?.()">⚙️ Настройки платформы</button>
     <button class="btn btn-red mt8" onclick="clearProgress()">🗑 Сбросить прогресс</button>`;
 }
@@ -1258,7 +1212,7 @@ function renderSettingsData(c){
 }
 
 function adminOnly(){
-  return `<div class="empty"><div class="em-icon">🔒</div><p style="color:var(--tx2)">Только для администраторов</p><p style="font-size:.72rem;color:var(--tx3)">Текущая роль: ${esc(normalizeRole(currentUser?.role))}</p></div>`;
+  return `<div class="empty"><div class="em-icon">🔒</div><p style="color:var(--tx2)">Только для администраторов</p><p style="font-size:.72rem;color:var(--tx3)">Текущая роль: ${esc(Platform?.user?.getRole?.() || currentUser?.role || 'user')}</p></div>`;
 }
 
 function renderSettingsImpExp(c){
