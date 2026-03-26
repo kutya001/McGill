@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>McGill Тренер</title>
+    <title>McGill</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0a0a0f">
     <style>
@@ -27,9 +27,7 @@
             --radius:    14px;
             --radius-sm: 8px;
             --accent:    var(--c-prep);
-            --sidebar-w: 260px;
             --header-h:  58px;
-            --tab-h:     52px;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,1580 +42,741 @@
             overflow: hidden;
         }
 
-        #progress-bar { position: fixed; top: 0; left: 0; width: 100%; height: 3px; background: var(--border); z-index: 50; }
-        #progress-fill { height: 100%; background: linear-gradient(90deg, var(--c-prep), var(--c-work)); width: 0%; transition: width 0.5s linear; }
+        /* ── VIEWS ── */
+        .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+        .view.active { display: flex; }
 
+        /* ── AUTH SCREENS ── */
+        .auth-scroll {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 24px;
+        }
+        .auth-card {
+            width: 100%; max-width: 440px; background: var(--surface);
+            border: 1px solid var(--border-hi); border-radius: var(--radius);
+            padding: 30px 28px; display: flex; flex-direction: column; gap: 18px;
+        }
+        .auth-logo { text-align: center; }
+        .auth-logo-icon { font-size: 3rem; line-height: 1; margin-bottom: 8px; }
+        .auth-logo-name { font-size: 1.4rem; font-weight: 800; }
+        .auth-logo-sub { font-size: 0.75rem; color: var(--text-2); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+        .inp-group { display: flex; flex-direction: column; gap: 6px; }
+        .inp-label { font-size: 0.78rem; color: var(--text-2); font-weight: 600; }
+        .inp-field {
+            width: 100%; padding: 10px 12px; background: var(--surface-2);
+            border: 1px solid var(--border-hi); border-radius: var(--radius-sm);
+            color: var(--text); font-family: 'Manrope', sans-serif; font-size: 0.88rem;
+            outline: none; transition: border-color 0.15s;
+        }
+        .inp-field:focus { border-color: var(--c-prep); }
+        .inp-ta { resize: vertical; min-height: 90px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; line-height: 1.5; }
+        .btn-primary {
+            width: 100%; padding: 12px; background: var(--c-prep); color: #fff;
+            border: none; border-radius: var(--radius-sm); font-family: 'Manrope', sans-serif;
+            font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: opacity 0.15s;
+        }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-secondary {
+            width: 100%; padding: 12px; background: transparent;
+            border: 1px solid var(--border-hi); color: var(--text-2);
+            border-radius: var(--radius-sm); font-family: 'Manrope', sans-serif;
+            font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: background 0.15s;
+        }
+        .btn-secondary:hover { background: var(--surface-2); }
+        .auth-err { font-size: 0.8rem; color: var(--c-danger); min-height: 18px; }
+        .auth-link {
+            font-size: 0.8rem; color: var(--c-prep); cursor: pointer;
+            background: none; border: none; font-family: 'Manrope', sans-serif; text-align: center;
+        }
+        .auth-link:hover { text-decoration: underline; }
+        .auth-sep { height: 1px; background: var(--border); }
+
+        /* ── PLATFORM HEADER ── */
         header {
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 16px 10px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            z-index: 10;
-            height: var(--header-h);
+            flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; background: var(--surface);
+            border-bottom: 1px solid var(--border); height: var(--header-h); z-index: 10;
         }
-        .header-left { flex: 1; min-width: 0; }
-        #workout-select {
-            width: 100%; background: transparent; color: var(--text); border: none;
-            font-family: 'Manrope', sans-serif; font-size: 1rem; font-weight: 700;
-            outline: none; cursor: pointer; appearance: none; padding-right: 18px;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns%3D'http%3A//www.w3.org/2000/svg' width%3D'12' height%3D'8'%3E%3Cpath fill%3D'%238888aa' d%3D'M0 0l6 8 6-8z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: right 2px center; background-size: 10px auto;
+        .hdr-logo { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+        .hdr-logo-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+        .hdr-logo-name { font-size: 0.95rem; font-weight: 800; }
+        .hdr-user {
+            font-size: 0.72rem; color: var(--text-2); font-family: 'JetBrains Mono', monospace;
+            flex-shrink: 0; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        #workout-select option { background: #1a1a24; color: var(--text); }
-        #ex-title-header { font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: none; }
-        #ph-title { font-size: 0.72rem; color: var(--text-2); margin-top: 2px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em; }
-
-        #offline-badge { display: none; font-size: 0.62rem; background: rgba(255,68,102,0.15); border: 1px solid var(--c-danger); color: var(--c-danger); padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
-        body.offline #offline-badge { display: block; }
-
-        .header-btns { display: flex; gap: 6px; flex-shrink: 0; }
-        .btn-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--border-hi); background: var(--surface-2); color: var(--text-2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; user-select: none; flex-shrink: 0; }
+        .btn-icon {
+            width: 36px; height: 36px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border-hi); background: var(--surface-2);
+            color: var(--text-2); cursor: pointer; display: flex; align-items: center;
+            justify-content: center; flex-shrink: 0; transition: background 0.15s, color 0.15s;
+        }
         .btn-icon:hover { background: var(--surface-3); color: var(--text); }
         .btn-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-        #btn-update {
-            width: 36px; height: 36px; border-radius: var(--radius-sm);
-            border: 1px solid rgba(91,140,255,0.4); background: rgba(91,140,255,0.1);
-            color: var(--c-prep); cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: background 0.15s, color 0.15s, transform 0.3s;
-            user-select: none; flex-shrink: 0; position: relative;
+        /* ── APPS GRID ── */
+        #apps-search-bar {
+            padding: 10px 16px 8px; background: var(--surface);
+            border-bottom: 1px solid var(--border); flex-shrink: 0;
         }
-        #btn-update:hover { background: rgba(91,140,255,0.2); }
-        #btn-update.spinning svg { animation: spin 0.7s linear infinite; }
-        #btn-update .update-dot {
-            position: absolute; top: -3px; right: -3px; width: 8px; height: 8px;
-            background: var(--c-finish); border-radius: 50%; border: 2px solid var(--bg);
-            display: none;
-        }
-        #btn-update.has-update .update-dot { display: block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        #btn-update svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.3s; }
-
-        .app-body { flex: 1; display: flex; overflow: hidden; }
-
-        #left-panel {
-            width: var(--sidebar-w); flex-shrink: 0; display: flex; flex-direction: column;
-            background: var(--surface); border-right: 1px solid var(--border); overflow: hidden;
-        }
-
-        #center-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-
-        .tab-bar { display: flex; flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
-        .tab-btn {
-            flex: 1; padding: 0 8px; height: var(--tab-h);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-            cursor: pointer; border: none; background: transparent; color: var(--text-3);
-            font-family: 'Manrope', sans-serif; font-size: 0.68rem; font-weight: 700;
-            letter-spacing: 0.04em; transition: color 0.15s, background 0.15s; position: relative; user-select: none;
-        }
-        .tab-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-        .tab-btn.active { color: var(--accent); }
-        .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 32px; height: 2px; background: var(--accent); border-radius: 2px 2px 0 0; }
-        .tab-btn:hover:not(.active) { color: var(--text-2); background: var(--surface-2); }
-
-        .tab-pane { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-        .tab-pane.active { display: flex; }
-
-        #tab-workout { overflow-y: auto; overflow-x: hidden; }
-        .workout-main { display: flex; flex-direction: column; align-items: center; padding: 16px 16px 20px; gap: 12px; min-height: 100%; }
-
-        .timer-wrap { position: relative; width: 190px; height: 190px; flex-shrink: 0; touch-action: none; }
-        .ring-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
-        .ring-bg { fill: none; stroke: var(--border); stroke-width: 6; }
-        .ring-fg { fill: none; stroke: var(--c-prep); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 534; stroke-dashoffset: 534; transition: stroke-dashoffset 0.9s linear, stroke 0.3s ease; }
-
-        @media (prefers-reduced-motion: no-preference) {
-            body.state-prep .timer-wrap { animation: prepPulse 1.4s ease-in-out infinite; }
-        }
-        @keyframes prepPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
-
-        .timer-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #time-display { font-family: 'JetBrains Mono', monospace; font-size: 3.8rem; font-weight: 700; line-height: 1; letter-spacing: -0.03em; transition: color 0.3s ease; }
-        #time-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-2); margin-top: 4px; transition: color 0.3s ease; font-family: 'JetBrains Mono', monospace; }
-        #total-time-display { font-size: 0.75rem; color: var(--text-2); margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
-        #step-counter { font-size: 0.6rem; color: var(--text-3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
-        #set-counter { font-size: 0.62rem; color: var(--accent); margin-top: 1px; font-family: 'JetBrains Mono', monospace; transition: color 0.3s; }
-
-        .controls { display: flex; gap: 8px; width: 100%; max-width: 380px; flex-shrink: 0; }
-        .btn-ctrl { flex: 1; padding: 13px 8px; border: none; border-radius: var(--radius); font-family: 'Manrope', sans-serif; font-size: 0.9rem; font-weight: 700; color: #fff; cursor: pointer; transition: transform 0.1s, opacity 0.2s, background 0.2s; user-select: none; }
-        .btn-ctrl:active { transform: scale(0.97); }
-        .btn-ctrl:disabled { opacity: 0.3; cursor: not-allowed; }
-        #btn-main  { background: var(--c-work); color: #000; }
-        #btn-prev, #btn-next  { background: var(--surface-3); border: 1px solid var(--border-hi); }
-        #btn-reset { background: var(--surface-3); border: 1px solid var(--border-hi); flex: 0 0 46px; padding: 13px 4px; }
-
-        .info-card { width: 100%; max-width: 380px; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--c-prep); border-radius: var(--radius); padding: 14px; font-size: 0.82rem; line-height: 1.55; flex-shrink: 0; max-height: 200px; overflow-y: auto; transition: border-left-color 0.3s ease; }
-        .info-card .ic-row { margin-bottom: 6px; color: var(--text-2); }
-        .info-card .ic-row b { color: var(--text); }
-        .info-card .ic-step { padding-top: 8px; border-top: 1px solid var(--border); color: var(--c-prep); font-weight: 700; margin-bottom: 0; font-size: 0.8rem; transition: color 0.3s ease; }
-
-        .timeline { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
-        .tl-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-3); }
-        .tl-item.active { background: var(--surface-2); color: var(--text); font-weight: 700; }
-        .tl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-hi); margin-right: 8px; flex-shrink: 0; }
-        .tl-item.active .tl-dot { background: var(--accent); }
-        .tl-name { flex: 1; display: flex; align-items: center; }
-        .tl-time { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-3); }
-        .tl-item.active .tl-time { color: var(--text-2); }
-
-        body.state-work { --accent: var(--c-work); }
-        body.state-rest { --accent: var(--c-rest); }
-        body.state-prep { --accent: var(--c-prep); }
-        body.state-finish { --accent: var(--c-finish); }
-        body.state-work #time-display, body.state-work #time-label { color: var(--c-work); }
-        body.state-rest #time-display, body.state-rest #time-label { color: var(--c-rest); }
-        body.state-prep #time-display, body.state-prep #time-label { color: var(--c-prep); }
-        body.state-finish #time-display, body.state-finish #time-label { color: var(--c-finish); }
-        body.state-work .info-card { border-left-color: var(--c-work); }
-        body.state-rest .info-card { border-left-color: var(--c-rest); }
-        body.state-prep .info-card { border-left-color: var(--c-prep); }
-        body.state-finish .info-card { border-left-color: var(--c-finish); }
-        body.state-work .info-card .ic-step { color: var(--c-work); }
-        body.state-rest .info-card .ic-step { color: var(--c-rest); }
-        body.state-prep .info-card .ic-step { color: var(--c-prep); }
-
-        /* ── ТАБ ИГР ── */
-        #tab-games { overflow: hidden; flex-direction: column; }
-        .games-search-bar { padding: 10px 14px 8px; flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
-        .games-search-input {
-            width: 100%; background: var(--surface-2); border: 1px solid var(--border-hi); border-radius: var(--radius-sm);
-            padding: 8px 12px 8px 34px; color: var(--text); font-family: 'Manrope', sans-serif; font-size: 0.85rem; outline: none; transition: border-color 0.15s;
+        .search-input {
+            width: 100%; padding: 9px 12px 9px 36px; background: var(--surface-2);
+            border: 1px solid var(--border-hi); border-radius: var(--radius-sm);
+            color: var(--text); font-family: 'Manrope', sans-serif; font-size: 0.85rem; outline: none;
             background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238888aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: 10px center;
+            background-repeat: no-repeat; background-position: 10px center; transition: border-color 0.15s;
         }
-        .games-search-input:focus { border-color: var(--c-prep); }
-        .games-scroll { flex: 1; overflow-y: auto; padding: 10px 10px 20px; }
-        .game-category { margin-bottom: 18px; }
-        .game-cat-label { font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); font-family: 'JetBrains Mono', monospace; padding: 0 4px 8px; }
-        .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
-        .game-tile {
+        .search-input:focus { border-color: var(--c-prep); }
+        #apps-scroll { flex: 1; overflow-y: auto; padding: 12px 12px 24px; }
+        .app-category { margin-bottom: 20px; }
+        .app-cat-label {
+            font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--text-3); font-family: 'JetBrains Mono', monospace; padding: 0 4px 8px;
+        }
+        .apps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+        .app-tile {
             background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
-            padding: 14px 10px 12px; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.1s;
-            display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; user-select: none; position: relative; overflow: hidden;
+            padding: 14px 10px 12px; cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, transform 0.1s;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            text-align: center; user-select: none; position: relative; overflow: hidden;
         }
-        .game-tile::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(91,140,255,0.06), transparent 70%); opacity: 0; transition: opacity 0.2s; }
-        .game-tile:hover { background: var(--surface-3); border-color: var(--border-hi); transform: translateY(-1px); }
-        .game-tile:hover::before { opacity: 1; }
-        .game-tile:active { transform: scale(0.97); }
-        .game-tile-icon { font-size: 2rem; line-height: 1; }
-        .game-tile-name { font-size: 0.78rem; font-weight: 700; color: var(--text); line-height: 1.3; }
-        .game-tile-desc { font-size: 0.66rem; color: var(--text-3); line-height: 1.4; display: none; }
-        .game-tile-play { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(91,140,255,0.15); border: 1px solid rgba(91,140,255,0.3); color: var(--c-prep); margin-top: 2px; flex-shrink: 0; }
-        .game-tile-play svg { width: 10px; height: 10px; fill: currentColor; stroke: none; }
-        @media (min-width: 768px) {
-            .games-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-            .game-tile { padding: 18px 14px 14px; gap: 10px; }
-            .game-tile-icon { font-size: 2.4rem; }
-            .game-tile-name { font-size: 0.82rem; }
-            .game-tile-desc { display: block; }
+        .app-tile::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(91,140,255,0.06), transparent 70%); opacity: 0; transition: opacity 0.2s; }
+        .app-tile:hover  { background: var(--surface-3); border-color: var(--border-hi); transform: translateY(-1px); }
+        .app-tile:hover::before { opacity: 1; }
+        .app-tile:active { transform: scale(0.97); }
+        .app-tile-icon { font-size: 2rem; line-height: 1; }
+        .app-tile-name { font-size: 0.78rem; font-weight: 700; color: var(--text); line-height: 1.3; }
+        .app-tile-desc { font-size: 0.66rem; color: var(--text-3); line-height: 1.4; display: none; }
+        .app-tile-play {
+            display: flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: rgba(91,140,255,0.15); border: 1px solid rgba(91,140,255,0.3); color: var(--c-prep); margin-top: 2px;
         }
+        .app-tile-play svg { width: 10px; height: 10px; fill: currentColor; stroke: none; }
 
-        #tab-settings, #tab-more { overflow-y: auto; padding: 8px 0 24px; flex-direction: column; }
-
-        .desktop-nav { flex: 1; overflow-y: auto; padding: 8px 0 16px; }
-        .dn-section { margin-bottom: 4px; }
-        .dn-label { font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); font-family: 'JetBrains Mono', monospace; padding: 10px 14px 3px; }
-        .dn-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; cursor: pointer; color: var(--text-2); font-size: 0.85rem; transition: background 0.12s, color 0.12s; border-radius: 0; }
-        .dn-item:hover { background: var(--surface-2); color: var(--text); }
-        .dn-item.active-nav { background: rgba(91,140,255,0.1); color: var(--c-prep); }
-        .dn-item-icon { width: 30px; height: 30px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .dn-item.active-nav .dn-item-icon { background: rgba(91,140,255,0.15); border-color: rgba(91,140,255,0.3); }
-        .dn-item-icon svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-        .dn-item-label { flex: 1; font-weight: 500; }
-        .dn-divider { height: 1px; background: var(--border); margin: 4px 14px; }
-        .desktop-logo { padding: 14px 14px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-        .desktop-logo-icon { font-size: 1.4rem; line-height: 1; }
-        .desktop-logo-name { font-size: 0.9rem; font-weight: 800; }
-        .desktop-logo-sub { font-size: 0.6rem; color: var(--text-2); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
-
-        /* ── МОДАЛЫ ── */
-        .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: flex-end; justify-content: center; }
-        .modal-backdrop.open { display: flex; }
-        .modal-sheet { background: var(--surface); border-radius: 20px 20px 0 0; border: 1px solid var(--border-hi); border-bottom: none; width: 100%; max-width: 600px; max-height: 88dvh; display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.22s ease; }
-        @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-handle { width: 40px; height: 4px; background: var(--border-hi); border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
-        .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 10px; flex-shrink: 0; }
-        .modal-header h2 { font-size: 1rem; font-weight: 800; }
-        .btn-close { width: 28px; height: 28px; background: var(--surface-3); border: none; border-radius: 50%; color: var(--text-2); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .modal-body { flex: 1; overflow-y: auto; padding: 4px 18px 24px; }
-
-        .msec { margin-bottom: 20px; }
-        .msec-title { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); font-family: 'JetBrains Mono', monospace; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-
-        .sound-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
-        .sound-row-label { flex: 0 0 110px; font-size: 0.82rem; color: var(--text-2); }
-        .sound-row-label span { display: block; font-size: 0.7rem; color: var(--text-3); margin-top: 1px; }
-        .sound-row input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-        .sound-val { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-2); width: 32px; text-align: right; }
-        .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
-        .toggle-label { font-size: 0.82rem; color: var(--text-2); }
-        .toggle-label span { display: block; font-size: 0.7rem; color: var(--text-3); margin-top: 1px; }
-        .toggle-switch { position: relative; width: 40px; height: 22px; }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .toggle-track { position: absolute; inset: 0; background: var(--surface-3); border: 1px solid var(--border-hi); border-radius: 11px; cursor: pointer; transition: background 0.2s; }
-        .toggle-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--text-2); border-radius: 50%; transition: transform 0.2s, background 0.2s; }
-        .toggle-switch input:checked + .toggle-track { background: var(--c-work); border-color: var(--c-work); }
-        .toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); background: #000; }
-        .intensity-labels { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-3); font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
-
-        .desc-prog-name { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
-        .desc-time { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-2); margin-bottom: 12px; }
-        .desc-body-text { font-size: 0.83rem; color: var(--text-2); line-height: 1.55; margin-bottom: 14px; }
-        .desc-ex-title { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; }
-        .desc-ex-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
-        .desc-ex-item:last-child { border-bottom: none; }
-        .desc-ex-name { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; }
-        .desc-ex-goal { font-size: 0.78rem; color: var(--text-2); }
-
-        .hist-streak { text-align: center; padding: 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 14px; }
-        .hist-streak-num { font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; font-weight: 700; color: var(--c-finish); line-height: 1; }
-        .hist-streak-lbl { font-size: 0.72rem; color: var(--text-2); margin-top: 4px; }
-        .hist-item { padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
-        .hist-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .hist-name { font-size: 0.82rem; font-weight: 700; }
-        .hist-status { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
-        .hist-status.done { background: rgba(0,229,160,0.12); color: var(--c-work); }
-        .hist-status.interrupted { background: rgba(255,68,102,0.12); color: var(--c-danger); }
-        .hist-meta { font-size: 0.72rem; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
-        .hist-empty { font-size: 0.82rem; color: var(--text-3); text-align: center; padding: 20px 0; }
-
-        .cache-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .cache-stat { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; }
-        .cache-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; }
-        .cache-stat-lbl { font-size: 0.7rem; color: var(--text-3); margin-top: 2px; }
-        .cache-file-list { display: flex; flex-direction: column; gap: 4px; }
-        .cache-file-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
-        .cache-file-item:hover { background: var(--surface-3); }
-        .cache-file-name { flex: 1; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .cache-file-type { font-size: 0.65rem; background: var(--surface-3); padding: 2px 6px; border-radius: 4px; color: var(--text-3); flex-shrink: 0; }
-        .cache-file-edit { font-size: 0.7rem; color: var(--c-prep); flex-shrink: 0; cursor: pointer; }
-        .cache-editor-wrap { display: none; margin-top: 10px; }
-        .cache-editor-wrap.open { display: flex; flex-direction: column; gap: 8px; }
-        .cache-editor-label { font-size: 0.72rem; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
-        .cache-editor-ta { width: 100%; background: var(--surface-2); border: 1px solid var(--border-hi); border-radius: var(--radius-sm); padding: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; line-height: 1.6; resize: vertical; min-height: 180px; outline: none; }
-        .cache-editor-btns { display: flex; gap: 8px; }
-        .cache-status { font-size: 0.75rem; color: var(--text-2); margin-top: 6px; font-family: 'JetBrains Mono', monospace; min-height: 18px; }
-
-        .btn-action { width: 100%; padding: 11px; background: var(--c-prep); color: #fff; border: none; border-radius: var(--radius-sm); font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: opacity 0.15s; margin-bottom: 6px; display: block; text-align: center; text-decoration: none; }
-        .btn-action:hover { opacity: 0.88; }
-        .btn-action.green { background: var(--c-work); color: #000; }
-        .btn-action.outline { background: transparent; border: 1px solid var(--border-hi); color: var(--text-2); }
-        .btn-action.outline:hover { background: var(--surface-2); opacity: 1; }
-        .btn-action.danger { background: transparent; border: 1px solid var(--c-danger); color: var(--c-danger); }
-        .btn-action.danger:hover { background: rgba(255,68,102,0.08); opacity: 1; }
-        .btn-action.sm { flex: 1; padding: 9px; font-size: 0.82rem; }
-
-        .ai-steps { font-size: 0.82rem; color: var(--text-2); line-height: 1.7; margin-bottom: 12px; }
-        .ai-steps code { background: var(--surface-3); padding: 1px 5px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text); }
-        .prompt-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; margin-bottom: 10px; max-height: 220px; overflow-y: auto; user-select: text; }
-
-        #game-frame-wrap { display:none; position:fixed; inset:0; z-index:200; background:#0a0a0f; flex-direction:column; }
-        .game-frame-header { display:flex; align-items:center; gap:10px; padding:10px 14px; background:#111118; border-bottom:1px solid rgba(255,255,255,.07); flex-shrink:0; }
-        #btn-game-back { background:#22222f; border:1px solid rgba(255,255,255,.15); color:#f0f0f8; width:34px; height:34px; border-radius:8px; font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-        #game-frame-title { font-family:'Manrope',sans-serif; font-weight:700; font-size:.95rem; flex:1; }
-        #game-pause-note { font-size:.65rem; color:#ff8c42; font-family:'JetBrains Mono',monospace; }
-        #game-iframe { flex:1; border:none; width:100%; background:#0a0a0f; }
-
-        #btn-menu { width:36px; height:36px; border-radius:var(--radius-sm); border:1px solid var(--border-hi); background:var(--surface-2); color:var(--text-2); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; flex-shrink:0; user-select:none; transition:background .15s; }
-        #btn-menu:hover { background:var(--surface-3); color:var(--text); }
-        #btn-menu span { display:block; width:14px; height:1.5px; background:currentColor; border-radius:1px; transition:transform .22s, opacity .22s; }
-        body.sidebar-open #btn-menu span:nth-child(1) { transform:translateY(5.5px) rotate(45deg); }
-        body.sidebar-open #btn-menu span:nth-child(2) { opacity:0; transform:scaleX(0); }
-        body.sidebar-open #btn-menu span:nth-child(3) { transform:translateY(-5.5px) rotate(-45deg); }
-
-        #sidebar-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:80; opacity:0; pointer-events:none; transition:opacity .25s; backdrop-filter:blur(3px); }
-        body.sidebar-open #sidebar-backdrop { opacity:1; pointer-events:all; }
-
-        #sidebar { position:fixed; top:0; left:0; bottom:0; width:272px; background:var(--surface); border-right:1px solid var(--border-hi); z-index:90; display:flex; flex-direction:column; transform:translateX(-100%); transition:transform .28s cubic-bezier(.4,0,.2,1); overflow:hidden; }
-        body.sidebar-open #sidebar { transform:translateX(0); }
-
-        .sb-header { display:flex; align-items:center; justify-content:space-between; padding:16px 14px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
-        .sb-logo { display:flex; align-items:center; gap:10px; }
-        .sb-logo-icon { font-size:1.4rem; line-height:1; }
-        .sb-logo-name { font-size:.95rem; font-weight:800; }
-        .sb-logo-sub { font-size:.6rem; color:var(--text-2); font-family:'JetBrains Mono',monospace; margin-top:1px; }
-        #btn-sb-close { width:28px; height:28px; background:var(--surface-3); border:none; border-radius:50%; color:var(--text-2); font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-        #btn-sb-close:hover { color:var(--text); }
-        #sidebar-body { flex:1; overflow-y:auto; padding:6px 0 24px; }
-        .sb-group { margin-bottom:2px; }
-        .sb-group-label { font-size:.58rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-3); font-family:'JetBrains Mono',monospace; padding:10px 14px 3px; }
-        .sb-item { display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; color:var(--text-2); font-size:.85rem; transition:background .12s; }
-        .sb-item:hover { background:var(--surface-2); color:var(--text); }
-        .sb-item-icon { width:30px; height:30px; border-radius:7px; background:var(--surface-2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-        .sb-item-icon svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-        .sb-item-label { flex:1; font-weight:500; }
-        .sb-divider { height:1px; background:var(--border); margin:4px 14px; }
-
-        /* ══════════════════════════════════
-           КАТЕГОРИИ ТРЕНИРОВОК
-        ══════════════════════════════════ */
-        /* Кнопка выбора программы под select */
-        #btn-select-program {
-            display: none;
-            align-items: center; gap: 6px;
-            background: none; border: none;
-            color: var(--text); cursor: pointer;
-            padding: 2px 0; max-width: 100%;
-            font-family: 'Manrope', sans-serif;
+        @media (min-width: 600px) {
+            .apps-grid { grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px; }
+            .app-tile   { padding: 18px 14px 14px; gap: 10px; }
+            .app-tile-icon { font-size: 2.4rem; }
+            .app-tile-name { font-size: 0.82rem; }
+            .app-tile-desc { display: block; }
+            #apps-scroll   { padding: 16px 16px 32px; }
         }
-        #btn-select-program:hover #workout-name-display { color: var(--c-prep); }
-        #btn-select-program:hover svg { opacity: 0.9 !important; }
-
-        /* Экран категорий внутри модала */
-        .wcat-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px;
-        }
-        .wcat-card {
-            background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 16px 12px; cursor: pointer;
-            transition: border-color 0.15s, background 0.15s, transform 0.1s;
-            display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
-        }
-        .wcat-card::before { content:''; position:absolute; inset:0; background:var(--_c,var(--c-prep)); opacity:0.06; }
-        .wcat-card:hover { border-color: var(--border-hi); background: var(--surface-3); transform: translateY(-1px); }
-        .wcat-card:active { transform: scale(0.97); }
-        .wcat-icon { font-size: 1.8rem; line-height: 1; }
-        .wcat-title { font-size: 0.88rem; font-weight: 800; }
-        .wcat-desc { font-size: 0.7rem; color: var(--text-3); line-height: 1.4; }
-        .wcat-count { font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; border: 1px solid; width: fit-content; margin-top: auto; }
-
-        /* Список программ внутри категории */
-        .wprog-list { display: flex; flex-direction: column; gap: 8px; }
-        .wprog-item {
-            background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
-            padding: 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-        }
-        .wprog-item:hover { border-color: var(--border-hi); background: var(--surface-3); }
-        .wprog-item:active { transform: scale(0.98); }
-        .wprog-item-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 5px; }
-        .wprog-item-desc { font-size: 0.75rem; color: var(--text-3); line-height: 1.5; }
-        .wprog-item-meta { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-        .wprog-tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 99px; background: var(--surface-3); color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
-
-        /* Кнопка назад внутри модала */
-        .modal-back-btn {
-            display: flex; align-items: center; gap: 6px; background: none; border: none;
-            color: var(--c-prep); font-size: 0.8rem; font-weight: 700; cursor: pointer;
-            padding: 0 0 12px; font-family: 'Manrope', sans-serif;
-        }
-        .modal-back-btn:hover { opacity: 0.8; }
-
-        @media (max-width: 767px) {
-            #left-panel { display: none; }
-            #btn-menu { display: flex; }
-            #center-panel { flex-direction: column; }
-            .tab-bar { order: 10; border-top: 1px solid var(--border); border-bottom: none; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom, 0); }
-            .tab-pane { order: 1; }
+        @media (min-width: 1024px) {
+            #v-platform { max-width: 960px; margin: 0 auto; width: 100%; position: relative; }
+            body { align-items: center; }
+            #v-platform { flex: 1; }
         }
 
-        @media (min-width: 768px) {
-            #btn-menu { display: none; }
-            #sidebar-backdrop { display: none !important; }
-            #sidebar { display: none; }
-            #left-panel { display: flex; }
-            .tab-bar { display: none; }
-            #tab-workout, #tab-games { display: flex !important; }
-            #center-panel { flex-direction: row; }
-            #tab-workout { flex: 0 0 400px; border-right: 1px solid var(--border); }
-            #tab-games { flex: 1; }
+        /* ── IMMERSIVE CONTAINER ── */
+        #immersive-container { display: none; position: fixed; inset: 0; z-index: 9999; background: var(--bg); }
+        #app-iframe { width: 100%; height: 100%; border: none; display: block; }
+        #btn-float-back {
+            position: absolute;
+            top: max(16px, env(safe-area-inset-top));
+            left: 16px;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: rgba(17,17,24,0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--text); font-size: 1.4rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 10000;
+            transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
+        #btn-float-back:active { transform: scale(0.92); }
 
-        @media (min-width: 1100px) { #tab-workout { flex: 0 0 440px; } }
+        /* ── TOAST ── */
+        #toast {
+            position: fixed; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+            left: 50%; transform: translateX(-50%);
+            background: var(--surface-3); border: 1px solid var(--border-hi);
+            color: var(--text); padding: 8px 18px; border-radius: 20px;
+            font-size: 0.82rem; z-index: 10001; pointer-events: none;
+            transition: opacity 0.3s; opacity: 0;
+            white-space: nowrap; max-width: 90vw; text-align: center;
+        }
+        #toast.show { opacity: 1; }
+        #toast.ok   { background: rgba(0,229,160,0.12); border-color: var(--c-work);   color: var(--c-work); }
+        #toast.err  { background: rgba(255,68,102,0.10); border-color: var(--c-danger); color: var(--c-danger); }
+
+        /* ── LOADER ── */
+        #loader {
+            position: fixed; inset: 0; background: rgba(10,10,15,0.82);
+            display: none; align-items: center; justify-content: center;
+            z-index: 20000; flex-direction: column; gap: 12px;
+        }
+        #loader.show { display: flex; }
+        .loader-spin { width: 36px; height: 36px; border: 3px solid var(--border-hi); border-top-color: var(--c-prep); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
-
-        #adj-toast { position:fixed; top:60px; left:50%; transform:translateX(-50%); background:var(--surface-3); border:1px solid var(--border-hi); color:var(--text); padding:6px 16px; border-radius:20px; font-size:0.8rem; font-family:'JetBrains Mono',monospace; z-index:200; pointer-events:none; transition:opacity 0.3s; opacity:0; }
     </style>
 </head>
 <body>
 
-<div id="progress-bar"><div id="progress-fill"></div></div>
+<!-- ═══ SETUP VIEW ═══ -->
+<div id="v-setup" class="view active">
+    <div class="auth-scroll">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <div class="auth-logo-icon">🏋️</div>
+                <div class="auth-logo-name">McGill</div>
+                <div class="auth-logo-sub">Первоначальная настройка</div>
+            </div>
+            <div class="inp-group">
+                <label class="inp-label">Google Spreadsheet ID</label>
+                <input type="text" id="setup-sid" class="inp-field" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
+            </div>
+            <div class="inp-group">
+                <label class="inp-label">Service Account JSON</label>
+                <textarea id="setup-sa" class="inp-field inp-ta" rows="5" placeholder='{"type":"service_account","client_email":"...","private_key":"-----BEGIN PRIVATE KEY-----\n..."}'></textarea>
+            </div>
+            <div class="auth-err" id="setup-err"></div>
+            <button class="btn-primary" id="btn-setup-save">Сохранить и проверить</button>
+        </div>
+    </div>
+</div>
 
-<header>
-    <div class="header-left">
-        <div id="ex-title-header"></div>
-        <!-- select скрыт, используется только для value -->
-        <select id="workout-select" style="display:none;"></select>
-        <button id="btn-select-program" title="Выбрать программу" style="display:none;">
-            <span id="workout-name-display" style="font-size:1rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;"></span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;opacity:0.5;"><polyline points="6 9 12 15 18 9"/></svg>
+<!-- ═══ LOGIN VIEW ═══ -->
+<div id="v-login" class="view">
+    <div class="auth-scroll">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <div class="auth-logo-icon">🏋️</div>
+                <div class="auth-logo-name">McGill</div>
+                <div class="auth-logo-sub" id="login-sub-text">Вход в систему</div>
+            </div>
+
+            <!-- Login form -->
+            <div id="login-form">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="inp-group">
+                        <label class="inp-label">Логин</label>
+                        <input type="text" id="login-login" class="inp-field" autocomplete="username" placeholder="username">
+                    </div>
+                    <div class="inp-group">
+                        <label class="inp-label">Пароль</label>
+                        <input type="password" id="login-pass" class="inp-field" autocomplete="current-password" placeholder="••••••">
+                    </div>
+                    <div class="auth-err" id="login-err"></div>
+                    <button class="btn-primary" id="btn-do-login">Войти</button>
+                    <button class="btn-secondary" id="btn-show-reg">Регистрация</button>
+                    <div class="auth-sep"></div>
+                    <button class="auth-link" id="btn-goto-setup">⚙ Настройки подключения</button>
+                </div>
+            </div>
+
+            <!-- Register form -->
+            <div id="reg-form" style="display:none;">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="inp-group">
+                        <label class="inp-label">Логин</label>
+                        <input type="text" id="reg-login" class="inp-field" autocomplete="username" placeholder="username">
+                    </div>
+                    <div class="inp-group">
+                        <label class="inp-label">Пароль</label>
+                        <input type="password" id="reg-pass" class="inp-field" autocomplete="new-password" placeholder="••••••">
+                    </div>
+                    <div class="auth-err" id="reg-err"></div>
+                    <button class="btn-primary" id="btn-do-reg">Зарегистрироваться</button>
+                    <button class="btn-secondary" id="btn-show-login">← Войти</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ PLATFORM VIEW ═══ -->
+<div id="v-platform" class="view">
+    <header>
+        <div class="hdr-logo">
+            <div class="hdr-logo-icon">🏋️</div>
+            <div class="hdr-logo-name">McGill</div>
+        </div>
+        <span class="hdr-user" id="hdr-user-name"></span>
+        <button class="btn-icon" id="btn-logout" title="Выйти из аккаунта">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
-        <div id="ph-title">Ожидание</div>
+    </header>
+    <div id="apps-search-bar">
+        <input type="search" class="search-input" id="apps-search" placeholder="Поиск приложения…" autocomplete="off">
     </div>
-    <div id="offline-badge">офлайн</div>
-    <button id="btn-update" title="Обновить приложение">
-        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-        <span class="update-dot"></span>
-    </button>
-    <button id="btn-menu" aria-label="Меню">
-        <span></span><span></span><span></span>
-    </button>
-</header>
-
-<div id="sidebar-backdrop"></div>
-<div id="sidebar">
-    <div class="sb-header">
-        <div class="sb-logo">
-            <div class="sb-logo-icon">🏋️</div>
-            <div><div class="sb-logo-name">McGill Тренер</div><div class="sb-logo-sub">Протокол Большой тройки</div></div>
-        </div>
-        <button id="btn-sb-close">×</button>
-    </div>
-    <div id="sidebar-body">
-        <div class="sb-group">
-            <div class="sb-group-label">Тренировка</div>
-            <div class="sb-item" data-modal="modal-programs">
-                <div class="sb-item-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10"/></svg></div>
-                <span class="sb-item-label">Выбрать программу</span>
-            </div>
-            <div class="sb-item" data-modal="modal-desc">
-                <div class="sb-item-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
-                <span class="sb-item-label">Схема тренировки</span>
-            </div>
-            <div class="sb-item" data-modal="modal-history">
-                <div class="sb-item-icon"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.27"/></svg></div>
-                <span class="sb-item-label">История</span>
-            </div>
-            <div class="sb-item" data-modal="modal-ai">
-                <div class="sb-item-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
-                <span class="sb-item-label">Программы (JSON)</span>
-            </div>
-        </div>
-        <div class="sb-divider"></div>
-        <div class="sb-group">
-            <div class="sb-group-label">Настройки</div>
-            <div class="sb-item" data-modal="modal-sound">
-                <div class="sb-item-icon"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></div>
-                <span class="sb-item-label">Звук и интенсивность</span>
-            </div>
-            <div class="sb-item" data-modal="modal-cache">
-                <div class="sb-item-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
-                <span class="sb-item-label">Кэш и данные</span>
-            </div>
-            <div class="sb-divider"></div>
-            <div class="sb-item" id="sb-update-app" style="color:var(--c-prep)">
-                <div class="sb-item-icon" style="background:rgba(91,140,255,0.15);border-color:rgba(91,140,255,0.3)"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div>
-                <span class="sb-item-label">Обновить приложение</span>
-            </div>
-        </div>
+    <div id="apps-scroll">
+        <div style="color:var(--text-3);font-size:0.82rem;padding:20px 4px;">Загрузка…</div>
     </div>
 </div>
 
-<div class="app-body">
-    <div id="left-panel">
-        <div class="desktop-logo">
-            <div class="desktop-logo-icon">🏋️</div>
-            <div>
-                <div class="desktop-logo-name">McGill Тренер</div>
-                <div class="desktop-logo-sub">Протокол Большой тройки</div>
-            </div>
-        </div>
-        <nav class="desktop-nav">
-            <div class="dn-section">
-                <div class="dn-label">Тренировка</div>
-                <div class="dn-item" data-modal="modal-programs">
-                    <div class="dn-item-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10"/></svg></div>
-                    <span class="dn-item-label">Выбрать программу</span>
-                </div>
-                <div class="dn-item" data-modal="modal-desc">
-                    <div class="dn-item-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
-                    <span class="dn-item-label">Схема тренировки</span>
-                </div>
-                <div class="dn-item" data-modal="modal-history">
-                    <div class="dn-item-icon"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.27"/></svg></div>
-                    <span class="dn-item-label">История</span>
-                </div>
-                <div class="dn-item" data-modal="modal-ai">
-                    <div class="dn-item-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83"/></svg></div>
-                    <span class="dn-item-label">Программы (JSON)</span>
-                </div>
-            </div>
-            <div class="dn-divider"></div>
-            <div class="dn-section">
-                <div class="dn-label">Настройки</div>
-                <div class="dn-item" data-modal="modal-sound">
-                    <div class="dn-item-icon"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></div>
-                    <span class="dn-item-label">Звук и интенсивность</span>
-                </div>
-                <div class="dn-item" data-modal="modal-cache">
-                    <div class="dn-item-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
-                    <span class="dn-item-label">Кэш и данные</span>
-                </div>
-                <div class="dn-divider"></div>
-                <div class="dn-item" id="dn-update-app" style="color:var(--c-prep)">
-                    <div class="dn-item-icon" style="background:rgba(91,140,255,0.15);border-color:rgba(91,140,255,0.3)"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div>
-                    <span class="dn-item-label">Обновить приложение</span>
-                </div>
-            </div>
-        </nav>
-    </div>
-
-    <div id="center-panel">
-        <nav class="tab-bar" role="tablist">
-            <button class="tab-btn active" data-tab="tab-workout" role="tab">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Тренировка
-            </button>
-            <button class="tab-btn" data-tab="tab-games" role="tab">
-                <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="17" cy="13" r="1" fill="currentColor" stroke="none"/></svg>
-                Игры
-            </button>
-        </nav>
-
-        <div id="tab-workout" class="tab-pane active">
-            <main class="workout-main">
-                <div class="timer-wrap" id="timer-wrap">
-                    <svg class="ring-svg" viewBox="0 0 190 190">
-                        <circle class="ring-bg" cx="95" cy="95" r="85"/>
-                        <circle class="ring-fg" id="ring-fg" cx="95" cy="95" r="85"/>
-                    </svg>
-                    <div class="timer-inner">
-                        <div id="time-display">00</div>
-                        <div id="time-label">ГОТОВ</div>
-                        <div id="total-time-display"></div>
-                        <div id="step-counter"></div>
-                        <div id="set-counter"></div>
-                    </div>
-                </div>
-                <div class="controls">
-                    <button class="btn-ctrl" id="btn-prev" disabled>Назад</button>
-                    <button class="btn-ctrl" id="btn-main">Старт</button>
-                    <button class="btn-ctrl" id="btn-next" disabled>Пропуск</button>
-                    <button class="btn-ctrl" id="btn-reset" title="Начать заново">↺</button>
-                </div>
-                <div class="info-card" id="info-card">
-                    <div style="color:var(--text-2)">Нажмите «Старт» для начала тренировки.</div>
-                </div>
-                <div class="timeline" id="timeline"></div>
-            </main>
-        </div>
-
-        <div id="tab-games" class="tab-pane">
-            <div class="games-search-bar">
-                <input type="search" class="games-search-input" id="games-search" placeholder="Поиск игры…" autocomplete="off">
-            </div>
-            <div class="games-scroll" id="games-scroll">
-                <div style="color:var(--text-3);font-size:0.82rem;padding:20px 4px">Загрузка игр…</div>
-            </div>
-        </div>
-    </div>
+<!-- ═══ IMMERSIVE CONTAINER ═══ -->
+<div id="immersive-container">
+    <button id="btn-float-back" title="Закрыть приложение">←</button>
+    <iframe id="app-iframe" sandbox="allow-scripts allow-same-origin" allowfullscreen></iframe>
 </div>
 
-<div id="game-frame-wrap">
-    <div class="game-frame-header">
-        <button id="btn-game-back">←</button>
-        <span id="game-frame-title"></span>
-        <span id="game-pause-note">⏸ тренировка на паузе</span>
-    </div>
-    <iframe id="game-iframe" style="flex:1;border:none;width:100%;background:#0a0a0f" sandbox="allow-scripts allow-same-origin" allowfullscreen></iframe>
-</div>
-
-<!-- ═══ МОДАЛ: ВЫБОР ПРОГРАММЫ (КАТЕГОРИИ) ═══ -->
-<div class="modal-backdrop" id="modal-programs">
-    <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header">
-            <h2 id="programs-modal-title">Выбрать программу</h2>
-            <button class="btn-close" data-close="modal-programs">×</button>
-        </div>
-        <div class="modal-body" id="programs-body">
-            <div style="color:var(--text-3);font-size:0.82rem;text-align:center;padding:24px 0">Загрузка…</div>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ Схема ═══ -->
-<div class="modal-backdrop" id="modal-desc">
-    <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header"><h2>Схема тренировки</h2><button class="btn-close" data-close="modal-desc">×</button></div>
-        <div class="modal-body" id="desc-body"></div>
-    </div>
-</div>
-
-<!-- ═══ История ═══ -->
-<div class="modal-backdrop" id="modal-history">
-    <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header"><h2>История тренировок</h2><button class="btn-close" data-close="modal-history">×</button></div>
-        <div class="modal-body" id="history-body"></div>
-    </div>
-</div>
-
-<!-- ═══ Звук ═══ -->
-<div class="modal-backdrop" id="modal-sound">
-    <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header"><h2>Настройки звука</h2><button class="btn-close" data-close="modal-sound">×</button></div>
-        <div class="modal-body">
-            <div class="msec">
-                <div class="msec-title">Интенсивность тренировки</div>
-                <div class="sound-row">
-                    <div class="sound-row-label">Масштаб времени<span>Все тайминги протокола</span></div>
-                    <input type="range" id="intensity-slider" min="50" max="150" step="5" value="100" style="flex:1;accent-color:var(--c-work)">
-                    <div class="sound-val"><span id="intensity-val">100%</span></div>
-                </div>
-                <div class="intensity-labels"><span>50% быстро</span><span>100% оригинал</span><span>150% медленно</span></div>
-            </div>
-            <div class="msec">
-                <div class="msec-title">Голосовые подсказки</div>
-                <div class="toggle-row">
-                    <div class="toggle-label">Синтез речи (TTS)<span>Озвучка шагов</span></div>
-                    <label class="toggle-switch"><input type="checkbox" id="tts-enabled" checked><span class="toggle-track"></span></label>
-                </div>
-                <div class="sound-row">
-                    <div class="sound-row-label">Громкость TTS<span>Голосовые подсказки</span></div>
-                    <input type="range" id="vol-tts" min="0" max="1" step="0.05" value="0.85">
-                    <div class="sound-val" id="lbl-tts">85%</div>
-                </div>
-                <div class="sound-row">
-                    <div class="sound-row-label">Скорость речи<span>0.5 — 2.0</span></div>
-                    <input type="range" id="vol-tts-rate" min="0.5" max="2" step="0.1" value="1.1">
-                    <div class="sound-val" id="lbl-tts-rate">1.1</div>
-                </div>
-            </div>
-            <div class="msec">
-                <div class="msec-title">Тональные сигналы</div>
-                <div class="toggle-row">
-                    <div class="toggle-label">Тональные сигналы<span>Звуковые маркеры фаз</span></div>
-                    <label class="toggle-switch"><input type="checkbox" id="tone-enabled" checked><span class="toggle-track"></span></label>
-                </div>
-                <div class="toggle-row">
-                    <div class="toggle-label">Вибрация<span>Haptic при смене фазы</span></div>
-                    <label class="toggle-switch"><input type="checkbox" id="haptic-enabled" checked><span class="toggle-track"></span></label>
-                </div>
-                <div class="sound-row">
-                    <div class="sound-row-label">Работа / Финиш<span>Сигнал подхода</span></div>
-                    <input type="range" id="vol-work" min="0" max="1" step="0.05" value="0.8">
-                    <div class="sound-val" id="lbl-work">80%</div>
-                </div>
-                <div class="sound-row">
-                    <div class="sound-row-label">Отдых<span>Сигнал паузы</span></div>
-                    <input type="range" id="vol-rest" min="0" max="1" step="0.05" value="0.8">
-                    <div class="sound-val" id="lbl-rest">80%</div>
-                </div>
-                <div class="sound-row">
-                    <div class="sound-row-label">Подготовка<span>Двойной бип</span></div>
-                    <input type="range" id="vol-prep" min="0" max="1" step="0.05" value="0.6">
-                    <div class="sound-val" id="lbl-prep">60%</div>
-                </div>
-                <div class="sound-row">
-                    <div class="sound-row-label">Отсчёт<span>Тик последние 3 сек</span></div>
-                    <input type="range" id="vol-tick" min="0" max="1" step="0.05" value="0.4">
-                    <div class="sound-val" id="lbl-tick">40%</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ Кэш ═══ -->
-<div class="modal-backdrop" id="modal-cache">
-    <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header"><h2>Настройки кэша</h2><button class="btn-close" data-close="modal-cache">×</button></div>
-        <div class="modal-body">
-            <div class="msec">
-                <div class="msec-title">Статус</div>
-                <div class="cache-stat-grid">
-                    <div class="cache-stat"><div class="cache-stat-val" id="cs-count">—</div><div class="cache-stat-lbl">Файлов в кэше</div></div>
-                    <div class="cache-stat"><div class="cache-stat-val" id="cs-size">—</div><div class="cache-stat-lbl">Размер</div></div>
-                </div>
-            </div>
-            <div class="msec">
-                <div class="msec-title">Просмотр и редактирование</div>
-                <div id="cache-file-list" class="cache-file-list"></div>
-                <div class="cache-editor-wrap" id="cache-editor">
-                    <div class="cache-editor-label" id="cache-editor-label">Редактирование</div>
-                    <textarea class="cache-editor-ta" id="cache-editor-ta" spellcheck="false"></textarea>
-                    <div style="font-size:0.7rem;color:var(--c-danger);min-height:16px" id="cache-editor-err"></div>
-                    <div class="cache-editor-btns">
-                        <button class="btn-action sm green" id="btn-save-cache">Сохранить</button>
-                        <button class="btn-action sm danger" id="btn-delete-cache">Удалить</button>
-                        <button class="btn-action sm outline" id="btn-cancel-edit">Отмена</button>
-                    </div>
-                </div>
-            </div>
-            <div class="msec">
-                <div class="msec-title">Управление</div>
-                <button class="btn-action outline" id="btn-cache-refresh">↻ Обновить список</button>
-
-                <div class="cache-status" id="cache-status"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ Программы / ИИ ═══ -->
-<div class="modal-backdrop" id="modal-ai">
-    <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header"><h2>Программы (JSON)</h2><button class="btn-close" data-close="modal-ai">×</button></div>
-        <div class="modal-body">
-            <div class="msec">
-                <div class="msec-title">Экспорт / Импорт</div>
-                <button class="btn-action green" id="btn-export-prog">↓ Экспортировать текущую программу</button>
-                <label class="btn-action outline" style="cursor:pointer">
-                    ↑ Импортировать программу (.json)
-                    <input type="file" id="import-file" accept=".json" style="display:none">
-                </label>
-                <div class="cache-status" id="import-status"></div>
-            </div>
-            <div class="msec">
-                <div class="msec-title">Генерация через ИИ</div>
-                <div class="ai-steps">
-                    1. Скопируйте промпт и отправьте в ChatGPT / Claude / Gemini.<br>
-                    2. Сохраните вывод как <code>my_workout.json</code> в папку <code>workouts/</code>.<br>
-                    3. Или нажмите «Импортировать» выше.
-                </div>
-                <div class="prompt-box" id="ai-prompt-text">Я разрабатываю веб-приложение — фитнес-таймер. Сгенерируй новую программу тренировки строго в формате JSON.
-
-Требования к структуре JSON:
-Корневой объект должен содержать массив "programs", внутри которого находится один объект новой тренировки.
-Объект тренировки должен содержать поля: id, name, description, estimatedTime (строка, например "15 минут"), exercisesDetails (объект с описанием биомеханики каждого упражнения) и protocol (массив шагов таймера).
-
-Правила для exercisesDetails:
-Ключ — название упражнения. Значение — объект с полями:
-- goal: Цель упражнения (строка).
-- start: Исходное положение (строка).
-- move: Описание движения (строка).
-*Обязательно включи упражнения "Переход" и "Финиш".*
-
-Правила для массива protocol:
-Каждый элемент — объект шага таймера. Поля:
-- ex: Название упражнения (совпадает с ключом из exercisesDetails).
-- phase: Название фазы.
-- type: Строго одно из: work, rest, prep, finish.
-- time: Длительность в секундах (число).
-- voiceTxt: Текст для TTS. Коротко.
-- toneType: Строго одно из: prep, work, rest, tick, finish.
-- stepDesc: Текстовое описание шага.
-
-Особенности:
-Всегда начинай с шага "Подготовка" (type: prep, time: 10).
-Между сменой упражнений вставляй шаг с ex: "Переход" и type: "rest".
-Завершай массив шагом с ex: "Финиш" (type: finish, toneType: finish).
-
-Задание:
-Сгенерируй программу тренировки: [ВВЕДИТЕ ОПИСАНИЕ ТРЕНИРОВКИ].
-Выведи только валидный JSON без markdown-разметки и дополнительного текста.</div>
-                <button class="btn-action" id="btn-copy-prompt">Скопировать промпт</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="adj-toast"></div>
+<div id="toast"></div>
+<div id="loader"><div class="loader-spin"></div></div>
 
 <script>
 'use strict';
-const RING_C = 2 * Math.PI * 85;
-const LABELS = { work: 'УДЕРЖАНИЕ', rest: 'ОТДЫХ', prep: 'ОЖИДАНИЕ', finish: 'ФИНИШ' };
-const IS_DESKTOP = () => window.innerWidth >= 768;
 
-let state = { stepIdx: 0, timeLeft: 0, isRunning: false, sessionId: 0, programIdx: 0 };
-let workoutsData = [], workoutsIndex = [], categoriesData = [], exDetails = {}, protocol = [], rawProtocol = [], totalTime = 0;
-let rafId = null, stepStartTs = 0, wakeLock = null, _voicesPromise = null;
+/* ── CONSTANTS ── */
+const LS_CFG  = 'mcg_config';
+const LS_SA   = 'wl_sa';       // shared key — dictionary also reads this
+const LS_USER = 'mcg_user';
+const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
+const TOKEN_URI   = 'https://oauth2.googleapis.com/token';
+const SCOPE       = 'https://www.googleapis.com/auth/spreadsheets';
 
-const soundCfg = { ttsEnabled:true, toneEnabled:true, hapticEnabled:true, volTTS:0.85, rateTTS:1.1, volWork:0.8, volRest:0.8, volPrep:0.6, volTick:0.4, intensity:100 };
-const saveSoundCfg = () => { try { localStorage.setItem('mcgill_sound', JSON.stringify(soundCfg)); } catch {} };
-const loadSoundCfg = () => { try { const s = JSON.parse(localStorage.getItem('mcgill_sound')||'null'); if(s) Object.assign(soundCfg,s); } catch {} };
+/* ── STATE ── */
+let cfg = { spreadsheetId: '' };
+let sa  = null;
+let currentUser    = null;
+let accessToken    = null;
+let tokenExpiry    = 0;
+let appsData       = null;
+let searchQuery    = '';
+let currentSession = { appId: null, startTime: null };
+let swRegistration = null;
 
+/* ── UTILS ── */
 const $ = id => document.getElementById(id);
-const uiTime=$('time-display'), uiLabel=$('time-label'), uiTotalTime=$('total-time-display'), uiCounter=$('step-counter'), uiSet=$('set-counter');
-const uiPhTitle=$('ph-title'), uiExTH=$('ex-title-header'), wSelect=$('workout-select');
-const infoCard=$('info-card'), timeline=$('timeline'), progressFill=$('progress-fill'), ringFg=$('ring-fg');
-const btnMain=$('btn-main'), btnNext=$('btn-next'), btnPrev=$('btn-prev'), btnReset=$('btn-reset');
 
-const syncOffline = () => document.body.classList.toggle('offline', !navigator.onLine);
-window.addEventListener('online', syncOffline); window.addEventListener('offline', syncOffline); syncOffline();
-
-// ═══════════════════════════════════════════════════════════════════
-//  ЗАГРУЗКА
-// ═══════════════════════════════════════════════════════════════════
-async function fetchWorkouts() {
-    try {
-        const idxRes = await fetch('./workouts/index.json');
-        if (!idxRes.ok) throw new Error('index.json не найден');
-        const raw = await idxRes.json();
-        workoutsIndex = Array.isArray(raw) ? raw : [];
-        workoutsData  = [];
-
-        // Нормализуем: строка → {file:...}, объект остаётся как есть
-        const normalized = workoutsIndex.map(e => typeof e === 'string' ? { file: e, title: e.replace('.json','').replace(/_/g,' ') } : e);
-
-        // Уникальные файлы без дублей
-        const seen  = new Set();
-        const files = normalized.filter(e => { if (!e.file || seen.has(e.file)) return false; seen.add(e.file); return true; });
-
-        const results = await Promise.allSettled(
-            files.map(entry => fetch(`./workouts/${entry.file}`).then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }))
-        );
-
-        results.forEach((res, i) => {
-            if (res.status === 'fulfilled' && res.value?.programs) {
-                // Прикрепляем мета-данные из index (category и т.д.) к программе
-                res.value.programs.forEach(prog => {
-                    prog._category = files[i].category || '';
-                    prog._file     = files[i].file || '';
-                    workoutsData.push(prog);
-                });
-            } else {
-                console.warn(`Не загружен ${files[i].file}:`, res.reason);
-            }
-        });
-
-        if (!workoutsData.length) throw new Error('Нет программ');
-        populateSelect();
-        loadProgram(0);
-
-        // Показываем кнопку выбора программы
-        $('btn-select-program').style.display = 'flex';
-
-        // Загружаем категории для модала
-        fetchCategories();
-
-    } catch(e) {
-        console.error(e);
-        wSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
-        uiPhTitle.textContent = 'Нет данных';
-        infoCard.innerHTML = `<div style="color:var(--c-danger)">Не удалось загрузить workouts/index.json</div>`;
-    }
+function toast(msg, type = '') {
+    const el = $('toast');
+    el.textContent = msg;
+    el.className = 'show' + (type ? ' ' + type : '');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ''; }, 3000);
 }
 
-async function fetchCategories() {
-    try {
-        const res = await fetch('./workouts/categories.json');
-        if (res.ok) {
-            categoriesData = await res.json();
-        }
-    } catch(e) {
-        // categories.json не обязателен — строим из данных
-    }
-    // Если файла нет — собираем уникальные категории из workoutsIndex
-    if (!categoriesData.length) {
-        const catSet = new Set(workoutsIndex.map(e => typeof e === 'object' ? (e.category || '') : '').filter(Boolean));
-        categoriesData = [...catSet].map(id => ({ id, title: id, icon: '📋', color: '#5b8cff', description: '' }));
-    }
+function showLoader(on) { $('loader').classList.toggle('show', !!on); }
+
+/* ── CONFIG / STORAGE ── */
+function loadCfg()  { try { const s = localStorage.getItem(LS_CFG);  if (s) cfg = JSON.parse(s); } catch {} }
+function saveCfg()  { localStorage.setItem(LS_CFG, JSON.stringify(cfg)); }
+function loadSA()   { try { const s = localStorage.getItem(LS_SA);   if (s) sa  = JSON.parse(s); } catch {} }
+function saveSA()   { if (sa) localStorage.setItem(LS_SA, JSON.stringify(sa)); else localStorage.removeItem(LS_SA); }
+function loadUser() { try { const s = localStorage.getItem(LS_USER); if (s) currentUser = JSON.parse(s); } catch {} }
+function saveUser() { if (currentUser) localStorage.setItem(LS_USER, JSON.stringify(currentUser)); else localStorage.removeItem(LS_USER); }
+
+/* ── VIEW SWITCHING ── */
+function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const el = $('v-' + name);
+    if (el) el.classList.add('active');
 }
 
-function populateSelect() {
-    wSelect.innerHTML = '';
-    workoutsData.forEach((p, i) => {
-        const o = document.createElement('option');
-        o.value = i; o.textContent = p.name;
-        wSelect.appendChild(o);
+/* ── JWT / SERVICE ACCOUNT AUTH ── */
+function b64url(input) {
+    const str = input instanceof ArrayBuffer
+        ? String.fromCharCode(...new Uint8Array(input))
+        : typeof input === 'string' ? input : JSON.stringify(input);
+    return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+function pemToArrayBuffer(pem) {
+    const b64 = pem.replace(/-----BEGIN PRIVATE KEY-----/,'').replace(/-----END PRIVATE KEY-----/,'').replace(/\s/g,'');
+    const bin = atob(b64);
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    return buf.buffer;
+}
+
+async function importPrivateKey(pem) {
+    return crypto.subtle.importKey('pkcs8', pemToArrayBuffer(pem),
+        { name:'RSASSA-PKCS1-v1_5', hash:'SHA-256' }, false, ['sign']);
+}
+
+async function createSignedJWT() {
+    if (!sa) throw new Error('Сервисный аккаунт не настроен');
+    const header = { alg:'RS256', typ:'JWT' };
+    const now    = Math.floor(Date.now() / 1000);
+    const claim  = { iss:sa.client_email, scope:SCOPE, aud:TOKEN_URI, iat:now, exp:now+3600 };
+    const input  = b64url(JSON.stringify(header)) + '.' + b64url(JSON.stringify(claim));
+    const key    = await importPrivateKey(sa.private_key);
+    const sig    = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(input));
+    return input + '.' + b64url(sig);
+}
+
+async function ensureAuth() {
+    if (accessToken && Date.now() < tokenExpiry) return accessToken;
+    const jwt = await createSignedJWT();
+    const r = await fetch(TOKEN_URI, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + jwt
     });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error_description || e.error || `HTTP ${r.status}`); }
+    const d = await r.json();
+    accessToken = d.access_token;
+    tokenExpiry = Date.now() + (d.expires_in - 60) * 1000;
+    return accessToken;
 }
 
-function updateProgramNameDisplay(idx) {
-    const name = workoutsData[idx]?.name || '';
-    const el = $('workout-name-display');
-    if (el) el.textContent = name;
+/* ── GOOGLE SHEETS API ── */
+async function apiRead(range) {
+    const token = await ensureAuth();
+    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}`;
+    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `HTTP ${r.status}`); }
+    return r.json();
 }
 
-function loadProgram(idx) {
-    _hardStop();
-    state.programIdx = idx; wSelect.value = idx;
-    updateProgramNameDisplay(idx);
-    const prog = workoutsData[idx];
-    exDetails   = prog.exercisesDetails || {};
-    rawProtocol = prog.protocol || [];
-    applyIntensity();
-    const etStr = typeof prog.estimatedTime === 'number' ? `${prog.estimatedTime} минут` : (prog.estimatedTime || '');
-    uiPhTitle.textContent = etStr ? `⏱ ${etStr}` : '';
-    updateDescModal(prog, etStr);
-    resetUI();
-}
-
-function applyIntensity() {
-    const f = soundCfg.intensity / 100;
-    protocol  = rawProtocol.map(s => ({...s, time: Math.max(1, Math.round(s.time * f))}));
-    totalTime = protocol.reduce((a, s) => a + s.time, 0);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  МОДАЛ ВЫБОРА ПРОГРАММЫ — КАТЕГОРИИ
-// ═══════════════════════════════════════════════════════════════════
-let programsModalScreen = 'categories'; // 'categories' | 'list'
-let programsActiveCat = null;
-
-function renderProgramsModal() {
-    const body   = $('programs-body');
-    const titleEl = $('programs-modal-title');
-
-    if (programsModalScreen === 'categories') {
-        titleEl.textContent = 'Выбрать программу';
-
-        // Собираем категории + программы без категории
-        const indexed = workoutsIndex
-            .filter(e => typeof e === 'object' && e.file)
-            .map(entry => ({ ...entry }));
-
-        // Определяем категории которые реально используются
-        const usedCats = new Set(indexed.map(e => e.category).filter(Boolean));
-
-        // Программы без категории
-        const uncategorized = indexed.filter(e => !e.category);
-
-        // Если всё без категорий или одна категория — показываем сразу список
-        if (usedCats.size === 0) {
-            programsModalScreen = 'list';
-            programsActiveCat   = null;
-            renderProgramsModal();
-            return;
-        }
-
-        let html = '<div class="wcat-grid">';
-        categoriesData.filter(c => usedCats.has(c.id)).forEach(cat => {
-            const count = indexed.filter(e => e.category === cat.id).length;
-            html += `<div class="wcat-card" data-cat="${cat.id}" style="--_c:${cat.color||'#5b8cff'};">
-                <div class="wcat-icon">${cat.icon || '📋'}</div>
-                <div class="wcat-title">${cat.title}</div>
-                <div class="wcat-desc">${cat.description || ''}</div>
-                <div class="wcat-count" style="color:${cat.color||'#5b8cff'};border-color:${cat.color||'#5b8cff'}40;">${count} прогр.</div>
-            </div>`;
-        });
-        html += '</div>';
-
-        // Добавляем кнопку "Все программы" если есть некатегоризованные или хочется видеть всё
-        html += `<button class="btn-action outline" style="margin-top:12px;" data-cat="__all">Все программы (${workoutsData.length})</button>`;
-
-        body.innerHTML = html;
-
-        body.querySelectorAll('[data-cat]').forEach(el => {
-            el.addEventListener('click', () => {
-                programsActiveCat   = el.dataset.cat === '__all' ? null : el.dataset.cat;
-                programsModalScreen = 'list';
-                renderProgramsModal();
-            });
-        });
-
-    } else {
-        // СПИСОК ПРОГРАММ в категории
-        const cat = categoriesData.find(c => c.id === programsActiveCat);
-        titleEl.textContent = cat ? cat.title : 'Все программы';
-
-        const filtered = programsActiveCat
-            ? workoutsData.filter(p => p._category === programsActiveCat)
-            : workoutsData;
-
-        let html = `<button class="modal-back-btn" id="programs-back-btn">← Назад</button>
-            <div class="wprog-list">`;
-
-        filtered.forEach(prog => {
-            const idx = workoutsData.indexOf(prog);
-            const isCurrent = idx === state.programIdx;
-            // Найти мета из index
-            const meta = workoutsIndex.find(e => typeof e === 'object' && e.file === prog._file) || {};
-            html += `<div class="wprog-item ${isCurrent ? 'wprog-item-active' : ''}" data-idx="${idx}" style="${isCurrent ? 'border-color:var(--c-prep);' : ''}">
-                <div class="wprog-item-title">${prog.name}${isCurrent ? ' ✓' : ''}</div>
-                <div class="wprog-item-desc">${meta.description || prog.description || ''}</div>
-                <div class="wprog-item-meta">
-                    ${prog.estimatedTime ? `<span class="wprog-tag">⏱ ${prog.estimatedTime}</span>` : ''}
-                    ${meta.category ? `<span class="wprog-tag">${meta.category}</span>` : ''}
-                </div>
-            </div>`;
-        });
-
-        html += '</div>';
-
-        if (!filtered.length) {
-            html += '<div style="color:var(--text-3);font-size:0.82rem;text-align:center;padding:24px 0">Нет программ</div>';
-        }
-
-        body.innerHTML = html;
-
-        $('programs-back-btn').addEventListener('click', () => {
-            programsModalScreen = 'categories';
-            renderProgramsModal();
-        });
-
-        body.querySelectorAll('.wprog-item[data-idx]').forEach(el => {
-            el.addEventListener('click', () => {
-                const idx = parseInt(el.dataset.idx);
-                if ((state.isRunning || state.stepIdx > 0) && !confirm('Сменить программу? Прогресс сбросится.')) return;
-                if (state.stepIdx > 0 && !state.isRunning) saveHistory({ done: false });
-                closeModal('modal-programs');
-                loadProgram(idx);
-            });
-        });
-    }
-}
-
-// Открытие модала программ — сбрасываем на экран категорий
-function openProgramsModal() {
-    programsModalScreen = 'categories';
-    programsActiveCat   = null;
-    renderProgramsModal();
-    openModal('modal-programs');
-}
-
-$('btn-select-program').addEventListener('click', openProgramsModal);
-
-// ═══════════════════════════════════════════════════════════════════
-//  RAF-ТАЙМЕР
-// ═══════════════════════════════════════════════════════════════════
-function _scheduleRaf() {
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    if (state.isRunning) rafId = requestAnimationFrame(_rafLoop);
-}
-
-function _rafLoop() {
-    if (!state.isRunning) { rafId = null; return; }
-    const step = protocol[state.stepIdx];
-    if (!step) { handleFinish(); return; }
-    const newLeft = Math.max(0, step.time - Math.floor((performance.now() - stepStartTs) / 1000));
-    if (newLeft !== state.timeLeft) {
-        state.timeLeft = newLeft;
-        if (state.timeLeft <= 0) {
-            rafId = null; state.stepIdx++; loadStep(); return;
-        }
-        updateUI();
-        if (state.timeLeft <= 3 && step.time > 5) playTone('tick');
-    } else {
-        // Update the global timer continuously even if current step's remaining time is unchanged
-        // to show smooth progress or just keep it in sync. The main logic needs to calculate
-        // done/left precisely.
-        updateGlobalTimerUI();
-    }
-    rafId = requestAnimationFrame(_rafLoop);
-}
-
-function updateGlobalTimerUI() {
-    if (!protocol.length || state.stepIdx >= protocol.length) return;
-    const step = protocol[state.stepIdx];
-    let done = 0;
-    for (let i = 0; i < state.stepIdx; i++) done += protocol[i].time;
-    // Calculate precise done time based on elapsed time of current step
-    const elapsedInStep = Math.max(0, step.time - state.timeLeft);
-    done += elapsedInStep;
-
-    const left = Math.max(0, totalTime - done);
-    const mmDone = Math.floor(done / 60);
-    const ssDone = Math.floor(done % 60).toString().padStart(2, '0');
-    const mmLeft = Math.floor(left / 60);
-    const ssLeft = Math.floor(left % 60).toString().padStart(2, '0');
-    uiTotalTime.textContent = `${mmDone}:${ssDone} / -${mmLeft}:${ssLeft}`;
-}
-
-function _hardStop() {
-    state.isRunning = false; state.sessionId++;
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    releaseWakeLock();
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-}
-
-function resetUI() {
-    const sid = state.sessionId, pidx = state.programIdx;
-    Object.assign(state, { stepIdx:0, timeLeft:0, isRunning:false, sessionId:sid, programIdx:pidx });
-    btnMain.textContent = 'Старт'; btnMain.style.background = ''; btnNext.disabled = true; btnPrev.disabled = true;
-    progressFill.style.width = '0%'; ringFg.style.strokeDashoffset = RING_C; ringFg.style.stroke = 'var(--c-prep)';
-    document.body.className = '';
-    uiTime.textContent = '00'; uiLabel.textContent = 'ГОТОВ'; uiTotalTime.textContent = ''; uiCounter.textContent = ''; uiSet.textContent = '';
-    setHeaderRunning(false);
-    infoCard.innerHTML = `<div style="color:var(--text-2)">Нажмите «Старт» для начала тренировки.</div>`;
-    renderTimeline();
-}
-
-function startTimer() {
-    if (!protocol.length) return;
-    initAudio(); requestWakeLock();
-    if (state.stepIdx === 0 && state.timeLeft === 0) {
-        speak('Инициализация протокола.');
-        state.isRunning = true;
-        btnMain.textContent = 'Пауза'; btnMain.style.background = 'var(--c-rest)'; btnNext.disabled = false; btnPrev.disabled = true;
-        loadStep(); return;
-    }
-    stepStartTs = performance.now() - ((protocol[state.stepIdx]?.time - state.timeLeft) * 1000);
-    state.isRunning = true;
-    btnMain.textContent = 'Пауза'; btnMain.style.background = 'var(--c-rest)'; btnNext.disabled = false; btnPrev.disabled = (state.stepIdx === 0);
-    _scheduleRaf();
-}
-
-function pauseTimer() { _hardStop(); btnMain.textContent = 'Продолжить'; btnMain.style.background = 'var(--c-work)'; btnNext.disabled = true; btnPrev.disabled = true; }
-
-function loadStep() {
-    if (state.stepIdx >= protocol.length) { handleFinish(); return; }
-    const step = protocol[state.stepIdx];
-    state.timeLeft = step.time; stepStartTs = performance.now();
-    if (step.voiceTxt) speak(step.voiceTxt);
-    if (step.toneType) playTone(step.toneType);
-    vibrate(step.type); updateUI(); _scheduleRaf();
-}
-
-function nextStep() { if (state.stepIdx < protocol.length) { state.stepIdx++; loadStep(); } }
-
-function prevStep() {
-    if (state.stepIdx > 0) {
-        state.stepIdx--;
-        loadStep();
-    }
-}
-
-function handleFinish() {
-    saveHistory({ done: true }); _hardStop(); setHeaderRunning(false);
-    uiTime.textContent = '✓'; uiLabel.textContent = 'ФИНИШ'; uiTotalTime.textContent = ''; uiCounter.textContent = ''; uiSet.textContent = '';
-    document.body.className = 'state-finish'; progressFill.style.width = '100%';
-    ringFg.style.strokeDashoffset = '0'; ringFg.style.stroke = 'var(--c-finish)';
-    infoCard.innerHTML = buildInfoCard('Финиш', 'Комплекс успешно завершён!');
-    renderTimeline(); btnMain.textContent = 'Старт'; btnMain.style.background = ''; btnNext.disabled = true; btnPrev.disabled = true;
-}
-
-function updateUI() {
-    if (!protocol.length || state.stepIdx >= protocol.length) return;
-    const step = protocol[state.stepIdx];
-    setHeaderRunning(true);
-    uiExTH.textContent = step.ex; uiTime.textContent = state.timeLeft;
-    uiLabel.textContent = LABELS[step.type] || 'РАБОТА'; uiCounter.textContent = `${state.stepIdx + 1} / ${protocol.length}`;
-    uiSet.textContent = getSetInfo(state.stepIdx) || '';
-    document.body.className = `state-${step.type}`;
-    let done = 0;
-    for (let i = 0; i < state.stepIdx; i++) done += protocol[i].time;
-    done += (step.time - state.timeLeft);
-    progressFill.style.width = `${totalTime ? Math.min(100, (done / totalTime) * 100) : 0}%`;
-    const frac = step.time > 0 ? (state.timeLeft / step.time) : 0;
-    ringFg.style.strokeDashoffset = RING_C * frac;
-    const cmap = { work:'var(--c-work)', rest:'var(--c-rest)', prep:'var(--c-prep)', finish:'var(--c-finish)' };
-    ringFg.style.stroke = cmap[step.type] || 'var(--c-prep)';
-    infoCard.innerHTML = buildInfoCard(step.ex, step.stepDesc);
-    renderTimeline();
-
-    updateGlobalTimerUI();
-
-    btnPrev.disabled = (state.stepIdx === 0);
-}
-
-function getSetInfo(idx) {
-    const step = protocol[idx];
-    if (!step || step.type !== 'work') return '';
-    let total = 0, current = 0;
-    protocol.forEach((s, i) => { if (s.ex === step.ex && s.type === 'work') { total++; if (i <= idx) current++; } });
-    return total > 1 ? `Подход ${current} / ${total}` : '';
-}
-
-function buildInfoCard(exName, stepDesc) {
-    const d = exDetails[exName] || { goal:'—', start:'—', move:'—' };
-    return `<div class="ic-row"><b>Цель:</b> ${d.goal}</div>
-        ${d.start && d.start !== '—' && d.start !== '-' ? `<div class="ic-row"><b>Исходное положение:</b> ${d.start}</div>` : ''}
-        <div class="ic-row"><b>Движение:</b> ${d.move}</div>
-        <div class="ic-step">${stepDesc || ''}</div>`;
-}
-
-function renderTimeline() {
-    if (!protocol.length) { timeline.innerHTML = ''; return; }
-    const end = Math.min(state.stepIdx + 5, protocol.length);
-    let html = '';
-    for (let i = state.stepIdx; i < end; i++) {
-        const s = protocol[i];
-        html += `<div class="tl-item${i === state.stepIdx ? ' active' : ''}"><span class="tl-name"><span class="tl-dot"></span>${s.ex} — ${s.phase}</span><span class="tl-time">${s.time}с</span></div>`;
-    }
-    timeline.innerHTML = html;
-}
-
-function setHeaderRunning(running) {
-    uiExTH.style.display = running ? 'block' : 'none';
-    $('btn-select-program').style.display = running ? 'none' : (workoutsData.length ? 'flex' : 'none');
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  АУДИО
-// ═══════════════════════════════════════════════════════════════════
-let audioCtx;
-function initAudio() { const AC = window.AudioContext || window.webkitAudioContext; if (!audioCtx) audioCtx = new AC(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
-function resumeAudioOnVisible() { if (!document.hidden && audioCtx?.state === 'suspended') audioCtx.resume(); if (!document.hidden && state.isRunning) requestWakeLock(); }
-
-function playTone(type) {
-    if (!soundCfg.toneEnabled || !audioCtx || audioCtx.state === 'closed') return;
-    if (audioCtx.state === 'suspended') { audioCtx.resume(); return; }
-    const now = audioCtx.currentTime;
-    const mk = (freq, vol, dur, wave='sine') => { const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type=wave; o.frequency.setValueAtTime(freq,now); g.gain.setValueAtTime(vol,now); g.gain.exponentialRampToValueAtTime(0.001,now+dur); o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now+dur); };
-    if (type==='work') mk(880, soundCfg.volWork, 0.6);
-    else if (type==='rest') mk(440, soundCfg.volRest, 0.5, 'triangle');
-    else if (type==='prep') {
-        const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type='square'; o.frequency.setValueAtTime(660,now); g.gain.setValueAtTime(soundCfg.volPrep*0.5,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.15); o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now+0.15);
-        const o2=audioCtx.createOscillator(),g2=audioCtx.createGain(); o2.type='square'; o2.frequency.setValueAtTime(660,now+0.2); g2.gain.setValueAtTime(soundCfg.volPrep*0.5,now+0.2); g2.gain.exponentialRampToValueAtTime(0.001,now+0.35); o2.connect(g2); g2.connect(audioCtx.destination); o2.start(now+0.2); o2.stop(now+0.35);
-    } else if (type==='tick') mk(1000, soundCfg.volTick*0.4, 0.1);
-    else if (type==='finish') [440,554,659,880].forEach((f,i) => { const t=now+i*0.2,o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.frequency.setValueAtTime(f,t); g.gain.setValueAtTime(soundCfg.volWork,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.5); o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.5); });
-}
-
-function vibrate(type) {
-    if (!soundCfg.hapticEnabled || !navigator.vibrate) return;
-    if (type==='work') navigator.vibrate([60]);
-    else if (type==='rest') navigator.vibrate([30]);
-    else if (type==='finish') navigator.vibrate([40,60,40,60,80]);
-}
-
-function ensureVoices() {
-    return new Promise(resolve => {
-        if (window.speechSynthesis.getVoices().length) { resolve(); return; }
-        window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.onvoiceschanged = null; resolve(); };
-        setTimeout(resolve, 1500);
+async function apiAppend(range, values) {
+    const token = await ensureAuth();
+    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+    const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values })
     });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `HTTP ${r.status}`); }
+    return r.json();
 }
 
-function speak(text) {
-    if (!soundCfg.ttsEnabled || !window.speechSynthesis || !text) return;
-    if (!_voicesPromise) _voicesPromise = ensureVoices();
-    _voicesPromise.then(() => {
-        window.speechSynthesis.cancel();
-        try { window.speechSynthesis.resume(); } catch {}
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang='ru-RU'; u.rate=soundCfg.rateTTS; u.volume=soundCfg.volTTS;
-        u.onerror = e => console.warn('TTS:', e.error);
-        window.speechSynthesis.speak(u);
-    });
+async function apiUpdate(range, values) {
+    const token = await ensureAuth();
+    const body  = Array.isArray(values) ? { values:[values] } : { values:[[values]] };
+    const url   = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
+    const r = await fetch(url, { method:'PUT', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    if (!r.ok) throw new Error('Update failed');
+    return r.json();
 }
 
-async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch {} }
-function releaseWakeLock() { if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; } }
+async function apiBatchValues(data) {
+    const token = await ensureAuth();
+    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values:batchUpdate`;
+    const r = await fetch(url, { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({valueInputOption:'USER_ENTERED',data}) });
+    if (!r.ok) throw new Error('Batch values update failed');
+    return r.json();
+}
 
-// ═══════════════════════════════════════════════════════════════════
-//  ИСТОРИЯ
-// ═══════════════════════════════════════════════════════════════════
-function saveHistory({ done }) {
+async function apiBatchStructural(requests) {
+    const token = await ensureAuth();
+    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}:batchUpdate`;
+    const r = await fetch(url, { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({requests}) });
+    if (!r.ok) throw new Error('Structural batch update failed');
+    return r.json();
+}
+
+/* ── USER AUTH AGAINST SHEETS ── */
+async function ensureUsersSheet() {
     try {
-        const prog = workoutsData[state.programIdx]; if (!prog) return;
-        const hist = JSON.parse(localStorage.getItem('mcgill_history') || '[]');
-        hist.unshift({ name: prog.name, date: new Date().toISOString(), done, duration: Math.round(totalTime * (soundCfg.intensity / 100)) });
-        if (hist.length > 100) hist.splice(100);
-        localStorage.setItem('mcgill_history', JSON.stringify(hist));
+        const res = await apiRead('users!A1:E1');
+        if (!res.values?.length) {
+            await apiAppend('users!A:E', [['login','password','role','status','total_xp']]);
+        }
     } catch {}
 }
 
-function calcStreak(hist) {
-    const days = new Set(hist.filter(h => h.done).map(h => h.date.slice(0, 10)));
-    let streak = 0, d = new Date();
-    while (true) { const k = d.toISOString().slice(0, 10); if (days.has(k)) { streak++; d.setDate(d.getDate() - 1); } else break; }
-    return streak;
-}
-
-function renderHistory() {
-    const body = $('history-body');
-    let hist; try { hist = JSON.parse(localStorage.getItem('mcgill_history') || '[]'); } catch { hist = []; }
-    const streak = calcStreak(hist);
-    let html = `<div class="hist-streak"><div class="hist-streak-num">${streak}</div><div class="hist-streak-lbl">дней подряд 🔥</div></div>`;
-    if (!hist.length) { html += `<div class="hist-empty">Тренировок ещё не было. Начните прямо сейчас!</div>`; }
-    else {
-        html += hist.slice(0, 30).map(h => {
-            const dt = new Date(h.date);
-            const dts = dt.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}) + ' ' + dt.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-            const dur = h.duration ? `${Math.floor(h.duration/60)}мин ${h.duration%60}с` : '';
-            return `<div class="hist-item"><div class="hist-top"><div class="hist-name">${h.name}</div><div class="hist-status ${h.done?'done':'interrupted'}">${h.done?'✓ завершено':'✗ прервано'}</div></div><div class="hist-meta">${dts}${dur?' · '+dur:''}</div></div>`;
-        }).join('');
-        html += `<button class="btn-action danger" style="margin-top:10px" id="btn-clear-hist">Очистить историю</button>`;
-    }
-    body.innerHTML = html;
-    const clr = $('btn-clear-hist');
-    if (clr) clr.addEventListener('click', () => { if (confirm('Очистить всю историю?')) { localStorage.removeItem('mcgill_history'); renderHistory(); } });
-}
-
-function updateDescModal(prog, etStr) {
-    let exHtml = '';
-    Object.keys(prog.exercisesDetails || {}).forEach(k => {
-        if (['Переход','Финиш','Подготовка'].includes(k)) return;
-        exHtml += `<div class="desc-ex-item"><div class="desc-ex-name">${k}</div><div class="desc-ex-goal">${prog.exercisesDetails[k].goal}</div></div>`;
-    });
-    $('desc-body').innerHTML = `<div class="desc-prog-name">${prog.name}</div><div class="desc-time">⏱ ${etStr}</div><div class="desc-body-text">${prog.description||''}</div><div class="desc-ex-title">Упражнения</div>${exHtml}`;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  КЭШ
-// ═══════════════════════════════════════════════════════════════════
-let editingUrl = null;
-async function getCacheName() { if (!('caches' in window)) return null; const keys = await caches.keys(); return keys.length ? keys[keys.length - 1] : null; }
-
-async function refreshCacheList() {
-    const sEl=$('cache-status'), lEl=$('cache-file-list'), cc=$('cs-count'), cs=$('cs-size');
-    sEl.textContent='Загрузка…'; lEl.innerHTML=''; closeEditor();
-    if (!('caches' in window)) { sEl.textContent='Cache API недоступен.'; cc.textContent=cs.textContent='—'; return; }
-    const cn = await getCacheName();
-    if (!cn) { sEl.textContent='Кэш пуст.'; cc.textContent='0'; cs.textContent='0 B'; return; }
-    const cache = await caches.open(cn), keys = await cache.keys(); let bytes = 0;
-    const items = await Promise.all(keys.map(async req => { const res=await cache.match(req),blob=res?await res.clone().blob():null; bytes+=blob?.size||0; return {url:req.url,size:blob?.size||0,type:blob?.type||''}; }));
-    cc.textContent=items.length; cs.textContent=formatBytes(bytes); sEl.textContent=`Кэш: ${cn}`;
-    items.forEach(item => {
-        const div=document.createElement('div'); div.className='cache-file-item';
-        const name=item.url.split('/').pop()||item.url, isJson=item.url.endsWith('.json');
-        div.innerHTML=`<span class="cache-file-name" title="${item.url}">${name}</span><span class="cache-file-type">${isJson?'JSON':item.type.split('/')[1]||'file'}</span><span style="font-size:0.65rem;color:var(--text-3)">${formatBytes(item.size)}</span>${isJson?`<span class="cache-file-edit" data-url="${item.url}">✏ Ред.</span>`:''}`;
-        if (isJson) div.querySelector('.cache-file-edit').addEventListener('click', e => { e.stopPropagation(); openCacheEditor(item.url); });
-        lEl.appendChild(div);
-    });
-}
-
-async function openCacheEditor(url) {
-    editingUrl = url;
-    const cn = await getCacheName(); if (!cn) return;
-    const cache = await caches.open(cn), res = await cache.match(url); if (!res) return;
-    $('cache-editor-label').textContent = '✏ ' + url.split('/').pop();
-    $('cache-editor-ta').value = await res.text(); $('cache-editor-err').textContent = '';
-    $('cache-editor').classList.add('open'); $('cache-editor').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function closeEditor() { editingUrl = null; $('cache-editor').classList.remove('open'); $('cache-editor-ta').value = ''; $('cache-editor-err').textContent = ''; }
-
-async function saveCacheEdit() {
-    if (!editingUrl) return;
-    const raw = $('cache-editor-ta').value;
-    try { JSON.parse(raw); } catch(e) { $('cache-editor-err').textContent = 'Невалидный JSON: ' + e.message; return; }
-    const cn = await getCacheName(); if (!cn) return;
-    await (await caches.open(cn)).put(editingUrl, new Response(raw, {headers:{'Content-Type':'application/json'}}));
-    $('cache-status').textContent = `✓ Сохранено: ${editingUrl.split('/').pop()}`; closeEditor(); refreshCacheList();
-}
-
-async function deleteCacheEntry() {
-    if (!editingUrl) return;
-    const cn = await getCacheName(); if (!cn) return;
-    if (!confirm(`Удалить из кэша: ${editingUrl.split('/').pop()}?`)) return;
-    await (await caches.open(cn)).delete(editingUrl);
-    $('cache-status').textContent = '✓ Удалено'; closeEditor(); refreshCacheList();
-}
-
-const formatBytes = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b/1024).toFixed(1)} KB` : `${(b/1048576).toFixed(2)} MB`;
-
-// ═══════════════════════════════════════════════════════════════════
-//  ОБНОВЛЕНИЕ ПРИЛОЖЕНИЯ
-// ═══════════════════════════════════════════════════════════════════
-let swRegistration = null;
-
-async function updateApp() {
-    const btn = $('btn-update');
-    btn.classList.add('spinning'); btn.title = 'Обновление…';
+async function ensureScoresLogs() {
+    // Create Scores sheet header if it doesn't exist
     try {
-        if ('serviceWorker' in navigator) {
-            const reg = swRegistration || await navigator.serviceWorker.getRegistration();
-            if (reg) await reg.unregister();
-        }
-        await Promise.all((await caches.keys()).map(k => caches.delete(k)));
-        showToast('✓ Обновлено! Перезагрузка…');
-        btn.classList.remove('spinning', 'has-update');
-        setTimeout(() => location.reload(true), 600);
-    } catch(e) { btn.classList.remove('spinning'); btn.title = 'Ошибка'; showToast('Ошибка обновления'); }
-}
-
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => { $('btn-update').classList.add('has-update'); });
-}
-$('btn-update').addEventListener('click', updateApp);
-if ($('sb-update-app')) $('sb-update-app').addEventListener('click', updateApp);
-if ($('dn-update-app')) $('dn-update-app').addEventListener('click', updateApp);
-
-// ═══════════════════════════════════════════════════════════════════
-//  ИГРЫ
-// ═══════════════════════════════════════════════════════════════════
-let gamesIndex = null, gamesSearchQuery = '';
-
-async function fetchGames() {
+        const r = await apiRead('Scores!A1:E1');
+        if (!r.values?.length) await apiAppend('Scores!A:E', [['timestamp','login','app_id','raw_score','xp_earned']]);
+    } catch {}
+    // Create Logs sheet header if it doesn't exist
     try {
-        const res = await fetch('./games/index.json');
-        if (!res.ok) return;
-        const data = await res.json();
-        // Поддержка обоих форматов: {categories:[...]} и массив []
-        if (Array.isArray(data)) {
-            gamesIndex = { categories: [{ id:'all', label:'🎮 Все игры', games: data }] };
-        } else if (data.categories) {
-            gamesIndex = data;
-        } else {
-            gamesIndex = { categories: [] };
-        }
-        renderGamesTab();
-    } catch(e) {
-        console.warn('games/index.json:', e);
-        $('games-scroll').innerHTML = '<div style="color:var(--text-3);font-size:0.82rem;padding:20px 4px">Игры не найдены</div>';
-    }
+        const r = await apiRead('Logs!A1:D1');
+        if (!r.values?.length) await apiAppend('Logs!A:D', [['timestamp','login','app_id','duration_sec']]);
+    } catch {}
 }
 
-function renderGamesTab() {
-    const scroll = $('games-scroll');
-    if (!gamesIndex?.categories?.length) { scroll.innerHTML = '<div style="color:var(--text-3);font-size:0.82rem;padding:20px 4px">Нет игр</div>'; return; }
-    const q = gamesSearchQuery.toLowerCase().trim();
+async function loginUser(login, password) {
+    const res  = await apiRead('users!A2:E5000');
+    const rows = res.values || [];
+    const row  = rows.find(r => r[0] === login && r[1] === password && r[3] !== 'blocked');
+    if (!row) return null;
+    return { login: row[0], role: row[2] || 'user', total_xp: parseInt(row[4]) || 0 };
+}
+
+async function registerUser(login, password) {
+    const res  = await apiRead('users!A2:E5000');
+    const rows = res.values || [];
+    if (rows.some(r => r[0] === login)) throw new Error('Пользователь уже существует');
+    const isFirst = rows.length === 0;
+    await apiAppend('users!A:E', [[login, password, isFirst ? 'admin' : 'user', 'active', '0']]);
+    return { login, role: isFirst ? 'admin' : 'user', total_xp: 0 };
+}
+
+/* ── PLATFORM API (accessible from iframes via window.parent.PlatformAPI) ── */
+window.PlatformAPI = {
+    user: {
+        getProfile: () => currentUser
+    },
+    db: {
+        read:            async (range)         => await apiRead(range),
+        append:          async (range, values) => await apiAppend(range, values),
+        update:          async (range, values) => await apiUpdate(range, values),
+        batchValues:     async (data)          => await apiBatchValues(data),
+        batchStructural: async (requests)      => await apiBatchStructural(requests)
+    },
+    gameplay: {
+        submitScore: async (appId, rawScore, xpEarned) => {
+            if (!currentUser) return;
+            const ts = new Date().toISOString();
+            await apiAppend('Scores!A:E', [[ts, currentUser.login, appId, rawScore, xpEarned]]).catch(()=>{});
+            // Best-effort XP increment in Users sheet
+            try {
+                const res  = await apiRead('users!A2:E5000');
+                const rows = res.values || [];
+                const idx  = rows.findIndex(r => r[0] === currentUser.login);
+                if (idx >= 0) {
+                    const rowNum = idx + 2;
+                    const curXp  = parseInt(rows[idx][4]) || 0;
+                    await apiUpdate(`users!E${rowNum}`, curXp + xpEarned);
+                    currentUser.total_xp = curXp + xpEarned;
+                    saveUser();
+                }
+            } catch {}
+        }
+    },
+    system: {
+        logSession: async (appId, durationSec) => {
+            if (!currentUser) return;
+            try {
+                const ts = new Date().toISOString();
+                await apiAppend('Logs!A:D', [[ts, currentUser.login, appId, durationSec]]);
+            } catch {}
+        }
+    },
+    ui: {
+        showToast:  (msg, type) => toast(msg, type),
+        showLoader: (on)        => showLoader(on)
+    }
+};
+
+/* ── APP LAUNCH / SESSION TRACKING ── */
+function launchApp(file, appId) {
+    currentSession = { appId, startTime: Date.now() };
+    $('app-iframe').src = `./apps/${file}`;
+    $('immersive-container').style.display = 'block';
+}
+
+$('btn-float-back').addEventListener('click', () => {
+    if (currentSession.appId && currentSession.startTime) {
+        const durationSec = Math.round((Date.now() - currentSession.startTime) / 1000);
+        if (durationSec > 5) {
+            window.PlatformAPI.system.logSession(currentSession.appId, durationSec);
+        }
+    }
+    currentSession = { appId: null, startTime: null };
+    $('immersive-container').style.display = 'none';
+    $('app-iframe').src = 'about:blank';
+});
+
+/* ── APPS GRID ── */
+const BUILTIN_APPS = [
+    { id:'trainer',    name:'Тренер',  icon:'🏋️', desc:'Таймер тренировки McGill Big 3.',   file:'trainer.html' },
+    { id:'dictionary', name:'Словарь', icon:'📖', desc:'Изучай слова на разных языках.',     file:'dictionary.html' }
+];
+
+async function fetchAndRenderApps() {
+    let categories = [{ id:'apps', label:'⭐ Приложения', games: BUILTIN_APPS }];
+    try {
+        const res = await fetch('./apps/index.json');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.categories) {
+                const extraCats = data.categories
+                    .map(cat => ({
+                        ...cat,
+                        games: (cat.games || []).filter(g =>
+                            !['wordlearning','dictionary','trainer'].includes(g.id) &&
+                            g.file !== 'WordLearning.html' &&
+                            g.file !== 'dictionary.html' &&
+                            g.file !== 'trainer.html'
+                        )
+                    }))
+                    .filter(cat => (cat.games || []).length > 0);
+                categories = [...categories, ...extraCats];
+            }
+        }
+    } catch {}
+    appsData = categories;
+    renderAppsGrid();
+}
+
+function renderAppsGrid() {
+    const el = $('apps-scroll');
+    const q  = searchQuery.toLowerCase().trim();
     let html = '';
-    gamesIndex.categories.forEach(cat => {
-        const games = q ? cat.games.filter(g => g.name.toLowerCase().includes(q) || g.desc?.toLowerCase().includes(q)) : cat.games;
-        if (!games.length) return;
-        html += `<div class="game-category"><div class="game-cat-label">${cat.label}</div><div class="games-grid">`;
-        games.forEach(g => {
-            html += `<div class="game-tile" data-file="${g.file}" data-name="${g.name}" role="button" tabindex="0">
-                <div class="game-tile-icon">${g.icon}</div>
-                <div class="game-tile-name">${g.name}</div>
-                <div class="game-tile-desc">${g.desc||''}</div>
-                <div class="game-tile-play"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+    (appsData || []).forEach(cat => {
+        const apps = q
+            ? (cat.games || []).filter(g => g.name.toLowerCase().includes(q) || (g.desc||'').toLowerCase().includes(q))
+            : (cat.games || []);
+        if (!apps.length) return;
+        html += `<div class="app-category"><div class="app-cat-label">${cat.label}</div><div class="apps-grid">`;
+        apps.forEach(g => {
+            html += `<div class="app-tile" data-file="${g.file}" data-id="${g.id||''}" data-name="${g.name}" role="button" tabindex="0">
+                <div class="app-tile-icon">${g.icon||'🎮'}</div>
+                <div class="app-tile-name">${g.name}</div>
+                <div class="app-tile-desc">${g.desc||''}</div>
+                <div class="app-tile-play"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
             </div>`;
         });
         html += '</div></div>';
     });
-    if (!html) html = '<div style="color:var(--text-3);font-size:0.82rem;padding:20px 4px">Игры не найдены</div>';
-    scroll.innerHTML = html;
-    scroll.querySelectorAll('.game-tile').forEach(tile => {
-        const open = () => openGame(tile.dataset.file, tile.dataset.name);
+    if (!html) html = '<div style="color:var(--text-3);font-size:0.82rem;padding:20px 4px">Приложения не найдены</div>';
+    el.innerHTML = html;
+    el.querySelectorAll('.app-tile').forEach(tile => {
+        const open = () => launchApp(tile.dataset.file, tile.dataset.id || tile.dataset.file);
         tile.addEventListener('click', open);
         tile.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); open(); } });
     });
 }
 
-$('games-search').addEventListener('input', e => { gamesSearchQuery = e.target.value; renderGamesTab(); });
+$('apps-search').addEventListener('input', e => { searchQuery = e.target.value; renderAppsGrid(); });
 
-function openGame(file, name) {
-    const wasRunning = state.isRunning;
-    if (wasRunning) pauseTimer();
-    $('game-pause-note').style.display = wasRunning ? 'inline' : 'none';
-    $('game-frame-title').textContent = name;
-    $('game-iframe').src = `./games/${file}`;
-    $('game-frame-wrap').style.display = 'flex';
+/* ── SETUP ── */
+$('btn-setup-save').addEventListener('click', async () => {
+    const sid   = $('setup-sid').value.trim();
+    const saRaw = $('setup-sa').value.trim();
+    const errEl = $('setup-err');
+    errEl.textContent = '';
+    if (!sid || !saRaw) { errEl.textContent = 'Заполните все поля'; return; }
+    let parsed;
+    try { parsed = JSON.parse(saRaw); } catch (e) { errEl.textContent = 'Некорректный JSON: ' + e.message; return; }
+    if (!parsed.client_email || !parsed.private_key) { errEl.textContent = 'SA JSON не содержит client_email или private_key'; return; }
+    cfg.spreadsheetId = sid;
+    sa = parsed;
+    saveCfg(); saveSA();
+    showLoader(true);
+    try {
+        await ensureAuth();
+        await ensureUsersSheet();
+        await ensureScoresLogs();
+        showLoader(false);
+        toast('✓ Подключено!', 'ok');
+        showView('login');
+    } catch (e) {
+        showLoader(false);
+        errEl.textContent = 'Ошибка подключения: ' + e.message;
+        // Roll back
+        cfg.spreadsheetId = '';
+        sa = null;
+    }
+});
+
+/* ── LOGIN / REGISTER TOGGLE ── */
+$('btn-show-reg').addEventListener('click', () => {
+    $('login-form').style.display = 'none';
+    $('reg-form').style.display   = '';
+    $('login-sub-text').textContent = 'Регистрация';
+});
+$('btn-show-login').addEventListener('click', () => {
+    $('reg-form').style.display   = 'none';
+    $('login-form').style.display = '';
+    $('login-sub-text').textContent = 'Вход в систему';
+});
+$('btn-goto-setup').addEventListener('click', () => showView('setup'));
+
+/* ── LOGIN ── */
+async function doLogin() {
+    const login = $('login-login').value.trim();
+    const pass  = $('login-pass').value;
+    const errEl = $('login-err');
+    errEl.textContent = '';
+    if (!login || !pass) { errEl.textContent = 'Заполните все поля'; return; }
+    showLoader(true);
+    try {
+        const user = await loginUser(login, pass);
+        if (!user) { errEl.textContent = 'Неверный логин или пароль'; showLoader(false); return; }
+        currentUser = user;
+        saveUser();
+        showLoader(false);
+        afterLogin();
+    } catch (e) {
+        showLoader(false);
+        errEl.textContent = 'Ошибка: ' + e.message;
+    }
 }
 
-$('btn-game-back').addEventListener('click', () => { $('game-frame-wrap').style.display = 'none'; $('game-iframe').src = 'about:blank'; });
-
-// ═══════════════════════════════════════════════════════════════════
-//  НАВИГАЦИЯ
-// ═══════════════════════════════════════════════════════════════════
-document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === btn.dataset.tab));
-    });
-});
-
-function openSidebar()  { document.body.classList.add('sidebar-open'); }
-function closeSidebar() { document.body.classList.remove('sidebar-open'); }
-
-$('btn-menu').addEventListener('click', () => document.body.classList.contains('sidebar-open') ? closeSidebar() : openSidebar());
-$('btn-sb-close').addEventListener('click', closeSidebar);
-$('sidebar-backdrop').addEventListener('click', closeSidebar);
-
-// ═══════════════════════════════════════════════════════════════════
-//  МОДАЛЫ
-// ═══════════════════════════════════════════════════════════════════
-function openModal(id) {
-    $(id).classList.add('open');
-    if (id === 'modal-cache') refreshCacheList();
-    if (id === 'modal-history') renderHistory();
+async function doRegister() {
+    const login = $('reg-login').value.trim();
+    const pass  = $('reg-pass').value;
+    const errEl = $('reg-err');
+    errEl.textContent = '';
+    if (!login || !pass) { errEl.textContent = 'Заполните все поля'; return; }
+    if (pass.length < 4) { errEl.textContent = 'Пароль — минимум 4 символа'; return; }
+    showLoader(true);
+    try {
+        const user = await registerUser(login, pass);
+        currentUser = user;
+        saveUser();
+        showLoader(false);
+        afterLogin();
+    } catch (e) {
+        showLoader(false);
+        errEl.textContent = 'Ошибка: ' + e.message;
+    }
 }
-function closeModal(id) { $(id).classList.remove('open'); }
 
-document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.close)));
-document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); }));
+$('btn-do-login').addEventListener('click', doLogin);
+$('btn-do-reg').addEventListener('click', doRegister);
+$('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('reg-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
 
-document.querySelectorAll('[data-modal]').forEach(item => {
-    item.addEventListener('click', () => {
-        closeSidebar();
-        if (item.dataset.modal === 'modal-programs') { openProgramsModal(); }
-        else { openModal(item.dataset.modal); }
-    });
+/* ── LOGOUT ── */
+$('btn-logout').addEventListener('click', () => {
+    if (!confirm('Выйти из аккаунта?')) return;
+    currentUser = null;
+    saveUser();
+    accessToken = null;
+    tokenExpiry = 0;
+    $('login-login').value = '';
+    $('login-pass').value  = '';
+    $('login-sub-text').textContent = 'Вход в систему';
+    $('login-form').style.display = '';
+    $('reg-form').style.display   = 'none';
+    showView('login');
 });
 
-// ═══════════════════════════════════════════════════════════════════
-//  УПРАВЛЕНИЕ ТРЕНИРОВКОЙ
-// ═══════════════════════════════════════════════════════════════════
-btnMain.addEventListener('click', () => state.isRunning ? pauseTimer() : startTimer());
-btnNext.addEventListener('click', () => { if (!btnNext.disabled) nextStep(); });
-btnPrev.addEventListener('click', () => { if (!btnPrev.disabled) prevStep(); });
-btnReset.addEventListener('click', () => {
-    const inProgress = state.isRunning || state.stepIdx > 0;
-    if (inProgress && !confirm('Начать тренировку заново?')) return;
-    if ((state.stepIdx > 0 || state.timeLeft < (protocol[0]?.time || 0)) && protocol.length) saveHistory({done:false});
-    _hardStop(); resetUI();
-});
-wSelect.addEventListener('change', e => {
-    const idx = parseInt(e.target.value);
-    if ((state.isRunning || state.stepIdx > 0) && !confirm('Сменить программу? Прогресс сбросится.')) { e.target.value = state.programIdx; return; }
-    if (state.stepIdx > 0 && !state.isRunning) saveHistory({done:false});
-    loadProgram(idx);
-});
+/* ── AFTER LOGIN ── */
+function afterLogin() {
+    $('hdr-user-name').textContent = currentUser.login;
+    showView('platform');
+    fetchAndRenderApps();
+}
 
-// Свайп (долгое нажатие и двойное касание)
-(() => {
-    const w = $('timer-wrap');
-    let sy = 0, pt = null, lt = 0, didLongPress = false;
-    w.addEventListener('touchstart', e => { sy = e.touches[0].clientY; didLongPress = false; pt = setTimeout(() => { if (state.isRunning && state.stepIdx < protocol.length) { didLongPress = true; protocol[state.stepIdx].time += 5; totalTime += 5; stepStartTs -= 5000; showToast('+5с'); } }, 600); }, {passive:true});
-    w.addEventListener('touchend', e => {
-        clearTimeout(pt);
-        if (didLongPress) { lt = 0; return; }
-        const now = Date.now();
-        if (now - lt < 300 && state.isRunning && state.stepIdx < protocol.length && state.timeLeft > 6) { protocol[state.stepIdx].time = Math.max(1, protocol[state.stepIdx].time - 5); totalTime = Math.max(0, totalTime - 5); stepStartTs += 5000; showToast('-5с'); }
-        lt = now;
-    }, {passive:true});
+/* ── INIT ── */
+(function init() {
+    loadCfg(); loadSA(); loadUser();
+
+    // Migrate old wl_config spreadsheetId if mcg_config is empty
+    if (!cfg.spreadsheetId) {
+        try {
+            const old = JSON.parse(localStorage.getItem('wl_config') || 'null');
+            if (old?.spreadsheetId) { cfg.spreadsheetId = old.spreadsheetId; saveCfg(); }
+        } catch {}
+    }
+
+    if (!sa || !cfg.spreadsheetId) {
+        if (sa) $('setup-sa').value = JSON.stringify(sa, null, 2);
+        if (cfg.spreadsheetId) $('setup-sid').value = cfg.spreadsheetId;
+        showView('setup');
+    } else if (!currentUser) {
+        showView('login');
+    } else {
+        afterLogin();
+    }
 })();
 
-function showToast(msg) { const t = $('adj-toast'); t.textContent = msg; t.style.opacity = '1'; clearTimeout(t._to); t._to = setTimeout(() => { t.style.opacity = '0'; }, 900); }
-
-// ═══════════════════════════════════════════════════════════════════
-//  ЗВУК
-// ═══════════════════════════════════════════════════════════════════
-function bindSlider(id, lbl, key, fmt) { const sl=$(id),lb=$(lbl); sl.value=soundCfg[key]; lb.textContent=fmt(soundCfg[key]); sl.addEventListener('input',()=>{ soundCfg[key]=parseFloat(sl.value); lb.textContent=fmt(soundCfg[key]); saveSoundCfg(); }); }
-function bindToggle(id, key) { const cb=$(id); cb.checked=soundCfg[key]; cb.addEventListener('change',()=>{ soundCfg[key]=cb.checked; saveSoundCfg(); }); }
-const pct = v => Math.round(v*100)+'%', numFmt = v => parseFloat(v).toFixed(1);
-bindSlider('vol-tts','lbl-tts','volTTS',pct); bindSlider('vol-tts-rate','lbl-tts-rate','rateTTS',numFmt);
-bindSlider('vol-work','lbl-work','volWork',pct); bindSlider('vol-rest','lbl-rest','volRest',pct);
-bindSlider('vol-prep','lbl-prep','volPrep',pct); bindSlider('vol-tick','lbl-tick','volTick',pct);
-bindToggle('tts-enabled','ttsEnabled'); bindToggle('tone-enabled','toneEnabled'); bindToggle('haptic-enabled','hapticEnabled');
-
-const intSl=$('intensity-slider'), intV=$('intensity-val');
-intSl.value=soundCfg.intensity; intV.textContent=soundCfg.intensity+'%';
-intSl.addEventListener('input', () => { soundCfg.intensity=parseInt(intSl.value); intV.textContent=soundCfg.intensity+'%'; saveSoundCfg(); if (!state.isRunning) { applyIntensity(); renderTimeline(); } });
-
-// ═══════════════════════════════════════════════════════════════════
-//  ЭКСПОРТ / ИМПОРТ
-// ═══════════════════════════════════════════════════════════════════
-function exportProgram() {
-    const prog = workoutsData[state.programIdx]; if (!prog) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({programs:[prog]},null,2)],{type:'application/json'}));
-    a.download = `${prog.id||'workout'}.json`; a.click(); URL.revokeObjectURL(a.href);
-}
-
-$('btn-export-prog').addEventListener('click', exportProgram);
-$('import-file').addEventListener('change', async e => {
-    const file = e.target.files[0]; if (!file) return;
-    const sEl = $('import-status');
-    try {
-        const text = await file.text(), data = JSON.parse(text);
-        if (!data.programs?.length) throw new Error('Нет массива programs');
-        data.programs.forEach(p => { p._category = ''; p._file = file.name; });
-        workoutsData = workoutsData.concat(data.programs); populateSelect();
-        sEl.textContent = `✓ Добавлено: ${data.programs.map(p => p.name).join(', ')}`;
-        if ('caches' in window) { const cn = await getCacheName(); if (cn) { const cache = await caches.open(cn); await cache.put(location.origin+'/workouts/import_'+Date.now()+'.json', new Response(text,{headers:{'Content-Type':'application/json'}})); } }
-    } catch(err) { sEl.textContent = 'Ошибка: ' + err.message; }
-    e.target.value = '';
-});
-
-$('btn-cache-refresh').addEventListener('click', refreshCacheList);
-$('btn-save-cache').addEventListener('click', saveCacheEdit);
-$('btn-delete-cache').addEventListener('click', deleteCacheEntry);
-$('btn-cancel-edit').addEventListener('click', closeEditor);
-
-$('btn-copy-prompt').addEventListener('click', async () => {
-    const text = $('ai-prompt-text').textContent;
-    try { await navigator.clipboard.writeText(text); } catch { const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-    $('btn-copy-prompt').textContent = '✓ Скопировано'; setTimeout(() => { $('btn-copy-prompt').textContent = 'Скопировать промпт'; }, 2000);
-});
-
-document.addEventListener('visibilitychange', resumeAudioOnVisible);
-
-// ═══════════════════════════════════════════════════════════════════
-//  ИНИЦИАЛИЗАЦИЯ
-// ═══════════════════════════════════════════════════════════════════
-loadSoundCfg();
-fetchWorkouts();
-fetchGames();
-
+/* ── SERVICE WORKER ── */
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
             .then(reg => {
                 swRegistration = reg;
-                console.log('SW:', reg.scope);
-                if (reg.waiting) $('btn-update').classList.add('has-update');
                 reg.addEventListener('updatefound', () => {
                     const nw = reg.installing;
-                    nw.addEventListener('statechange', () => {
-                        if (nw.state === 'installed' && navigator.serviceWorker.controller) $('btn-update').classList.add('has-update');
+                    nw?.addEventListener('statechange', () => {
+                        if (nw.state === 'installed' && navigator.serviceWorker.controller)
+                            toast('Обновление доступно — обновите страницу', 'ok');
                     });
                 });
             })

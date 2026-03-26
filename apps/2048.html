@@ -117,9 +117,19 @@ function move(dir){
     scoreEl.textContent=score;
     if(score>best){ best=score; bestEl.textContent=best; localStorage.setItem('2048_best',best); }
     addTile(); render();
-    if(board.includes(2048)&&!over){ showMsg('🎉 2048!','Продолжай!'); over=true; return; }
-    if(!canMove()){ showMsg('😞 Игра окончена',`Счёт: ${score}`); over=true; }
+    if(board.includes(2048)&&!over){ showMsg('🎉 2048!','Продолжай!'); over=true; submitScore(); return; }
+    if(!canMove()){ showMsg('😞 Игра окончена',`Счёт: ${score}`); over=true; submitScore(); }
   }
+}
+
+function submitScore(){
+  try {
+    const api = window.parent?.PlatformAPI;
+    if (api) {
+      const xp = Math.max(1, Math.floor(score / 100));
+      api.gameplay.submitScore('2048', score, xp).catch(()=>{});
+    }
+  } catch {}
 }
 
 function canMove(){

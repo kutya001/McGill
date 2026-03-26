@@ -1,0 +1,2091 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Словарь</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#0a0a0f;--sf:#111118;--sf2:#1a1a24;--sf3:#22222f;
+  --bd:rgba(255,255,255,.07);--bdh:rgba(255,255,255,.15);
+  --tx:#f0f0f8;--tx2:#8888aa;--tx3:#44445a;
+  --green:#00e5a0;--blue:#5b8cff;--orange:#ff8c42;--gold:#ffd700;--red:#ff4466;
+  --r:14px;--rs:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Manrope',system-ui,sans-serif;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;height:100dvh;user-select:none;-webkit-user-select:none}
+input,select,textarea,button{font-family:inherit}
+
+/* ===== HEADER ===== */
+header{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--sf);border-bottom:1px solid var(--bd);z-index:20;min-height:54px}
+#btn-back{display:none;width:36px;height:36px;border-radius:var(--rs);border:1px solid var(--bdh);background:var(--sf2);color:var(--tx2);cursor:pointer;font-size:1.1rem;flex-shrink:0}
+#hdr-title{flex:1;font-size:1rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-btn{width:36px;height:36px;border-radius:var(--rs);border:1px solid var(--bdh);background:var(--sf2);color:var(--tx2);cursor:pointer;font-size:1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.hdr-btn:active{background:var(--sf3)}
+
+/* ===== MAIN ===== */
+main{flex:1;overflow:hidden;position:relative}
+.view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:16px;display:none;-webkit-overflow-scrolling:touch}
+.view.active{display:block}
+
+/* ===== BOTTOM NAV ===== */
+#bnav{flex-shrink:0;display:flex;background:var(--sf);border-top:1px solid var(--bd);padding:4px 0;padding-bottom:max(4px,env(safe-area-inset-bottom))}
+#bnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--tx3);font-size:.6rem;padding:6px 0;cursor:pointer;transition:color .2s;letter-spacing:.02em}
+#bnav button .ico{font-size:1.25rem;line-height:1}
+#bnav button.active{color:var(--blue)}
+
+/* ===== TOAST ===== */
+#toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--sf3);color:var(--tx);padding:10px 20px;border-radius:var(--r);font-size:.82rem;z-index:100;transition:transform .3s ease;pointer-events:none;white-space:nowrap;border:1px solid var(--bdh);max-width:90vw;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:var(--red);color:var(--red)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+
+/* ===== LOADER ===== */
+#loader{position:fixed;inset:0;background:rgba(10,10,15,.85);display:none;align-items:center;justify-content:center;z-index:90;flex-direction:column;gap:12px}
+#loader.show{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--sf3);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loader span{font-size:.78rem;color:var(--tx2)}
+
+/* ===== MODAL ===== */
+.modal-bg{position:fixed;inset:0;background:rgba(10,10,15,.8);z-index:80;display:none;align-items:flex-end;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:var(--sf);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;padding:20px 16px;padding-bottom:max(20px,env(safe-area-inset-bottom))}
+.modal h3{font-size:1rem;margin-bottom:16px}
+.modal-close{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--tx2);font-size:1.2rem;cursor:pointer}
+
+/* ===== COMMON ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:var(--r);border:none;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .15s;width:100%}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-green{background:var(--green);color:#000}
+.btn-red{background:rgba(255,68,102,.15);color:var(--red);border:1px solid rgba(255,68,102,.3)}
+.btn-ghost{background:var(--sf2);color:var(--tx2);border:1px solid var(--bd)}
+.btn-sm{padding:8px 14px;font-size:.78rem;width:auto}
+
+.input-group{margin-bottom:14px}
+.input-group label{display:block;font-size:.72rem;color:var(--tx2);margin-bottom:5px;letter-spacing:.03em;text-transform:uppercase}
+.input-group input,.input-group select,.input-group textarea{width:100%;padding:12px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);color:var(--tx);font-size:.9rem;outline:none;transition:border-color .2s}
+.input-group input:focus,.input-group select:focus,.input-group textarea:focus{border-color:var(--blue)}
+.input-group select{appearance:none;background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%238888aa' d='M0 0l6 8 6-8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:10px;padding-right:32px}
+.input-group select option{background:var(--sf2);color:var(--tx)}
+.input-group textarea{resize:vertical;min-height:80px}
+
+.card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.cat-card{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r);padding:16px 14px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:6px}
+.cat-card:active{background:var(--sf3);transform:scale(.97)}
+.cat-card .cat-icon{font-size:1.8rem}
+.cat-card .cat-name{font-size:.82rem;font-weight:600}
+.cat-card .cat-count{font-size:.68rem;color:var(--tx2)}
+.cat-card .cat-prog{height:3px;border-radius:2px;background:var(--sf3);overflow:hidden;margin-top:4px}
+.cat-card .cat-prog span{display:block;height:100%;background:var(--green);border-radius:2px;transition:width .3s}
+
+.word-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);margin-bottom:8px;cursor:pointer;transition:all .15s}
+.word-item:active{background:var(--sf3)}
+.word-item .w-main{flex:1;min-width:0}
+.word-item .w-from{font-size:.92rem;font-weight:600}
+.word-item .w-to{font-size:.78rem;color:var(--tx2);margin-top:2px}
+.word-item .w-tr{font-size:.68rem;color:var(--tx3);margin-top:1px;font-style:italic}
+.word-item .w-speak{width:32px;height:32px;border-radius:50%;background:var(--sf3);border:none;color:var(--tx2);font-size:.9rem;cursor:pointer;flex-shrink:0}
+.word-item .w-level{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.w-level.l0{background:var(--tx3)}.w-level.l1{background:var(--orange)}.w-level.l2{background:var(--gold)}.w-level.l3{background:var(--green)}
+
+/* ===== LANG PAIR SELECTOR ===== */
+.lang-pair{display:flex;align-items:center;gap:8px;margin-bottom:16px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r);padding:10px 14px}
+.lang-pair select{flex:1;background:transparent;color:var(--tx);border:none;font-size:.88rem;font-weight:600;outline:none;appearance:none;text-align:center;padding:4px 0}
+.lang-pair .arrow{color:var(--blue);font-size:1.1rem;flex-shrink:0}
+.lang-pair .swap-btn{width:32px;height:32px;border-radius:50%;background:var(--sf3);border:1px solid var(--bd);color:var(--blue);cursor:pointer;font-size:.9rem;flex-shrink:0;transition:transform .3s}
+.lang-pair .swap-btn:active{transform:rotate(180deg)}
+
+.stats-row{display:flex;gap:10px;margin-bottom:16px}
+.stat-card{flex:1;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:12px;text-align:center}
+.stat-card .st-num{font-size:1.3rem;font-weight:700}
+.stat-card .st-lbl{font-size:.62rem;color:var(--tx2);margin-top:2px;text-transform:uppercase;letter-spacing:.04em}
+
+.section-title{font-size:.72rem;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;margin-top:8px}
+
+.search-bar{display:flex;gap:8px;margin-bottom:14px}
+.search-bar input{flex:1;padding:10px 14px;border-radius:var(--r);border:1px solid var(--bd);background:var(--sf2);color:var(--tx);font-size:.85rem;outline:none}
+.search-bar input:focus{border-color:var(--blue)}
+.search-bar input::placeholder{color:var(--tx3)}
+
+/* ===== FLASHCARDS ===== */
+.cards-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cards-progress{font-size:.78rem;color:var(--tx2)}
+.cards-progress b{color:var(--tx)}
+.prog-bar{height:4px;background:var(--sf3);border-radius:2px;overflow:hidden;margin-bottom:20px}
+.prog-bar span{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:2px;transition:width .3s}
+
+.fc-wrap{display:flex;align-items:center;justify-content:center;flex:1;min-height:320px;perspective:1000px;touch-action:pan-y}
+.fc{position:relative;width:min(90vw,320px);height:min(60vw,380px);cursor:pointer;transform-style:preserve-3d;transition:transform .5s}
+.fc.flipped{transform:rotateY(180deg)}
+.fc.swipe-r{transition:transform .3s;transform:translateX(120%) rotate(15deg);opacity:0}
+.fc.swipe-l{transition:transform .3s;transform:translateX(-120%) rotate(-15deg);opacity:0}
+.fc-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--r);padding:28px;gap:8px;border:1px solid var(--bd)}
+.fc-front{background:var(--sf2)}
+.fc-back{background:var(--sf2);transform:rotateY(180deg)}
+.fc-lang{font-size:.68rem;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;position:absolute;top:16px}
+.fc-word{font-size:1.6rem;font-weight:700;text-align:center;line-height:1.3}
+.fc-trans{font-size:.82rem;color:var(--tx2);font-style:italic;margin-top:4px}
+.fc-speak-btn{position:absolute;bottom:16px;width:40px;height:40px;border-radius:50%;background:var(--sf3);border:1px solid var(--bd);color:var(--tx2);font-size:1rem;cursor:pointer}
+.fc-hint{font-size:.68rem;color:var(--tx3);margin-top:8px}
+
+.fc-actions{display:flex;gap:12px;margin-top:20px;width:min(90vw,320px)}
+.fc-actions button{flex:1;padding:14px;border-radius:var(--r);border:none;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s}
+.fc-actions button:active{transform:scale(.96)}
+.fc-btn-no{background:rgba(255,68,102,.12);color:var(--red);border:1px solid rgba(255,68,102,.3)}
+.fc-btn-yes{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.3)}
+
+.fc-done{text-align:center;padding:40px 20px}
+.fc-done h2{font-size:1.3rem;margin-bottom:8px}
+.fc-done p{font-size:.82rem;color:var(--tx2);margin-bottom:20px}
+.fc-done .done-stats{display:flex;gap:14px;justify-content:center;margin-bottom:24px}
+.fc-done .ds{text-align:center}
+.fc-done .ds b{font-size:1.5rem;display:block}
+.fc-done .ds span{font-size:.62rem;color:var(--tx2);text-transform:uppercase}
+
+/* ===== QUIZ ===== */
+.quiz-question{font-size:1.4rem;font-weight:700;text-align:center;margin:24px 0 8px;min-height:60px;display:flex;align-items:center;justify-content:center}
+.quiz-lang{font-size:.68rem;color:var(--tx2);text-align:center;text-transform:uppercase;letter-spacing:.06em}
+.quiz-opts{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.quiz-opt{width:100%;padding:16px;border-radius:var(--r);border:1px solid var(--bd);background:var(--sf2);color:var(--tx);font-size:1rem;text-align:left;cursor:pointer;transition:all .2s}
+.quiz-opt:active{background:var(--sf3)}
+.quiz-opt.correct{background:rgba(0,229,160,.15);border-color:var(--green);color:var(--green)}
+.quiz-opt.wrong{background:rgba(255,68,102,.15);border-color:var(--red);color:var(--red)}
+.quiz-opt.disabled{pointer-events:none}
+.quiz-score{text-align:center;margin-bottom:12px;font-size:.78rem;color:var(--tx2)}
+
+/* ===== SETTINGS ===== */
+.set-section{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.set-section h3{font-size:.82rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)}
+.set-row:last-child{border-bottom:none}
+.set-row span{font-size:.82rem}
+.set-row .badge{font-size:.68rem;background:var(--sf3);padding:2px 8px;border-radius:10px;color:var(--tx2)}
+
+.help-box{background:var(--sf3);border-radius:var(--rs);padding:14px;margin-top:12px;font-size:.72rem;color:var(--tx2);line-height:1.6}
+.help-box code{background:var(--bg);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.68rem;color:var(--blue)}
+.help-toggle{background:none;border:none;color:var(--blue);font-size:.76rem;cursor:pointer;padding:4px 0;margin-top:8px}
+
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tag{display:inline-flex;align-items:center;gap:4px;background:var(--sf3);border:1px solid var(--bd);border-radius:20px;padding:5px 10px;font-size:.72rem}
+.tag .del{background:none;border:none;color:var(--red);cursor:pointer;font-size:.8rem;padding:0 2px}
+
+/* FAB */
+.fab{position:absolute;bottom:16px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--blue);border:none;color:#fff;font-size:1.5rem;cursor:pointer;box-shadow:0 4px 16px rgba(91,140,255,.35);z-index:10;display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.fab:active{transform:scale(.9)}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.toggle-row span{font-size:.82rem}
+.toggle{width:44px;height:24px;border-radius:12px;background:var(--sf3);border:1px solid var(--bd);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--blue);border-color:var(--blue)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(20px)}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:var(--tx3)}
+.empty .em-icon{font-size:2.5rem;margin-bottom:12px}
+.empty p{font-size:.82rem;margin-bottom:16px}
+
+.btn-orange{background:var(--orange);color:#000}
+
+#hdr-user{font-size:.68rem;color:var(--tx2);background:var(--sf3);border:1px solid var(--bd);border-radius:20px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+#hdr-user:hover{background:var(--sf2)}
+
+.word-item .w-edit{width:28px;height:28px;border-radius:50%;background:var(--sf3);border:none;color:var(--tx2);font-size:.7rem;cursor:pointer;flex-shrink:0}
+.tag .edit{background:none;border:none;color:var(--blue);cursor:pointer;font-size:.7rem;padding:0 2px}
+
+.prompt-box{background:var(--sf3);border:1px solid var(--bd);border-radius:var(--rs);padding:12px;font-family:monospace;font-size:.68rem;color:var(--tx2);line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;user-select:text;-webkit-user-select:text;margin-bottom:10px}
+
+.rating-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);margin-bottom:8px}
+.rating-pos{font-size:1.1rem;font-weight:800;color:var(--gold);min-width:28px;text-align:center}
+.rating-pos.p1{color:var(--gold)}.rating-pos.p2{color:var(--tx2)}.rating-pos.p3{color:var(--orange)}
+.rating-name{flex:1;font-size:.88rem;font-weight:600}
+.rating-score{font-size:.82rem;color:var(--blue);font-weight:700}
+.rating-detail{font-size:.68rem;color:var(--tx3)}
+
+.login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:20px}
+.login-box{width:100%;max-width:320px}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo .em{font-size:3rem}
+.login-logo h2{font-size:1.2rem;margin-top:8px}
+.login-logo p{font-size:.78rem;color:var(--tx2);margin-top:4px}
+
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.user-row:last-child{border-bottom:none}
+.user-row .u-name{flex:1;font-size:.85rem;font-weight:600}
+.user-row .u-role{font-size:.65rem;padding:2px 8px;border-radius:10px;background:var(--sf3);color:var(--tx2)}
+.user-row .u-role.admin{color:var(--gold);border:1px solid rgba(255,215,0,.3)}
+.user-row .u-pending{color:var(--orange);font-size:.7rem}
+.user-row button{padding:4px 10px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf3);color:var(--tx2);font-size:.7rem;cursor:pointer}
+.user-row button.approve{border-color:var(--green);color:var(--green)}
+.user-row button.reject{border-color:var(--red);color:var(--red)}
+
+.stabs{display:flex;gap:4px;margin-bottom:14px;overflow-x:auto;flex-shrink:0}
+.stab{padding:8px 14px;border-radius:20px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s}
+.stab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* Session config */
+.sconf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.sconf-chip{padding:10px 6px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);font-size:.78rem;font-weight:600;text-align:center;cursor:pointer;transition:all .15s}
+.sconf-chip.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
+.sconf-chip:active{transform:scale(.95)}
+.sconf-cats{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:4px;padding-right:2px}
+.sconf-cat-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf2);cursor:pointer;transition:all .15s}
+.sconf-cat-row.sel{border-color:var(--blue);background:rgba(91,140,255,.1)}
+.sconf-cat-row .sci{font-size:1.2rem;flex-shrink:0}
+.sconf-cat-row .scn{flex:1;font-size:.85rem;font-weight:600}
+.sconf-cat-row .scc{font-size:.65rem;color:var(--tx2)}
+.sconf-cat-row .schk{width:18px;height:18px;border-radius:50%;border:2px solid var(--bd);flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center;font-size:.6rem}
+.sconf-cat-row.sel .schk{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* Misc */
+.mb8{margin-bottom:8px}.mb16{margin-bottom:16px}.mt8{margin-top:8px}.mt16{margin-top:16px}
+.flex-c{display:flex;align-items:center;gap:8px}
+.gap8{gap:8px}.gap12{gap:12px}
+.row{display:flex;gap:10px}.row>*{flex:1}
+
+/* ===== PC / DESKTOP ADAPTATION ===== */
+@media (min-width:680px){
+  body{
+    align-items:center;
+    background:radial-gradient(ellipse at 20% 25%,rgba(91,140,255,.09) 0%,transparent 52%),radial-gradient(ellipse at 80% 75%,rgba(0,229,160,.06) 0%,transparent 52%),var(--bg);
+  }
+  header,main,#bnav{width:min(680px,100%);box-shadow:0 0 0 1px var(--bd)}
+  header{border-radius:var(--r) var(--r) 0 0}
+  #bnav{border-radius:0 0 var(--r) var(--r)}
+  .card-grid{grid-template-columns:repeat(3,1fr)}
+  .view{padding:20px 24px}
+  .modal-bg{align-items:center}
+  .modal{border-radius:var(--r);max-width:500px;max-height:85vh}
+  #toast{top:24px}
+}
+@media (min-width:1100px){
+  header,main,#bnav{width:min(860px,100%)}
+  .card-grid{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Loader -->
+<div id="loader"><div class="spinner"></div><span>Загрузка...</span></div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
+
+<!-- Header -->
+<header>
+  <button id="btn-back" onclick="goBack()">←</button>
+  <div id="hdr-title">📖 Словарь</div>
+  <span id="hdr-user" onclick="openUserMenu()" style="display:none"></span>
+  <button class="hdr-btn" id="btn-sync" onclick="syncData()" title="Синхронизация">🔄</button>
+</header>
+
+<!-- Content -->
+<main>
+  <!-- === LOGIN VIEW === -->
+  <section id="v-login" class="view">
+    <div class="login-wrap">
+      <div class="login-box">
+        <div class="login-logo"><div class="em">📖</div><h2>Словарь</h2><p>Войдите для продолжения</p></div>
+        <div class="input-group"><label>Логин</label><input type="text" id="inp-login" placeholder="Имя пользователя" autocomplete="username"></div>
+        <div class="input-group"><label>Пароль</label><input type="password" id="inp-pass" placeholder="Пароль" autocomplete="current-password"></div>
+        <button class="btn btn-primary mt8" onclick="doLogin()">Войти</button>
+        <button class="btn btn-ghost mt8" onclick="showRegister()">Регистрация</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- === REGISTER VIEW === -->
+  <section id="v-register" class="view">
+    <div class="login-wrap">
+      <div class="login-box">
+        <div class="login-logo"><div class="em">📝</div><h2>Регистрация</h2><p>Создайте аккаунт</p></div>
+        <div class="input-group"><label>Логин</label><input type="text" id="inp-reg-login" placeholder="Имя пользователя" autocomplete="username"></div>
+        <div class="input-group"><label>Пароль</label><input type="password" id="inp-reg-pass" placeholder="Пароль" autocomplete="new-password"></div>
+        <div class="input-group"><label>Пароль ещё раз</label><input type="password" id="inp-reg-pass2" placeholder="Подтвердите пароль" autocomplete="new-password"></div>
+        <button class="btn btn-primary mt8" onclick="doRegister()">Зарегистрироваться</button>
+        <button class="btn btn-ghost mt8" onclick="showLogin()">Уже есть аккаунт</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- === SETUP VIEW === -->
+  <section id="v-setup" class="view">
+    <div style="text-align:center;padding:20px 0 30px">
+      <div style="font-size:3rem;margin-bottom:10px">📖</div>
+      <h2 style="font-size:1.2rem;margin-bottom:6px">Словарь</h2>
+      <p style="font-size:.82rem;color:var(--tx2)">Учи слова на разных языках<br>с помощью Google Таблиц</p>
+    </div>
+    <div class="input-group">
+      <label>ID Google Таблицы</label>
+      <input type="text" id="inp-sid" placeholder="1BxiMVs0XRA5nFMdKvBd...">
+    </div>
+    <div class="input-group">
+      <label>JSON сервисного аккаунта</label>
+      <textarea id="inp-sa" rows="6" placeholder='Вставьте содержимое .json файла сервисного аккаунта...'></textarea>
+    </div>
+    <button class="btn btn-primary mt8" onclick="saveSetup()">Подключиться</button>
+    <button class="btn btn-orange mt8" onclick="initSheets()">🗃 Инициализировать таблицы</button>
+    <p style="font-size:.68rem;color:var(--tx3);margin-top:6px;text-align:center">Создаст листы languages, categories, words, users, ratings если их нет</p>
+    <button class="help-toggle mt8" onclick="toggleHelp()">📋 Инструкция по настройке</button>
+    <div class="help-box" id="help-box" style="display:none">
+      <b>1.</b> Создайте Google Таблицу с 3 листами:<br>
+      &nbsp;&nbsp;• <code>languages</code> — столбцы: code, name<br>
+      &nbsp;&nbsp;• <code>categories</code> — столбцы: id, name, icon<br>
+      &nbsp;&nbsp;• <code>words</code> — столбцы: category, lang_from, word_from, lang_to, word_to, transcription<br><br>
+      <b>2.</b> Первая строка каждого листа — заголовки<br><br>
+      <b>3.</b> Пример данных в листе <code>words</code>:<br>
+      &nbsp;&nbsp;<code>food | ru | Яблоко | en | Apple | ˈæpəl</code><br><br>
+      <b>4.</b> Откройте <code>console.cloud.google.com</code><br>
+      &nbsp;&nbsp;• Создайте проект → Включите Google Sheets API<br>
+      &nbsp;&nbsp;• Создайте Service Account (IAM → Service Accounts)<br>
+      &nbsp;&nbsp;• Создайте JSON ключ для сервисного аккаунта<br><br>
+      <b>5.</b> Откройте доступ к таблице для email сервисного аккаунта:<br>
+      &nbsp;&nbsp;<code>...@...iam.gserviceaccount.com</code> — Редактор<br><br>
+      <b>6.</b> ID таблицы — часть URL:<br>
+      &nbsp;&nbsp;<code>docs.google.com/spreadsheets/d/<b>{ID}</b>/edit</code>
+    </div>
+  </section>
+
+  <!-- === HOME VIEW === -->
+  <section id="v-home" class="view">
+    <div class="lang-pair">
+      <select id="sel-from"></select>
+      <span class="arrow">→</span>
+      <select id="sel-to"></select>
+      <button class="swap-btn" onclick="swapLangs()" title="Поменять направление">⇄</button>
+    </div>
+    <div class="stats-row" id="home-stats"></div>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="🔍 Поиск слов..." oninput="filterHome()">
+    </div>
+    <div class="section-title" id="cat-title">Категории</div>
+    <div class="card-grid" id="cat-grid"></div>
+    <div id="search-results" style="display:none"></div>
+  </section>
+
+  <!-- === WORDS LIST VIEW === -->
+  <section id="v-words" class="view">
+    <div class="flex-c mb16" style="justify-content:space-between">
+      <div style="font-size:.72rem;color:var(--tx2)" id="words-subtitle"></div>
+      <div class="flex-c gap8">
+        <button class="btn btn-sm btn-primary" onclick="openSessionConfig('cards')">🎴 Карточки</button>
+        <button class="btn btn-sm btn-ghost" onclick="openSessionConfig('quiz')">❓ Тест</button>
+      </div>
+    </div>
+    <div id="words-list"></div>
+    <button class="fab" onclick="openAddWord()" title="Добавить слово">+</button>
+  </section>
+
+  <!-- === FLASHCARDS VIEW === -->
+  <section id="v-cards" class="view" style="display:none;flex-direction:column;align-items:center;padding:16px">
+    <div style="width:100%;max-width:340px">
+      <div class="cards-header">
+        <div class="cards-progress"><b id="fc-cur">1</b> / <span id="fc-total">0</span></div>
+        <div class="toggle-row" style="padding:0">
+          <span style="font-size:.72rem;margin-right:6px">Обратный</span>
+          <div class="toggle" id="fc-reverse" onclick="toggleReverse()"></div>
+        </div>
+      </div>
+      <div class="prog-bar"><span id="fc-prog" style="width:0%"></span></div>
+    </div>
+    <div class="fc-wrap" id="fc-wrap">
+      <div class="fc" id="flashcard" onclick="flipCard()">
+        <div class="fc-face fc-front">
+          <div class="fc-lang" id="fc-lang-f"></div>
+          <div class="fc-word" id="fc-word-f"></div>
+          <div class="fc-hint">нажмите, чтобы перевернуть</div>
+          <button class="fc-speak-btn" onclick="event.stopPropagation();speakWord(false)">🔊</button>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-lang" id="fc-lang-b"></div>
+          <div class="fc-word" id="fc-word-b"></div>
+          <div class="fc-trans" id="fc-trans-b"></div>
+          <button class="fc-speak-btn" onclick="event.stopPropagation();speakWord(true)">🔊</button>
+        </div>
+      </div>
+    </div>
+    <div class="fc-actions" id="fc-actions">
+      <button class="fc-btn-no" onclick="cardAnswer(false)">✗ Учить</button>
+      <button class="fc-btn-yes" onclick="cardAnswer(true)">✓ Знаю</button>
+    </div>
+    <div class="fc-done" id="fc-done" style="display:none">
+      <h2>🎉 Сессия завершена!</h2>
+      <div class="done-stats">
+        <div class="ds"><b id="ds-known" style="color:var(--green)">0</b><span>Знаю</span></div>
+        <div class="ds"><b id="ds-learning" style="color:var(--orange)">0</b><span>Учить</span></div>
+        <div class="ds"><b id="ds-total">0</b><span>Всего</span></div>
+      </div>
+      <button class="btn btn-primary" onclick="openSessionConfig('cards')">🔄 Повторить</button>
+      <button class="btn btn-ghost mt8" onclick="navigate('words')">К списку слов</button>
+    </div>
+  </section>
+
+  <!-- === QUIZ VIEW === -->
+  <section id="v-quiz" class="view" style="flex-direction:column;align-items:center">
+    <div style="width:100%;max-width:380px">
+      <div class="prog-bar mb8"><span id="qz-prog" style="width:0%"></span></div>
+      <div class="quiz-score">Счёт: <b id="qz-score">0</b> / <span id="qz-total">0</span></div>
+      <div class="quiz-lang" id="qz-lang"></div>
+      <div class="quiz-question" id="qz-question"></div>
+      <div class="quiz-opts" id="qz-opts"></div>
+      <div id="qz-next" style="display:none;margin-top:16px">
+        <button class="btn btn-primary" onclick="nextQuizQ()">Далее →</button>
+      </div>
+    </div>
+    <div class="fc-done" id="qz-done" style="display:none">
+      <h2>🏆 Тест завершён!</h2>
+      <div class="done-stats">
+        <div class="ds"><b id="qzd-correct" style="color:var(--green)">0</b><span>Верно</span></div>
+        <div class="ds"><b id="qzd-wrong" style="color:var(--red)">0</b><span>Ошибки</span></div>
+        <div class="ds"><b id="qzd-pct" style="color:var(--blue)">0%</b><span>Результат</span></div>
+      </div>
+      <button class="btn btn-primary" onclick="openSessionConfig('quiz')">🔄 Повторить</button>
+      <button class="btn btn-ghost mt8" onclick="navigate('words')">К списку слов</button>
+    </div>
+  </section>
+
+  <!-- === RATING VIEW === -->
+  <section id="v-rating" class="view">
+    <div class="section-title">🏆 Рейтинг пользователей</div>
+    <div id="rating-list"></div>
+  </section>
+
+  <!-- === SETTINGS VIEW === -->
+  <section id="v-settings" class="view">
+    <div class="stabs" id="settings-tabs">
+      <div class="stab active" onclick="setSettingsTab('general')">Общие</div>
+      <div class="stab" onclick="setSettingsTab('langs')">Языки</div>
+      <div class="stab" onclick="setSettingsTab('cats')">Категории</div>
+      <div class="stab" onclick="setSettingsTab('data')">Данные</div>
+      <div class="stab" onclick="setSettingsTab('impexp')">Импорт/Экспорт</div>
+      <div class="stab" onclick="setSettingsTab('admin')" id="stab-admin" style="display:none">Админ</div>
+      <div class="stab" onclick="setSettingsTab('logs')" id="stab-logs" style="display:none">Журнал</div>
+    </div>
+    <div id="settings-content"></div>
+  </section>
+</main>
+
+<!-- Bottom Nav -->
+<nav id="bnav">
+  <button data-v="home" class="active" onclick="navigate('home')"><span class="ico">📚</span>Словарь</button>
+  <button data-v="cards" onclick="openSessionConfig('cards')"><span class="ico">🎴</span>Карточки</button>
+  <button data-v="quiz" onclick="openSessionConfig('quiz')"><span class="ico">❓</span>Тест</button>
+  <button data-v="rating" onclick="navigate('rating')"><span class="ico">🏆</span>Рейтинг</button>
+  <button data-v="settings" onclick="navigate('settings')"><span class="ico">⚙️</span>Настройки</button>
+</nav>
+
+<script>
+/* ===== CONSTANTS ===== */
+const LS_CFG='wl_config', LS_CACHE='wl_cache', LS_PROG='wl_progress', LS_SA='wl_sa', LS_USER='wl_user';
+const SHEETS_BASE='https://sheets.googleapis.com/v4/spreadsheets';
+const TOKEN_URI='https://oauth2.googleapis.com/token';
+const SCOPE='https://www.googleapis.com/auth/spreadsheets';
+const LANG_CODES={ru:'ru-RU',en:'en-US',ko:'ko-KR',fr:'fr-FR',de:'de-DE',es:'es-ES',it:'it-IT',ja:'ja-JP',zh:'zh-CN',ar:'ar-SA',tr:'tr-TR',pt:'pt-BR',hi:'hi-IN',pl:'pl-PL',uk:'uk-UA',kk:'kk-KZ',ky:'ky-KG'};
+const ALL_SHEETS=['languages','categories','words','users','ratings','logs'];
+const SHEET_HEADERS={languages:['code','name'],categories:['id','name','icon'],words:['category','lang_from','word_from','lang_to','word_to','transcription'],users:['login','password','role','status'],ratings:['login','words_learned','quizzes_done','quiz_score','last_active'],logs:['timestamp','user','action','details','type']};
+
+/* ===== STATE ===== */
+let cfg={spreadsheetId:''};
+let sa=null; // service account parsed JSON
+let data={languages:[],categories:[],words:[],users:[],ratings:[],logs:[]};
+let ui={view:'home',langFrom:'ru',langTo:'en',category:null,settingsTab:'general'};
+let progress={};
+let currentUser=null;
+let accessToken=null;
+let tokenExpiry=0;
+let navStack=['home'];
+
+/* Cards state */
+let fc={words:[],index:0,flipped:false,reverse:false,known:0,learning:0};
+/* Quiz state */
+let qz={words:[],index:0,score:0,answered:false,total:10};
+/* Import preview state */
+let _pendingImport=null;
+
+/* ===== INIT ===== */
+const Platform = window.parent?.PlatformAPI || null;
+
+function init(){
+  loadConfig();
+  loadProgress();
+  loadCache();
+  if (!Platform) {
+    const el=document.getElementById('v-setup');
+    if(el) el.innerHTML='<div style="padding:40px;text-align:center;color:#ff6b6b">Откройте приложение через платформу McGill</div>';
+    showView('setup'); return;
+  }
+  const profile = Platform.user.getProfile();
+  if (!profile) {
+    const el=document.getElementById('v-setup');
+    if(el) el.innerHTML='<div style="padding:40px;text-align:center;color:#ff6b6b">Войдите в платформу McGill</div>';
+    showView('setup'); return;
+  }
+  currentUser = { login: profile.login, role: profile.role, status: 'active' };
+  afterLogin();
+  initLangSelectors();
+  document.getElementById('sel-from').addEventListener('change',onLangChange);
+  document.getElementById('sel-to').addEventListener('change',onLangChange);
+
+  // Touch gestures for flashcard
+  let tx0=0,ty0=0;
+  const wrap=document.getElementById('fc-wrap');
+  wrap.addEventListener('touchstart',e=>{tx0=e.touches[0].clientX;ty0=e.touches[0].clientY},{passive:true});
+  wrap.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-tx0;
+    const dy=e.changedTouches[0].clientY-ty0;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
+      if(dx>0) cardAnswer(true); else cardAnswer(false);
+    }
+  },{passive:true});
+}
+
+/* ===== CONFIG ===== */
+function loadConfig(){
+  try{const s=localStorage.getItem(LS_CFG);if(s)cfg=JSON.parse(s)}catch(e){}
+  if(cfg.langFrom) ui.langFrom=cfg.langFrom;
+  if(cfg.langTo) ui.langTo=cfg.langTo;
+}
+function saveCfg(){
+  cfg.langFrom=ui.langFrom; cfg.langTo=ui.langTo;
+  localStorage.setItem(LS_CFG,JSON.stringify(cfg));
+}
+function loadSA(){
+  try{const s=localStorage.getItem(LS_SA);if(s)sa=JSON.parse(s)}catch(e){}
+}
+function saveSA(){
+  if(sa) localStorage.setItem(LS_SA,JSON.stringify(sa));
+  else localStorage.removeItem(LS_SA);
+}
+function loadProgress(){
+  try{const s=localStorage.getItem(LS_PROG);if(s)progress=JSON.parse(s)}catch(e){}
+}
+function saveProgress(){localStorage.setItem(LS_PROG,JSON.stringify(progress))}
+function loadCache(){
+  try{const s=localStorage.getItem(LS_CACHE);if(s) data=JSON.parse(s)}catch(e){}
+}
+function saveCache(){localStorage.setItem(LS_CACHE,JSON.stringify(data))}
+function loadUser(){try{const s=localStorage.getItem(LS_USER);if(s)currentUser=JSON.parse(s)}catch(e){}}
+function saveUser(){if(currentUser)localStorage.setItem(LS_USER,JSON.stringify(currentUser));else localStorage.removeItem(LS_USER)}
+
+function afterLogin(){
+  document.getElementById('hdr-user').textContent=currentUser.login;
+  document.getElementById('hdr-user').style.display='inline';
+  if(currentUser.role==='admin'){
+    document.getElementById('stab-admin').style.display='';
+    document.getElementById('stab-logs').style.display='';
+  }
+  showView('home');
+  syncData();
+}
+
+/* ===== NAVIGATION ===== */
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>{v.classList.remove('active');v.style.display='';});
+  const el=document.getElementById('v-'+name);
+  if(el){el.classList.add('active');if(name==='cards')el.style.display='flex';}
+  const noNav=['login','register','setup'];
+  document.getElementById('bnav').style.display=noNav.includes(name)?'none':'flex';
+}
+
+function navigate(name,params){
+  if(name===ui.view&&!params) return;
+  ui.view=name;
+  navStack.push(name);
+  showView(name);
+  // Update header
+  const titles={home:'📖 Словарь',words:'📝 Слова',cards:'🎴 Карточки',quiz:'❓ Тест',settings:'⚙️ Настройки',setup:'📖 Словарь'};
+  document.getElementById('hdr-title').textContent=titles[name]||'Словарь';
+  // Back button
+  const backViews=['words','cards','quiz'];
+  document.getElementById('btn-back').style.display=backViews.includes(name)?'block':'none';
+  // Bottom nav
+  document.querySelectorAll('#bnav button').forEach(b=>{
+    b.classList.toggle('active',b.dataset.v===name||(name==='words'&&b.dataset.v==='home'));
+  });
+  // Render
+  if(name==='home') renderHome();
+  else if(name==='words') renderWords();
+  else if(name==='cards'){if(!params?._skipInit) initCards();}
+  else if(name==='quiz'){if(!params?._skipInit) initQuiz();}
+  else if(name==='rating') renderRating();
+  else if(name==='settings') renderSettings();
+}
+
+function goBack(){
+  navStack.pop();
+  const prev=navStack[navStack.length-1]||'home';
+  ui.view=prev;
+  showView(prev);
+  navigate(prev);
+}
+
+/* ===== PLATFORM API WRAPPERS (replaces JWT / Service Account auth) ===== */
+async function apiRead(range){ return Platform.db.read(range); }
+async function apiAppend(range,values){ return Platform.db.append(range,values); }
+async function apiUpdate(range,values){ return Platform.db.update(range,values); }
+async function apiClearRow(sheet,rowIndex){
+  const headers=SHEET_HEADERS[sheet]||[];
+  return Platform.db.update(sheet+'!'+rowIndex+':'+rowIndex,[new Array(headers.length||8).fill('')]);
+}
+async function apiBatchUpdate(requests){ return Platform.db.batchStructural(requests); }
+async function apiBatchValueUpdate(batchData){ return Platform.db.batchValues(batchData); }
+async function apiGetSheets(){
+  const found=[];
+  for(const name of ALL_SHEETS){
+    try{ await Platform.db.read(name+'!A1'); found.push(name); }catch{}
+  }
+  return found;
+}
+
+
+/* ===== INIT SHEETS ===== */
+async function initSheets(silent=false){
+  if(!silent) showLoader(true);
+  try{
+    const existing=await apiGetSheets();
+    const reqs=[];
+    for(const name of ALL_SHEETS){if(!existing.includes(name))reqs.push({addSheet:{properties:{title:name}}})}
+    if(reqs.length)await apiBatchUpdate(reqs);
+    for(const name of ALL_SHEETS){
+      const rows=await apiRead(name+'!1:1');
+      if(!rows.values||!rows.values.length)await apiAppend(name+'!A1',[SHEET_HEADERS[name]]);
+    }
+    const users=await apiRead('users!A2:D');
+    if(!users.values||!users.values.length)await apiAppend('users!A:D',[['Kutman','123','admin','active']]);
+    if(!silent) toast('Таблицы инициализированы','ok');
+  }catch(e){toast('Ошибка инициализации: '+e.message,'err')}
+  if(!silent) showLoader(false);
+}
+
+/* ===== AUTH ===== */
+function showLogin(){showView('login')}
+function showRegister(){showView('register')}
+
+async function ensureUsersLoaded(){
+  if(data.users.length)return;
+  try{
+    const res=await apiRead('users!A2:D');
+    if(res.values&&res.values.length){
+      data.users=res.values.filter(r=>r[0]).map(r=>({login:r[0],password:r[1]||'',role:r[2]||'user',status:r[3]||'active'}));
+      saveCache();
+    }
+  }catch(e){}
+  if(!data.users.length){data.users=[{login:'Kutman',password:'123',role:'admin',status:'active'}]}
+}
+
+async function doLogin(){
+  const login=document.getElementById('inp-login').value.trim();
+  const pass=document.getElementById('inp-pass').value.trim();
+  if(!login||!pass){toast('Введите логин и пароль','err');return}
+  showLoader(true);
+  try{
+    await ensureUsersLoaded();
+    const u=data.users.find(x=>x.login.toLowerCase()===login.toLowerCase());
+    if(!u){toast('Пользователь не найден','err');showLoader(false);return}
+    if(u.password!==pass){toast('Неверный пароль','err');showLoader(false);return}
+    if(u.status==='pending'){toast('Аккаунт ожидает подтверждения','err');showLoader(false);return}
+    if(u.status==='rejected'){toast('Аккаунт отклонён','err');showLoader(false);return}
+    currentUser={login:u.login,role:u.role};saveUser();
+    logToSheet('login','Вход: '+u.login,'ok');
+    toast('Добро пожаловать, '+u.login+'!','ok');
+    afterLogin();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+async function doRegister(){
+  const login=document.getElementById('inp-reg-login').value.trim();
+  const pass=document.getElementById('inp-reg-pass').value.trim();
+  const pass2=document.getElementById('inp-reg-pass2').value.trim();
+  if(!login||!pass){toast('Заполните все поля','err');return}
+  if(pass!==pass2){toast('Пароли не совпадают','err');return}
+  showLoader(true);
+  try{
+    await ensureUsersLoaded();
+    if(data.users.find(x=>x.login.toLowerCase()===login.toLowerCase())){toast('Логин занят','err');showLoader(false);return}
+    await apiAppend('users!A:D',[[login,pass,'user','pending']]);
+    data.users.push({login,password:pass,role:'user',status:'pending'});saveCache();
+    toast('Регистрация отправлена. Ожидайте подтверждения.','ok');
+    showLogin();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+function openUserMenu(){
+  if(!currentUser)return;
+  showModal(`
+    <h3>${esc(currentUser.login)}</h3>
+    <p style="color:var(--tx2);font-size:.82rem;margin-bottom:16px">Роль: ${esc(currentUser.role)}</p>
+    <button class="btn btn-ghost mb8" onclick="openChangePass()">Сменить пароль</button>
+    <button class="btn btn-red" onclick="doLogout()">Выйти</button>
+  `);
+}
+
+function openChangePass(){
+  closeModal();
+  showModal(`
+    <h3>Смена пароля</h3>
+    <div class="input-group"><label>Текущий пароль</label><input type="password" id="m-old-pass"></div>
+    <div class="input-group"><label>Новый пароль</label><input type="password" id="m-new-pass"></div>
+    <div class="input-group"><label>Повтор</label><input type="password" id="m-new-pass2"></div>
+    <button class="btn btn-primary" onclick="doChangePass()">Сохранить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+
+async function doChangePass(){
+  const old=document.getElementById('m-old-pass').value;
+  const np=document.getElementById('m-new-pass').value;
+  const np2=document.getElementById('m-new-pass2').value;
+  if(!old||!np){toast('Заполните поля','err');return}
+  if(np!==np2){toast('Пароли не совпадают','err');return}
+  const idx=data.users.findIndex(u=>u.login===currentUser.login);
+  if(idx<0){toast('Пользователь не найден','err');return}
+  if(data.users[idx].password!==old){toast('Неверный текущий пароль','err');return}
+  showLoader(true);
+  try{await apiUpdate('users!B'+(idx+2),np);data.users[idx].password=np;saveCache();toast('Пароль изменён','ok');closeModal()}catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+
+function doLogout(){
+  logToSheet('logout','Выход из системы','info');
+  currentUser=null;closeModal();
+  // Inform user that platform controls the session
+  try{ Platform?.ui?.showToast('Для выхода используйте кнопку ← на платформе','info'); }catch{}
+}
+
+function logToSheet(action,details,type='info'){
+  if(!Platform) return;
+  const user=currentUser?.login||'system';
+  const row=[new Date().toISOString(),user,action,String(details),type];
+  apiAppend('logs!A:E',[row]).catch(()=>{});
+}
+
+/* ===== SYNC ===== */
+async function syncData(){
+  showLoader(true);
+  try{
+    let results=await Promise.allSettled([
+      apiRead('languages!A2:B100'),
+      apiRead('categories!A2:C100'),
+      apiRead('words!A2:F5000'),
+      apiRead('users!A2:D'),
+      apiRead('ratings!A2:E')
+    ]);
+    // Auto-init if any sheet is missing or users table is empty
+    const needsInit=results.some(r=>r.status==='rejected')||
+      (results[3].status==='fulfilled'&&!(results[3].value.values?.length));
+    if(needsInit){
+      toast('Инициализация таблиц...','');
+      await initSheets(true);
+      results=await Promise.allSettled([
+        apiRead('languages!A2:B100'),
+        apiRead('categories!A2:C100'),
+        apiRead('words!A2:F5000'),
+        apiRead('users!A2:D'),
+        apiRead('ratings!A2:E')
+      ]);
+    }
+    if(results[0].status==='fulfilled'){const v=results[0].value;data.languages=(v.values||[]).map(r=>({code:(r[0]||'').trim(),name:(r[1]||'').trim()})).filter(l=>l.code&&l.name)}
+    if(results[1].status==='fulfilled'){const v=results[1].value;data.categories=(v.values||[]).map(r=>({id:(r[0]||'').trim(),name:(r[1]||'').trim(),icon:(r[2]||'📁').trim()})).filter(c=>c.id&&c.name)}
+    if(results[2].status==='fulfilled'){const v=results[2].value;data.words=(v.values||[]).map(r=>({
+      category:(r[0]||'').trim(),
+      langFrom:(r[1]||'').trim(),
+      wordFrom:(r[2]||'').trim(),
+      langTo:(r[3]||'').trim(),
+      wordTo:(r[4]||'').trim(),
+      transcription:(r[5]||'').trim()
+    })).filter(w=>w.wordFrom&&w.wordTo)}
+    if(results[3].status==='fulfilled'){const v=results[3].value;if(v.values&&v.values.length)data.users=v.values.filter(r=>r[0]).map(r=>({login:r[0],password:r[1]||'',role:r[2]||'user',status:r[3]||'active'}))}
+    if(results[4].status==='fulfilled'){const v=results[4].value;if(v.values&&v.values.length)data.ratings=v.values.filter(r=>r[0]).map(r=>({login:r[0],words_learned:parseInt(r[1])||0,quizzes_done:parseInt(r[2])||0,quiz_score:parseInt(r[3])||0,last_active:r[4]||''}))}
+    saveCache();
+    initLangSelectors();
+    toast('Данные обновлены ✓','ok');
+    if(ui.view==='home') renderHome();
+    else if(ui.view==='settings') renderSettings();
+  }catch(e){
+    console.error(e);
+    toast('Ошибка: '+e.message,'err');
+  }
+  showLoader(false);
+}
+
+/* ===== LANG SELECTORS ===== */
+function initLangSelectors(){
+  const sf=document.getElementById('sel-from'),st=document.getElementById('sel-to');
+  sf.innerHTML='';st.innerHTML='';
+  const langs=data.languages.length?data.languages:[{code:'ru',name:'Русский'},{code:'en',name:'English'}];
+  langs.forEach(l=>{
+    sf.appendChild(new Option(l.name,l.code));
+    st.appendChild(new Option(l.name,l.code));
+  });
+  sf.value=ui.langFrom||langs[0]?.code||'ru';
+  st.value=ui.langTo||(langs[1]?.code||langs[0]?.code||'en');
+  ui.langFrom=sf.value; ui.langTo=st.value;
+}
+
+function onLangChange(){
+  ui.langFrom=document.getElementById('sel-from').value;
+  ui.langTo=document.getElementById('sel-to').value;
+  saveCfg();
+  renderHome();
+}
+
+function swapLangs(){
+  const t=ui.langFrom; ui.langFrom=ui.langTo; ui.langTo=t;
+  document.getElementById('sel-from').value=ui.langFrom;
+  document.getElementById('sel-to').value=ui.langTo;
+  saveCfg(); renderHome();
+}
+
+/* ===== HELPERS ===== */
+function getWords(catId){
+  return data.words.filter(w=>w.langFrom===ui.langFrom&&w.langTo===ui.langTo&&(!catId||w.category===catId));
+}
+function wordKey(w){return `${w.langFrom}_${w.langTo}_${w.category}_${w.wordFrom}`}
+function getLevel(w){const p=progress[wordKey(w)];return p?Math.min(p.known||0,3):0}
+function getLangName(code){const l=data.languages.find(x=>x.code===code);return l?l.name:code}
+
+/* ===== HOME VIEW ===== */
+function renderHome(){
+  const all=getWords();
+  const learned=all.filter(w=>getLevel(w)>=3).length;
+  const learning=all.filter(w=>{const l=getLevel(w);return l>=1&&l<3}).length;
+
+  document.getElementById('home-stats').innerHTML=`
+    <div class="stat-card"><div class="st-num">${all.length}</div><div class="st-lbl">Слов</div></div>
+    <div class="stat-card"><div class="st-num" style="color:var(--orange)">${learning}</div><div class="st-lbl">Учу</div></div>
+    <div class="stat-card"><div class="st-num" style="color:var(--green)">${learned}</div><div class="st-lbl">Выучено</div></div>`;
+
+  const grid=document.getElementById('cat-grid');
+  grid.innerHTML='';
+  const cats=data.categories.length?data.categories:[{id:'_all',name:'Все слова',icon:'📚'}];
+  cats.forEach(c=>{
+    const cw=getWords(c.id==='_all'?null:c.id);
+    if(cw.length===0&&c.id!=='_all') return;
+    const cl=cw.filter(w=>getLevel(w)>=3).length;
+    const pct=cw.length?Math.round(cl/cw.length*100):0;
+    const d=document.createElement('div');
+    d.className='cat-card';
+    d.addEventListener('click',()=>{ui.category=c.id==='_all'?null:c.id;navigate('words')});
+
+    const iconEl=document.createElement('div');iconEl.className='cat-icon';iconEl.textContent=c.icon;
+    const nameEl=document.createElement('div');nameEl.className='cat-name';nameEl.textContent=c.name;
+    const countEl=document.createElement('div');countEl.className='cat-count';countEl.textContent=`${cw.length} слов · ${pct}%`;
+    const progWrap=document.createElement('div');progWrap.className='cat-prog';
+    const progBar=document.createElement('span');progBar.style.width=pct+'%';
+    progWrap.appendChild(progBar);
+
+    d.appendChild(iconEl);d.appendChild(nameEl);d.appendChild(countEl);d.appendChild(progWrap);
+    grid.appendChild(d);
+  });
+
+  // Add "all" card if there are categories
+  if(data.categories.length>0){
+    const allW=getWords();
+    const allL=allW.filter(w=>getLevel(w)>=3).length;
+    const allPct=allW.length?Math.round(allL/allW.length*100):0;
+    const d=document.createElement('div');
+    d.className='cat-card';
+    d.style.borderColor='var(--blue)';d.style.borderStyle='dashed';
+    d.addEventListener('click',()=>{ui.category=null;navigate('words')});
+
+    const iconEl=document.createElement('div');iconEl.className='cat-icon';iconEl.textContent='📚';
+    const nameEl=document.createElement('div');nameEl.className='cat-name';nameEl.textContent='Все слова';
+    const countEl=document.createElement('div');countEl.className='cat-count';countEl.textContent=`${allW.length} слов · ${allPct}%`;
+    const progWrap=document.createElement('div');progWrap.className='cat-prog';
+    const progBar=document.createElement('span');progBar.style.width=allPct+'%';
+    progWrap.appendChild(progBar);
+
+    d.appendChild(iconEl);d.appendChild(nameEl);d.appendChild(countEl);d.appendChild(progWrap);
+    grid.appendChild(d);
+  }
+
+  document.getElementById('search-results').style.display='none';
+  document.getElementById('cat-title').style.display='';
+  document.getElementById('cat-grid').style.display='';
+  document.getElementById('search-input').value='';
+}
+
+function filterHome(){
+  const q=document.getElementById('search-input').value.trim().toLowerCase();
+  const sr=document.getElementById('search-results');
+  const cg=document.getElementById('cat-grid');
+  const ct=document.getElementById('cat-title');
+  if(!q){sr.style.display='none';cg.style.display='';ct.style.display='';return}
+  cg.style.display='none';ct.style.display='none';sr.style.display='block';
+  const all=getWords();
+  const filtered=all.filter(w=>w.wordFrom.toLowerCase().includes(q)||w.wordTo.toLowerCase().includes(q)||w.transcription.toLowerCase().includes(q));
+  sr.innerHTML='';
+  if(!filtered.length){sr.innerHTML='<div class="empty"><p>Ничего не найдено</p></div>';return}
+  filtered.slice(0,50).forEach(w=>{sr.appendChild(createWordItem(w))});
+}
+
+/* ===== WORDS LIST VIEW ===== */
+function renderWords(){
+  const words=getWords(ui.category);
+  const catName=ui.category?data.categories.find(c=>c.id===ui.category)?.name:'Все слова';
+  document.getElementById('hdr-title').textContent=catName||'Слова';
+  document.getElementById('words-subtitle').textContent=`${words.length} слов · ${getLangName(ui.langFrom)} → ${getLangName(ui.langTo)}`;
+
+  const list=document.getElementById('words-list');
+  list.innerHTML='';
+  if(!words.length){
+    list.innerHTML='<div class="empty"><div class="em-icon">📭</div><p>Нет слов в этой категории</p><button class="btn btn-primary btn-sm" onclick="openAddWord()">Добавить слова</button></div>';
+    return;
+  }
+  words.forEach(w=>list.appendChild(createWordItem(w)));
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function createWordItem(w){
+  const idx=data.words.indexOf(w);
+  const d=document.createElement('div');
+  d.className='word-item';
+  const lvl=getLevel(w);
+  const dot=document.createElement('div');
+  dot.className='w-level l'+lvl;
+  const main=document.createElement('div');
+  main.className='w-main';
+  const from=document.createElement('div');from.className='w-from';from.textContent=w.wordFrom;
+  const to=document.createElement('div');to.className='w-to';to.textContent=w.wordTo;
+  main.appendChild(from);main.appendChild(to);
+  if(w.transcription){const tr=document.createElement('div');tr.className='w-tr';tr.textContent=w.transcription;main.appendChild(tr)}
+  const editBtn=document.createElement('button');
+  editBtn.className='w-edit';editBtn.textContent='✏';
+  editBtn.addEventListener('click',e=>{e.stopPropagation();openEditWord(idx)});
+  const spk=document.createElement('button');
+  spk.className='w-speak';spk.textContent='🔊';
+  spk.addEventListener('click',e=>{e.stopPropagation();speak(w.wordTo,w.langTo)});
+  d.appendChild(dot);d.appendChild(main);d.appendChild(editBtn);d.appendChild(spk);
+  return d;
+}
+
+/* ===== FLASHCARDS ===== */
+function openSessionConfig(mode){
+  // Build available categories based on current lang pair
+  const allWords=getWords();
+  const usedCatIds=[...new Set(allWords.map(w=>w.category))];
+  const cats=data.categories.filter(c=>usedCatIds.includes(c.id));
+  const defaultCat=ui.category||'_all';
+  const wordCounts=[10,20,30,50,100,'Все'];
+  const modeLabel=mode==='cards'?'🎴 Карточки':'❓ Тест';
+  const modeColor=mode==='cards'?'var(--blue)':'var(--orange)';
+
+  const catRows=`
+    <div class="sconf-cat-row sel" data-cat="_all" onclick="_scToggleCat(this,'_all')">
+      <span class="sci">📚</span>
+      <span class="scn">Все категории</span>
+      <span class="scc">${allWords.length} слов</span>
+      <div class="schk">✓</div>
+    </div>`+cats.map(c=>{
+      const cnt=getWords(c.id).length;
+      const sel=defaultCat===c.id;
+      return `<div class="sconf-cat-row${sel?' sel':''}" data-cat="${esc(c.id)}" onclick="_scToggleCat(this,'${esc(c.id)}')"><span class="sci">${c.icon}</span><span class="scn">${esc(c.name)}</span><span class="scc">${cnt} слов</span><div class="schk">${sel?'✓':''}</div></div>`;
+    }).join('');
+
+  const getDefault=()=>{
+    const pool=allWords;
+    const d=Math.min(20,pool.length);
+    const opts=[10,20,30,50,100];
+    return opts.find(n=>n>=pool.length)||d;
+  };
+
+  const chipHtml=wordCounts.map(n=>{
+    const label=n==='Все'?'Все':n;
+    return `<div class="sconf-chip" data-n="${n}" onclick="_scSelectN(this,${n==='Все'?9999:n})">${label}</div>`;
+  }).join('');
+
+  showModal(`
+    <h3 style="color:${modeColor}">${modeLabel}</h3>
+    <div class="input-group" style="margin-bottom:8px"><label>Категория</label></div>
+    <div class="sconf-cats" id="sc-cats">${catRows}</div>
+    <div class="input-group" style="margin-top:12px;margin-bottom:8px"><label>Количество слов</label></div>
+    <div class="sconf-grid" id="sc-chips">${chipHtml}</div>
+    <div style="font-size:.72rem;color:var(--tx2);margin:8px 0 14px" id="sc-avail"></div>
+    <button class="btn btn-primary" style="background:${modeColor}" onclick="_scStart('${mode}')">
+      ${mode==='cards'?'Начать карточки':'Начать тест'} →
+    </button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+
+  // Pre-select default chip + default cat row
+  if(defaultCat!=='_all'){
+    const allRow=document.querySelector('.sconf-cat-row[data-cat="_all"]');
+    if(allRow){allRow.classList.remove('sel');allRow.querySelector('.schk').textContent='';}
+  }
+  _scUpdateAvail();
+  // Auto-select closest word count chip
+  const curPool=_scGetPool();
+  const best=[10,20,30,50,100].reduce((a,b)=>Math.abs(b-curPool.length)<Math.abs(a-curPool.length)?b:a,20);
+  const chips=document.querySelectorAll('#sc-chips .sconf-chip');
+  const selChip=[...chips].find(c=>parseInt(c.dataset.n)===best||(best>=100&&c.dataset.n==='100')||c.dataset.n==='Все'&&curPool.length<10)||chips[1]||chips[0];
+  if(selChip)selChip.classList.add('sel');
+}
+
+function _scToggleCat(el,catId){
+  document.querySelectorAll('#sc-cats .sconf-cat-row').forEach(r=>{r.classList.remove('sel');r.querySelector('.schk').textContent=''});
+  el.classList.add('sel');
+  el.querySelector('.schk').textContent='✓';
+  _scUpdateAvail();
+}
+
+function _scSelectN(el,n){
+  document.querySelectorAll('#sc-chips .sconf-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  _scUpdateAvail();
+}
+
+function _scGetPool(){
+  const selCat=document.querySelector('#sc-cats .sconf-cat-row.sel')?.dataset.cat||'_all';
+  const catId=selCat==='_all'?null:selCat;
+  return getWords(catId);
+}
+
+function _scUpdateAvail(){
+  const pool=_scGetPool();
+  const selN=document.querySelector('#sc-chips .sconf-chip.sel')?.dataset.n||'20';
+  const n=selN==='Все'?pool.length:parseInt(selN);
+  const actual=Math.min(n,pool.length);
+  const box=document.getElementById('sc-avail');
+  if(box) box.textContent=`Будет ${actual} из ${pool.length} доступных слов`;
+}
+
+function _scStart(mode){
+  const selCat=document.querySelector('#sc-cats .sconf-cat-row.sel')?.dataset.cat||'_all';
+  const catId=selCat==='_all'?null:selCat;
+  const selN=document.querySelector('#sc-chips .sconf-chip.sel')?.dataset.n||'20';
+  const limit=selN==='Все'?99999:parseInt(selN);
+  ui.category=catId;
+  closeModal();
+  if(mode==='cards') initCards(limit);
+  else initQuiz(limit);
+  navigate(mode,{_skipInit:true});
+}
+
+function initCards(limit){
+  limit=limit||99999;
+  const words=getWords(ui.category);
+  if(words.length===0){toast('Нет слов для изучения','err');goBack();return;}
+  const newW=words.filter(w=>getLevel(w)===0);
+  const learnW=words.filter(w=>{const l=getLevel(w);return l>=1&&l<3});
+  const mastW=words.filter(w=>getLevel(w)>=3);
+  const ordered=[...shuffle(newW),...shuffle(learnW),...shuffle(mastW)];
+  const sliced=ordered.slice(0,limit);
+  fc={words:sliced.length?sliced:shuffle([...words]).slice(0,limit),index:0,flipped:false,reverse:document.getElementById('fc-reverse').classList.contains('on'),known:0,learning:0};
+  document.getElementById('fc-total').textContent=fc.words.length;
+  document.getElementById('fc-done').style.display='none';
+  document.getElementById('fc-actions').style.display='flex';
+  document.getElementById('fc-wrap').style.display='flex';
+  showCard();
+}
+
+function startCards(){openSessionConfig('cards')}
+
+function showCard(){
+  if(fc.index>=fc.words.length){showCardsDone();return}
+  const w=fc.words[fc.index];
+  const card=document.getElementById('flashcard');
+  card.classList.remove('flipped','swipe-r','swipe-l');
+  fc.flipped=false;
+  document.getElementById('fc-cur').textContent=fc.index+1;
+  document.getElementById('fc-prog').style.width=Math.round((fc.index/fc.words.length)*100)+'%';
+
+  const wFrom=fc.reverse?w.wordTo:w.wordFrom;
+  const wTo=fc.reverse?w.wordFrom:w.wordTo;
+  const lFrom=fc.reverse?w.langTo:w.langFrom;
+  const lTo=fc.reverse?w.langFrom:w.langTo;
+
+  document.getElementById('fc-lang-f').textContent=getLangName(lFrom);
+  document.getElementById('fc-word-f').textContent=wFrom;
+  document.getElementById('fc-lang-b').textContent=getLangName(lTo);
+  document.getElementById('fc-word-b').textContent=wTo;
+  document.getElementById('fc-trans-b').textContent=w.transcription||'';
+}
+
+function flipCard(){
+  const card=document.getElementById('flashcard');
+  fc.flipped=!fc.flipped;
+  card.classList.toggle('flipped',fc.flipped);
+  if(navigator.vibrate) navigator.vibrate(10);
+}
+
+function cardAnswer(known){
+  const w=fc.words[fc.index];
+  const key=wordKey(w);
+  if(!progress[key]) progress[key]={known:0,attempts:0,lastSeen:0};
+  progress[key].attempts++;
+  progress[key].lastSeen=Date.now();
+  if(known){progress[key].known=Math.min((progress[key].known||0)+1,5);fc.known++}
+  else{progress[key].known=0;fc.learning++}
+  saveProgress();
+
+  const card=document.getElementById('flashcard');
+  card.classList.add(known?'swipe-r':'swipe-l');
+  setTimeout(()=>{fc.index++;showCard()},300);
+}
+
+function toggleReverse(){
+  const el=document.getElementById('fc-reverse');
+  el.classList.toggle('on');
+  fc.reverse=el.classList.contains('on');
+  showCard();
+}
+
+function showCardsDone(){
+  document.getElementById('fc-actions').style.display='none';
+  document.getElementById('fc-wrap').style.display='none';
+  document.getElementById('fc-done').style.display='block';
+  document.getElementById('ds-known').textContent=fc.known;
+  document.getElementById('ds-learning').textContent=fc.learning;
+  document.getElementById('ds-total').textContent=fc.words.length;
+  document.getElementById('fc-prog').style.width='100%';
+}
+
+function speakWord(isBack){
+  const w=fc.words[fc.index];
+  if(!w) return;
+  if(isBack){speak(fc.reverse?w.wordFrom:w.wordTo,fc.reverse?w.langFrom:w.langTo)}
+  else{speak(fc.reverse?w.wordTo:w.wordFrom,fc.reverse?w.langTo:w.langFrom)}
+}
+
+/* ===== QUIZ ===== */
+function initQuiz(limit){
+  limit=limit||99999;
+  const words=getWords(ui.category);
+  if(words.length<2){toast('Нужно минимум 2 слова для теста','err');goBack();return}
+  qz={words:shuffle([...words]).slice(0,Math.min(words.length,limit)),index:0,score:0,answered:false,allWords:words};
+  document.getElementById('qz-done').style.display='none';
+  document.getElementById('qz-total').textContent=qz.words.length;
+  showQuizQ();
+}
+
+function startQuiz(){openSessionConfig('quiz')}
+
+function showQuizQ(){
+  if(qz.index>=qz.words.length){showQuizDone();return}
+  qz.answered=false;
+  const w=qz.words[qz.index];
+  document.getElementById('qz-score').textContent=qz.score;
+  document.getElementById('qz-prog').style.width=Math.round((qz.index/qz.words.length)*100)+'%';
+  document.getElementById('qz-lang').textContent=getLangName(w.langFrom)+' → '+getLangName(w.langTo);
+  document.getElementById('qz-question').textContent=w.wordFrom;
+  document.getElementById('qz-next').style.display='none';
+
+  // Generate options
+  const correct=w.wordTo;
+  const pool=qz.allWords.filter(x=>x.wordTo!==correct&&x.langTo===w.langTo);
+  const wrongs=shuffle(pool).slice(0,3).map(x=>x.wordTo);
+  // If not enough wrong answers, fill with dummy
+  while(wrongs.length<3) wrongs.push('—');
+  const opts=shuffle([correct,...wrongs]);
+
+  const container=document.getElementById('qz-opts');
+  container.innerHTML='';
+  opts.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.className='quiz-opt';
+    btn.textContent=opt;
+    btn.addEventListener('click',()=>answerQuiz(btn,opt,correct,w));
+    container.appendChild(btn);
+  });
+}
+
+function answerQuiz(btn,selected,correct,w){
+  if(qz.answered) return;
+  qz.answered=true;
+  const isCorrect=selected===correct;
+  if(isCorrect) qz.score++;
+
+  // Update progress
+  const key=wordKey(w);
+  if(!progress[key]) progress[key]={known:0,attempts:0,lastSeen:0};
+  progress[key].attempts++;
+  progress[key].lastSeen=Date.now();
+  if(isCorrect) progress[key].known=Math.min((progress[key].known||0)+1,5);
+  else progress[key].known=Math.max((progress[key].known||0)-1,0);
+  saveProgress();
+
+  document.querySelectorAll('.quiz-opt').forEach(b=>{
+    b.classList.add('disabled');
+    if(b.textContent===correct) b.classList.add('correct');
+  });
+  if(!isCorrect) btn.classList.add('wrong');
+
+  document.getElementById('qz-score').textContent=qz.score;
+  if(navigator.vibrate) navigator.vibrate(isCorrect?10:[20,30,20]);
+
+  document.getElementById('qz-next').style.display='block';
+}
+
+function nextQuizQ(){qz.index++;showQuizQ()}
+
+function showQuizDone(){
+  document.getElementById('qz-done').style.display='block';
+  document.getElementById('qz-opts').innerHTML='';
+  document.getElementById('qz-next').style.display='none';
+  document.getElementById('qz-prog').style.width='100%';
+  const wrong=qz.words.length-qz.score;
+  document.getElementById('qzd-correct').textContent=qz.score;
+  document.getElementById('qzd-wrong').textContent=wrong;
+  document.getElementById('qzd-pct').textContent=Math.round(qz.score/qz.words.length*100)+'%';
+  document.querySelector('#v-quiz .quiz-score').style.display='none';
+  document.querySelector('#v-quiz .quiz-lang').style.display='none';
+  document.querySelector('#v-quiz .quiz-question').style.display='none';
+  updateRating();
+}
+
+/* ===== SETTINGS VIEW ===== */
+function setSettingsTab(tab){
+  ui.settingsTab=tab;
+  document.querySelectorAll('#settings-tabs .stab').forEach(s=>s.classList.toggle('active',s.textContent.trim()==={general:'Общие',langs:'Языки',cats:'Категории',data:'Данные',impexp:'Импорт/Экспорт',admin:'Админ',logs:'Журнал'}[tab]));
+  renderSettings();
+}
+
+function renderSettings(){
+  const c=document.getElementById('settings-content');
+  if(!c)return;
+  const tab=ui.settingsTab||'general';
+  if(tab==='general') renderSettingsGeneral(c);
+  else if(tab==='langs') renderSettingsLangs(c);
+  else if(tab==='cats') renderSettingsCats(c);
+  else if(tab==='data') renderSettingsData(c);
+  else if(tab==='impexp') renderSettingsImpExp(c);
+  else if(tab==='admin') renderSettingsAdmin(c);
+  else if(tab==='logs') renderSettingsLogs(c);
+}
+
+function renderSettingsGeneral(c){
+  c.innerHTML=`
+    <div class="set-section">
+      <h3>📋 Подключение</h3>
+      <div class="set-row"><span>Spreadsheet ID</span><span class="badge">${cfg.spreadsheetId?cfg.spreadsheetId.slice(0,12)+'…':'Не задан'}</span></div>
+      <div class="set-row"><span>Сервисный аккаунт</span><span class="badge">${sa?.client_email||'Не настроен'}</span></div>
+      <button class="btn btn-sm btn-ghost mt8" onclick="openChangeSID()">Изменить ID</button>
+      <button class="btn btn-sm btn-ghost mt8" onclick="openChangeSA()">Изменить SA</button>
+      <button class="btn btn-sm btn-orange mt8" onclick="initSheetsFromSettings()">🗃 Инициализировать таблицы</button>
+    </div>
+    <div class="set-section">
+      <h3>📊 Статистика</h3>
+      <div class="set-row"><span>Слов в кэше</span><span class="badge">${data.words.length}</span></div>
+      <div class="set-row"><span>Прогресс</span><span class="badge">${Object.keys(progress).length} слов</span></div>
+      <div class="set-row"><span>Языки</span><span class="badge">${data.languages.length}</span></div>
+      <div class="set-row"><span>Категории</span><span class="badge">${data.categories.length}</span></div>
+    </div>
+    <button class="btn btn-red mt8" onclick="clearProgress()">🗑 Сбросить прогресс</button>`;
+}
+
+function renderSettingsLangs(c){
+  if(currentUser?.role!=='admin'){c.innerHTML=adminOnly();return}
+  let html='<div class="set-section"><h3>🌍 Языки</h3><div class="tag-list">';
+  data.languages.forEach((l,i)=>{
+    html+=`<span class="tag">${esc(l.name)} (${esc(l.code)}) <button class="edit" onclick="openEditLang(${i})">✏</button></span>`;
+  });
+  html+=`</div><button class="btn btn-sm btn-primary mt8" onclick="openAddLang()">+ Добавить язык</button></div>`;
+  c.innerHTML=html;
+}
+
+function renderSettingsCats(c){
+  if(currentUser?.role!=='admin'){c.innerHTML=adminOnly();return}
+  let html='<div class="set-section"><h3>📂 Категории</h3><div class="tag-list">';
+  data.categories.forEach((cat,i)=>{
+    html+=`<span class="tag">${esc(cat.icon)} ${esc(cat.name)} <button class="edit" onclick="openEditCat(${i})">✏</button></span>`;
+  });
+  html+=`</div><button class="btn btn-sm btn-primary mt8" onclick="openAddCat()">+ Добавить категорию</button></div>`;
+  c.innerHTML=html;
+}
+
+function renderSettingsData(c){
+  if(currentUser?.role!=='admin'){c.innerHTML=adminOnly();return}
+  const catsOpts=data.categories.map(cat=>`<option value="${esc(cat.id)}">${esc(cat.icon+' '+cat.name)}</option>`).join('');
+  c.innerHTML=`
+    <div class="set-section">
+      <h3>📝 Массовый импорт</h3>
+      <div class="input-group"><label>Категория</label><select id="imp-cat">${catsOpts}</select></div>
+      <div class="input-group"><label>Слова (формат: слово|перевод|транскрипция)</label><textarea id="imp-text" rows="6" placeholder="apple|яблоко|ˈæpəl"></textarea></div>
+      <button class="btn btn-sm btn-primary" onclick="bulkImport()">Импортировать</button>
+      <div class="prompt-box mt8" id="import-prompt">Пример:\napple|яблоко|ˈæpəl\nbanana|банан|bəˈnænə\ncat|кошка</div>
+    </div>`;
+}
+
+function adminOnly(){return'<div class="empty"><div class="em-icon">🔒</div><p style="color:var(--tx2)">Только для администраторов</p></div>'}
+
+function renderSettingsImpExp(c){
+  if(currentUser?.role!=='admin'){c.innerHTML=adminOnly();return}
+  const langsOpts=data.languages.map(l=>`<option value="${esc(l.code)}">${esc(l.name)}</option>`).join('');
+  const catsOpts='<option value="">Все категории</option>'+data.categories.map(cat=>`<option value="${esc(cat.id)}">${esc(cat.icon+' '+cat.name)}</option>`).join('');
+  const promptCatsOpts='<option value="">— выбрать —</option>'+data.categories.map(cat=>`<option value="${esc(cat.id)}">${esc(cat.icon+' '+cat.name)}</option>`).join('');
+  c.innerHTML=`
+    <div class="set-section">
+      <h3>📤 Экспорт JSON</h3>
+      <div class="input-group"><label>Язык (от)</label><select id="exp-lf">${langsOpts}</select></div>
+      <div class="input-group"><label>Язык (до)</label><select id="exp-lt">${langsOpts}</select></div>
+      <div class="input-group"><label>Категория</label><select id="exp-cat">${catsOpts}</select></div>
+      <button class="btn btn-sm btn-primary mb8" onclick="exportJSON()">Скачать JSON</button>
+      <button class="btn btn-sm btn-ghost" onclick="exportToClipboard()">📋 Копировать в буфер</button>
+    </div>
+    <div class="set-section">
+      <h3>📥 Импорт JSON</h3>
+      <p style="font-size:.78rem;color:var(--tx2);margin-bottom:10px">Умный импорт: новые слова добавятся, существующие обновятся, дубликаты пропустятся</p>
+      <input type="file" id="imp-file" accept=".json" onchange="onImportFile(event)" style="display:none">
+      <div class="flex-c gap8 mb8">
+        <button class="btn btn-sm btn-primary" onclick="document.getElementById('imp-file').click()">📂 Выбрать файл .json</button>
+        <button class="btn btn-sm btn-ghost" onclick="togglePasteArea()">📋 Вставить текст</button>
+      </div>
+      <div id="imp-paste-wrap" style="display:none">
+        <div class="input-group" style="margin-bottom:8px"><label>Вставьте JSON</label><textarea id="imp-paste-text" rows="7" placeholder='{"langFrom":"ru","langTo":"en","words":[...]}'></textarea></div>
+        <div id="imp-check-result" style="margin-bottom:4px"></div>
+        <div class="flex-c gap8">
+          <button class="btn btn-sm btn-ghost" onclick="checkImport()">🔍 Проверить</button>
+          <button class="btn btn-sm btn-primary" onclick="importFromPaste()">📥 Импортировать</button>
+        </div>
+      </div>
+    </div>
+    <div class="set-section">
+      <h3>🤖 Промт для ИИ</h3>
+      <p style="font-size:.78rem;color:var(--tx2);margin-bottom:12px">Скопируйте промт, вставьте в ChatGPT / Claude / Gemini — и загрузите полученный JSON через импорт выше.</p>
+      <div class="input-group"><label>Категория</label><select id="ai-prompt-cat" onchange="refreshAiPrompt()">${promptCatsOpts}</select></div>
+      <div class="row mb8">
+        <div class="input-group"><label>Язык (от)</label><select id="ai-prompt-lf" onchange="refreshAiPrompt()">${langsOpts}</select></div>
+        <div class="input-group"><label>Язык (до)</label><select id="ai-prompt-lt" onchange="refreshAiPrompt()">${langsOpts}</select></div>
+      </div>
+      <div class="input-group"><label>Количество слов</label><input type="number" id="ai-prompt-count" value="30" min="5" max="200" oninput="refreshAiPrompt()"></div>
+      <div class="prompt-box" id="ai-prompt-box"></div>
+      <button class="btn btn-sm btn-primary" onclick="copyAiPrompt()">📋 Скопировать промт</button>
+    </div>`;
+  document.getElementById('exp-lf').value=ui.langFrom;
+  document.getElementById('exp-lt').value=ui.langTo;
+  document.getElementById('ai-prompt-lf').value=ui.langFrom;
+  document.getElementById('ai-prompt-lt').value=ui.langTo;
+  refreshAiPrompt();
+}
+
+function refreshAiPrompt(){
+  const box=document.getElementById('ai-prompt-box');
+  if(!box)return;
+  const lfCode=document.getElementById('ai-prompt-lf')?.value||ui.langFrom;
+  const ltCode=document.getElementById('ai-prompt-lt')?.value||ui.langTo;
+  const catSel=document.getElementById('ai-prompt-cat')?.value||'';
+  const count=parseInt(document.getElementById('ai-prompt-count')?.value)||30;
+  const lfName=data.languages.find(l=>l.code===lfCode)?.name||lfCode;
+  const ltName=data.languages.find(l=>l.code===ltCode)?.name||ltCode;
+  const catObj=data.categories.find(c=>c.id===catSel);
+  const catDesc=catObj?`тема/категория: «${catObj.name}»`:'любую одну тему на твой выбор (укажи её в поле category)';
+  const existingWords=data.words
+    .filter(w=>w.langFrom===lfCode&&w.langTo===ltCode&&(!catSel||w.category===catSel))
+    .slice(0,10).map(w=>w.wordFrom).join(', ');
+  const avoidLine=existingWords?`\nИсключи уже имеющиеся слова (примеры): ${existingWords}.`:'';
+  const prompt=`Сгенерируй ${count} слов для изучения языка.
+Язык оригинала: ${lfName} (код: ${lfCode})
+Язык перевода: ${ltName} (код: ${ltCode})
+Тема: ${catDesc}${avoidLine}
+
+Верни ТОЛЬКО валидный JSON без пояснений, строго в формате:
+{
+  "langFrom": "${lfCode}",
+  "langTo": "${ltCode}",
+  "category": "${catSel||'<id_категории>'}",
+  "words": [
+    { "category": "${catSel||'<id_категории>'}", "wordFrom": "слово на ${lfName}", "wordTo": "перевод на ${ltName}", "transcription": "транскрипция (если есть, иначе пустая строка)" }
+  ]
+}
+
+Правила:
+- wordFrom — слово/фраза на ${lfName}
+- wordTo — точный перевод на ${ltName}
+- transcription — произношение wordTo в IPA или пустая строка ""
+- category — ровно одно значение для всех слов: ${catSel?`"${catSel}"`:'id категории латиницей, например "food"'}
+- Никакого текста вне JSON, никаких markdown-блоков`;
+  box.textContent=prompt;
+}
+
+function copyAiPrompt(){
+  const box=document.getElementById('ai-prompt-box');
+  if(!box||!box.textContent){toast('Сначала настройте параметры','err');return}
+  navigator.clipboard.writeText(box.textContent)
+    .then(()=>toast('Промт скопирован в буфер обмена','ok'))
+    .catch(()=>toast('Не удалось скопировать','err'));
+}
+
+function parseImportRaw(raw){
+  let text=raw.trim();
+  // Strip markdown code fences (```json ... ``` or ``` ... ```)
+  const mdMatch=text.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/i);
+  if(mdMatch)text=mdMatch[1].trim();
+  let json;
+  try{json=JSON.parse(text);}catch(e){
+    const msg=String(e.message||e);
+    const posMatch=msg.match(/position (\d+)/);
+    let detail=msg;
+    if(posMatch){
+      const i=parseInt(posMatch[1]);
+      const from=Math.max(0,i-30),to=Math.min(text.length,i+30);
+      const snippet=text.slice(from,to).replace(/\n/g,' ');
+      const arrow=' '.repeat(Math.min(i-from,59));
+      detail=`${msg}\n\nКонтекст: ...${snippet}...\n           ${arrow}^`;
+    }
+    return{ok:false,error:detail};
+  }
+  if(typeof json!=='object'||json===null||Array.isArray(json))
+    return{ok:false,error:'Корень JSON должен быть объектом { ... }, а не массивом или примитивом'};
+  if(!('words' in json))
+    return{ok:false,error:'Отсутствует обязательное поле "words".\nОжидаемый формат:\n{"langFrom":"ru","langTo":"en","words":[...]}'};
+  if(!Array.isArray(json.words))
+    return{ok:false,error:`Поле "words" должно быть массивом [...], получено: ${typeof json.words}`};
+  if(json.words.length===0)
+    return{ok:false,error:'Массив "words" пустой — нечего импортировать'};
+  return{ok:true,json};
+}
+
+function checkImport(){
+  const raw=document.getElementById('imp-paste-text')?.value.trim();
+  const box=document.getElementById('imp-check-result');
+  if(!raw){if(box)box.innerHTML='<div style="color:var(--red);font-size:.78rem;padding:4px 0">Вставьте JSON-текст в поле выше</div>';return;}
+  const result=parseImportRaw(raw);
+  if(!result.ok){
+    _pendingImport=null;
+    if(box)box.innerHTML=`<div style="background:rgba(255,68,102,.1);border:1px solid rgba(255,68,102,.3);border-radius:8px;padding:12px;font-family:monospace;font-size:.7rem;color:var(--red);white-space:pre-wrap;word-break:break-word;margin-bottom:4px">${esc(result.error)}</div>`;
+    return;
+  }
+  const json=result.json;
+  const lf=json.langFrom||ui.langFrom;
+  const lt=json.langTo||ui.langTo;
+  let newCount=0,changedCount=0,duplicateCount=0,invalidCount=0;
+  const invalidRows=[];
+  json.words.forEach((w,i)=>{
+    if(!w.wordFrom||!w.wordTo){invalidCount++;invalidRows.push(`#${i+1}: ${JSON.stringify(w).slice(0,80)}`);return;}
+    const ex=data.words.find(x=>x.langFrom===lf&&x.langTo===lt&&x.wordFrom.toLowerCase()===w.wordFrom.toLowerCase());
+    if(ex){if(ex.wordTo===w.wordTo&&ex.transcription===(w.transcription||''))duplicateCount++;else changedCount++;}
+    else newCount++;
+  });
+  _pendingImport=json;
+  const lfName=getLangName(lf),ltName=getLangName(lt);
+  let invHtml='';
+  if(invalidRows.length)invHtml=`<div style="margin-top:8px"><div style="font-size:.68rem;color:var(--tx2);margin-bottom:4px">Неверные строки (нет wordFrom / wordTo):</div><div style="background:var(--sf3);border-radius:6px;padding:8px;font-family:monospace;font-size:.65rem;color:var(--red);max-height:80px;overflow-y:auto;white-space:pre-wrap">${esc(invalidRows.slice(0,5).join('\n'))}${invalidRows.length>5?`\n...ещё ${invalidRows.length-5}`:''}</div></div>`;
+  if(box)box.innerHTML=`<div style="background:var(--sf3);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:4px"><div style="font-size:.72rem;color:var(--tx2);margin-bottom:8px">${esc(lfName)} → ${esc(ltName)} · В файле: ${json.words.length} слов</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center"><div style="background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);border-radius:6px;padding:8px"><div style="font-size:1.2rem;font-weight:800;color:var(--green)">${newCount}</div><div style="font-size:.6rem;color:var(--tx2)">Новых</div></div><div style="background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.3);border-radius:6px;padding:8px"><div style="font-size:1.2rem;font-weight:800;color:var(--blue)">${changedCount}</div><div style="font-size:.6rem;color:var(--tx2)">Обновятся</div></div><div style="background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:6px;padding:8px"><div style="font-size:1.2rem;font-weight:800;color:var(--tx2)">${duplicateCount}</div><div style="font-size:.6rem;color:var(--tx2)">Дубликатов</div></div><div style="background:rgba(255,68,102,.1);border:1px solid rgba(255,68,102,.3);border-radius:6px;padding:8px"><div style="font-size:1.2rem;font-weight:800;color:var(--red)">${invalidCount}</div><div style="font-size:.6rem;color:var(--tx2)">Неверных</div></div></div>${invHtml}</div>`;
+}
+
+function togglePasteArea(){
+  const w=document.getElementById('imp-paste-wrap');
+  if(!w)return;
+  const show=w.style.display==='none';
+  w.style.display=show?'block':'none';
+  if(show)document.getElementById('imp-paste-text').focus();
+}
+
+function importFromPaste(){
+  const raw=document.getElementById('imp-paste-text')?.value.trim();
+  if(!raw){toast('Вставьте JSON-текст','err');return}
+  const result=parseImportRaw(raw);
+  if(!result.ok){
+    const box=document.getElementById('imp-check-result');
+    if(box)box.innerHTML=`<div style="background:rgba(255,68,102,.1);border:1px solid rgba(255,68,102,.3);border-radius:8px;padding:12px;font-family:monospace;font-size:.7rem;color:var(--red);white-space:pre-wrap;word-break:break-word;margin-bottom:4px">${esc(result.error)}</div>`;
+    toast('Ошибка формата JSON','err');
+    return;
+  }
+  importJSON(result.json);
+  _pendingImport=null;
+  document.getElementById('imp-paste-text').value='';
+  const b=document.getElementById('imp-check-result');if(b)b.innerHTML='';
+  document.getElementById('imp-paste-wrap').style.display='none';
+}
+
+function renderSettingsAdmin(c){
+  if(!currentUser||currentUser.role!=='admin'){c.innerHTML='<p style="color:var(--tx2)">Доступ только для администраторов</p>';return}
+  let html='<div class="set-section"><h3>👥 Пользователи</h3>';
+  data.users.forEach((u,i)=>{
+    const isPending=u.status==='pending';
+    const roleClass=u.role==='admin'?'admin':'';
+    html+=`<div class="user-row">
+      <span class="u-name">${esc(u.login)}${isPending?' <span class="u-pending">(ожидает)</span>':''}</span>
+      <span class="u-role ${roleClass}">${esc(u.role)}</span>`;
+    if(isPending){
+      html+=`<button class="approve" onclick="approveUser(${i})">✓</button><button class="reject" onclick="rejectUser(${i})">✗</button>`;
+    }else if(u.login!==currentUser.login){
+      html+=`<button onclick="toggleRole(${i})">${u.role==='admin'?'→user':'→admin'}</button>`;
+      html+=`<button class="reject" onclick="deleteUser(${i})">🗑</button>`;
+    }
+    html+=`</div>`;
+  });
+  html+=`</div>`;
+  c.innerHTML=html;
+}
+
+async function renderSettingsLogs(c){
+  if(!currentUser||currentUser.role!=='admin'){c.innerHTML=adminOnly();return}
+  c.innerHTML='<div class="empty"><div class="spinner" style="width:28px;height:28px;border-width:2px"></div></div>';
+  try{
+    const res=await apiRead('logs!A2:E2000');
+    const rows=[...(res.values||[])].filter(r=>r[0]).reverse();
+    if(!rows.length){c.innerHTML='<div class="empty"><div class="em-icon">📋</div><p>Журнал пуст</p></div>';return}
+    const typeColor=t=>t==='ok'?'var(--green)':t==='err'?'var(--red)':'var(--tx2)';
+    const fmt=ts=>{try{return new Date(ts).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}catch(e){return ts||''}}
+    let html=`<div class="set-section"><h3>📋 Журнал событий</h3>
+      <div style="font-size:.68rem;color:var(--tx2);margin-bottom:10px">${rows.length} записей · Новые сверху</div>
+      <div style="overflow-x:auto;margin:0 -4px">
+      <table style="width:100%;border-collapse:collapse;font-size:.72rem;min-width:400px">
+        <tr style="color:var(--tx3);font-size:.63rem;text-transform:uppercase;letter-spacing:.04em">
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)">Время</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)">Пользователь</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)">Действие</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)">Детали</th>
+        </tr>`;
+    rows.forEach(r=>{
+      const[ts,user,action,details,type]=r;
+      const col=typeColor(type);
+      html+=`<tr style="border-bottom:1px solid var(--bd)">
+        <td style="padding:6px 8px;color:var(--tx3);white-space:nowrap">${esc(fmt(ts||''))}</td>
+        <td style="padding:6px 8px;font-weight:600">${esc(user||'')}</td>
+        <td style="padding:6px 8px;color:${col};white-space:nowrap">${esc(action||'')}</td>
+        <td style="padding:6px 8px;color:var(--tx2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(details||'')}">${esc(details||'')}</td>
+      </tr>`;
+    });
+    html+='</table></div></div>';
+    c.innerHTML=html;
+  }catch(e){
+    c.innerHTML=`<div class="empty"><div class="em-icon">❌</div><p>Ошибка загрузки журнала:<br>${esc(e.message)}</p></div>`;
+  }
+}
+
+function openChangeSID(){
+  showModal(`
+    <h3>Spreadsheet ID</h3>
+    <div class="input-group"><label>ID таблицы</label><input type="text" id="m-new-sid" value="${esc(cfg.spreadsheetId||'')}"></div>
+    <button class="btn btn-primary" onclick="saveSID()">Сохранить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+function saveSID(){
+  cfg.spreadsheetId=document.getElementById('m-new-sid').value.trim();
+  saveCfg();accessToken=null;tokenExpiry=0;
+  toast('ID сохранён','ok');closeModal();syncData();
+}
+
+function initSheetsFromSettings(){initSheets()}
+
+/* ===== ADMIN FUNCTIONS ===== */
+async function approveUser(idx){
+  showLoader(true);
+  try{
+    await apiUpdate('users!D'+(idx+2),'active');
+    const login=data.users[idx].login;
+    data.users[idx].status='active';saveCache();
+    logToSheet('approve_user','Одобрен: '+login,'ok');
+    toast('Пользователь одобрен','ok');renderSettings();
+  }catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+async function rejectUser(idx){
+  showLoader(true);
+  try{
+    await apiUpdate('users!D'+(idx+2),'rejected');
+    const login=data.users[idx].login;
+    data.users[idx].status='rejected';saveCache();
+    logToSheet('reject_user','Отклонён: '+login,'info');
+    toast('Пользователь отклонён','ok');renderSettings();
+  }catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+async function toggleRole(idx){
+  const newRole=data.users[idx].role==='admin'?'user':'admin';
+  showLoader(true);
+  try{
+    await apiUpdate('users!C'+(idx+2),newRole);
+    const login=data.users[idx].login;
+    data.users[idx].role=newRole;saveCache();
+    logToSheet('change_role',login+' → '+newRole,'info');
+    toast('Роль изменена','ok');renderSettings();
+  }catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+async function deleteUser(idx){
+  if(!confirm('Удалить пользователя '+data.users[idx].login+'?'))return;
+  const login=data.users[idx].login;
+  showLoader(true);
+  try{
+    await apiClearRow('users',idx+2);
+    data.users.splice(idx,1);saveCache();
+    logToSheet('delete_user','Удалён: '+login,'info');
+    toast('Пользователь удалён','ok');renderSettings();
+  }catch(e){toast('Ошибка','err')}
+  showLoader(false);
+}
+
+function openChangeSA(){
+  showModal(`
+    <h3>Сервисный аккаунт</h3>
+    <div class="input-group"><label>JSON сервисного аккаунта</label>
+    <textarea id="m-sa-json" rows="8" placeholder='Вставьте содержимое .json...'></textarea></div>
+    <button class="btn btn-primary" onclick="updateSA()">Сохранить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+
+function updateSA(){
+  const raw=document.getElementById('m-sa-json').value.trim();
+  if(!raw){toast('Вставьте JSON','err');return}
+  try{
+    const parsed=JSON.parse(raw);
+    if(!parsed.client_email||!parsed.private_key){toast('Некорректный JSON: нет client_email/private_key','err');return}
+    sa=parsed; saveSA();
+    accessToken=null; tokenExpiry=0;
+    toast('Сервисный аккаунт обновлён','ok');
+    closeModal(); renderSettings();
+  }catch(e){toast('Ошибка парсинга JSON','err')}
+}
+
+function saveSetup(){
+  const sid=document.getElementById('inp-sid').value.trim();
+  const saRaw=document.getElementById('inp-sa').value.trim();
+  if(!sid){toast('Введите ID таблицы','err');return}
+  if(!saRaw){toast('Вставьте JSON сервисного аккаунта','err');return}
+  try{
+    const parsed=JSON.parse(saRaw);
+    if(!parsed.client_email||!parsed.private_key){toast('Некорректный JSON: нет client_email/private_key','err');return}
+    sa=parsed; saveSA();
+  }catch(e){toast('Ошибка парсинга JSON','err');return}
+  cfg.spreadsheetId=sid;
+  saveCfg();
+  showLogin();
+}
+
+function clearProgress(){
+  if(!confirm('Сбросить весь прогресс?')) return;
+  progress={};
+  saveProgress();
+  toast('Прогресс сброшен','ok');
+  renderSettings();
+}
+
+/* ===== MODALS: ADD LANGUAGE / CATEGORY / WORD ===== */
+function showModal(html){
+  const m=document.getElementById('modal');
+  m.innerHTML=html;
+  document.getElementById('modal-bg').classList.add('show');
+}
+function closeModal(){document.getElementById('modal-bg').classList.remove('show')}
+document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+
+function openAddLang(){
+  showModal(`
+    <h3>Добавить язык</h3>
+    <div class="input-group"><label>Код (en, ko, fr...)</label><input type="text" id="m-lcode" maxlength="5" placeholder="en"></div>
+    <div class="input-group"><label>Название</label><input type="text" id="m-lname" placeholder="English"></div>
+    <button class="btn btn-primary" onclick="addLang()">Добавить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+async function addLang(){
+  const code=document.getElementById('m-lcode').value.trim().toLowerCase();
+  const name=document.getElementById('m-lname').value.trim();
+  if(!code||!name){toast('Заполните все поля','err');return}
+  showLoader(true);
+  try{
+    await apiAppend('languages!A:B',[[code,name]]);
+    data.languages.push({code,name});
+    saveCache();initLangSelectors();
+    toast('Язык добавлен','ok');closeModal();
+    if(ui.view==='settings') renderSettings();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+function openAddCat(){
+  showModal(`
+    <h3>Добавить категорию</h3>
+    <div class="input-group"><label>ID (латиница)</label><input type="text" id="m-catid" placeholder="food"></div>
+    <div class="input-group"><label>Название</label><input type="text" id="m-catname" placeholder="Еда"></div>
+    <div class="input-group"><label>Иконка (эмодзи)</label><input type="text" id="m-caticon" maxlength="4" placeholder="🍕"></div>
+    <button class="btn btn-primary" onclick="addCat()">Добавить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+async function addCat(){
+  const id=document.getElementById('m-catid').value.trim().toLowerCase();
+  const name=document.getElementById('m-catname').value.trim();
+  const icon=document.getElementById('m-caticon').value.trim()||'📁';
+  if(!id||!name){toast('Заполните ID и название','err');return}
+  showLoader(true);
+  try{
+    await apiAppend('categories!A:C',[[id,name,icon]]);
+    data.categories.push({id,name,icon});
+    saveCache();
+    toast('Категория добавлена','ok');closeModal();
+    if(ui.view==='settings') renderSettings();
+    if(ui.view==='home') renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+function openAddWord(){
+  const catsOpts=data.categories.map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  const langsOpts=data.languages.map(l=>`<option value="${l.code}">${l.name}</option>`).join('');
+  showModal(`
+    <h3>Добавить слово</h3>
+    <div class="input-group"><label>Категория</label><select id="m-wcat">${catsOpts}</select></div>
+    <div class="row">
+      <div class="input-group"><label>Язык (от)</label><select id="m-wlf">${langsOpts}</select></div>
+      <div class="input-group"><label>Язык (до)</label><select id="m-wlt">${langsOpts}</select></div>
+    </div>
+    <div class="input-group"><label>Слово (оригинал)</label><input type="text" id="m-wfrom" placeholder="Яблоко"></div>
+    <div class="input-group"><label>Перевод</label><input type="text" id="m-wto" placeholder="Apple"></div>
+    <div class="input-group"><label>Транскрипция (необязательно)</label><input type="text" id="m-wtr" placeholder="ˈæpəl"></div>
+    <button class="btn btn-primary" onclick="addWord()">Добавить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+  if(ui.category){document.getElementById('m-wcat').value=ui.category}
+  document.getElementById('m-wlf').value=ui.langFrom;
+  document.getElementById('m-wlt').value=ui.langTo;
+}
+
+async function addWord(){
+  const cat=document.getElementById('m-wcat').value;
+  const lf=document.getElementById('m-wlf').value;
+  const lt=document.getElementById('m-wlt').value;
+  const wf=document.getElementById('m-wfrom').value.trim();
+  const wt=document.getElementById('m-wto').value.trim();
+  const tr=document.getElementById('m-wtr').value.trim();
+  if(!wf||!wt){toast('Введите слово и перевод','err');return}
+  showLoader(true);
+  try{
+    await apiAppend('words!A:F',[[cat,lf,wf,lt,wt,tr]]);
+    data.words.push({category:cat,langFrom:lf,wordFrom:wf,langTo:lt,wordTo:wt,transcription:tr});
+    saveCache();
+    toast('Слово добавлено','ok');
+    // Clear inputs for next word
+    document.getElementById('m-wfrom').value='';
+    document.getElementById('m-wto').value='';
+    document.getElementById('m-wtr').value='';
+    document.getElementById('m-wfrom').focus();
+    if(ui.view==='words') renderWords();
+    if(ui.view==='home') renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+/* ===== EDIT / DELETE LANGUAGE ===== */
+function openEditLang(idx){
+  const l=data.languages[idx];if(!l)return;
+  showModal(`
+    <h3>Редактировать язык</h3>
+    <div class="input-group"><label>Код</label><input type="text" id="m-el-code" value="${esc(l.code)}" maxlength="5"></div>
+    <div class="input-group"><label>Название</label><input type="text" id="m-el-name" value="${esc(l.name)}"></div>
+    <button class="btn btn-primary" onclick="saveLang(${idx})">Сохранить</button>
+    <button class="btn btn-red mt8" onclick="deleteLang(${idx})">Удалить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+async function saveLang(idx){
+  const code=document.getElementById('m-el-code').value.trim().toLowerCase();
+  const name=document.getElementById('m-el-name').value.trim();
+  if(!code||!name){toast('Заполните все поля','err');return}
+  showLoader(true);
+  try{
+    await apiUpdate('languages!A'+(idx+2)+':B'+(idx+2),[code,name]);
+    data.languages[idx]={code,name};saveCache();initLangSelectors();
+    toast('Язык обновлён','ok');closeModal();if(ui.view==='settings')renderSettings();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+async function deleteLang(idx){
+  if(!confirm('Удалить язык '+data.languages[idx].name+'?'))return;
+  showLoader(true);
+  try{
+    await apiClearRow('languages',idx+2);
+    data.languages.splice(idx,1);saveCache();initLangSelectors();
+    toast('Язык удалён','ok');closeModal();if(ui.view==='settings')renderSettings();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+/* ===== EDIT / DELETE CATEGORY ===== */
+function openEditCat(idx){
+  const c=data.categories[idx];if(!c)return;
+  showModal(`
+    <h3>Редактировать категорию</h3>
+    <div class="input-group"><label>ID</label><input type="text" id="m-ec-id" value="${esc(c.id)}"></div>
+    <div class="input-group"><label>Название</label><input type="text" id="m-ec-name" value="${esc(c.name)}"></div>
+    <div class="input-group"><label>Иконка</label><input type="text" id="m-ec-icon" value="${esc(c.icon)}" maxlength="4"></div>
+    <button class="btn btn-primary" onclick="saveCat(${idx})">Сохранить</button>
+    <button class="btn btn-red mt8" onclick="deleteCat(${idx})">Удалить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+}
+async function saveCat(idx){
+  const id=document.getElementById('m-ec-id').value.trim().toLowerCase();
+  const name=document.getElementById('m-ec-name').value.trim();
+  const icon=document.getElementById('m-ec-icon').value.trim()||'📁';
+  if(!id||!name){toast('Заполните ID и название','err');return}
+  showLoader(true);
+  try{
+    await apiUpdate('categories!A'+(idx+2)+':C'+(idx+2),[id,name,icon]);
+    data.categories[idx]={id,name,icon};saveCache();
+    toast('Категория обновлена','ok');closeModal();
+    if(ui.view==='settings')renderSettings();if(ui.view==='home')renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+async function deleteCat(idx){
+  if(!confirm('Удалить категорию '+data.categories[idx].name+'?'))return;
+  showLoader(true);
+  try{
+    await apiClearRow('categories',idx+2);
+    data.categories.splice(idx,1);saveCache();
+    toast('Категория удалена','ok');closeModal();
+    if(ui.view==='settings')renderSettings();if(ui.view==='home')renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+/* ===== EDIT / DELETE WORD ===== */
+function openEditWord(idx){
+  const w=data.words[idx];if(!w)return;
+  const catsOpts=data.categories.map(c=>`<option value="${esc(c.id)}"${c.id===w.category?' selected':''}>${esc(c.icon+' '+c.name)}</option>`).join('');
+  const langsOpts=data.languages.map(l=>`<option value="${esc(l.code)}">${esc(l.name)}</option>`).join('');
+  showModal(`
+    <h3>Редактировать слово</h3>
+    <div class="input-group"><label>Категория</label><select id="m-ew-cat">${catsOpts}</select></div>
+    <div class="row">
+      <div class="input-group"><label>Язык (от)</label><select id="m-ew-lf">${langsOpts}</select></div>
+      <div class="input-group"><label>Язык (до)</label><select id="m-ew-lt">${langsOpts}</select></div>
+    </div>
+    <div class="input-group"><label>Слово (оригинал)</label><input type="text" id="m-ew-from" value="${esc(w.wordFrom)}"></div>
+    <div class="input-group"><label>Перевод</label><input type="text" id="m-ew-to" value="${esc(w.wordTo)}"></div>
+    <div class="input-group"><label>Транскрипция</label><input type="text" id="m-ew-tr" value="${esc(w.transcription||'')}"></div>
+    <button class="btn btn-primary" onclick="saveWord(${idx})">Сохранить</button>
+    <button class="btn btn-red mt8" onclick="deleteWord(${idx})">Удалить</button>
+    <button class="btn btn-ghost mt8" onclick="closeModal()">Отмена</button>
+  `);
+  document.getElementById('m-ew-lf').value=w.langFrom;
+  document.getElementById('m-ew-lt').value=w.langTo;
+}
+async function saveWord(idx){
+  const cat=document.getElementById('m-ew-cat').value;
+  const lf=document.getElementById('m-ew-lf').value;
+  const lt=document.getElementById('m-ew-lt').value;
+  const wf=document.getElementById('m-ew-from').value.trim();
+  const wt=document.getElementById('m-ew-to').value.trim();
+  const tr=document.getElementById('m-ew-tr').value.trim();
+  if(!wf||!wt){toast('Введите слово и перевод','err');return}
+  showLoader(true);
+  try{
+    const row=idx+2;
+    await apiUpdate('words!A'+row+':F'+row,[cat,lf,wf,lt,wt,tr]);
+    data.words[idx]={category:cat,langFrom:lf,wordFrom:wf,langTo:lt,wordTo:wt,transcription:tr};
+    saveCache();toast('Слово обновлено','ok');closeModal();
+    if(ui.view==='words')renderWords();if(ui.view==='home')renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+async function deleteWord(idx){
+  if(!confirm('Удалить слово "'+data.words[idx].wordFrom+'"?'))return;
+  showLoader(true);
+  try{
+    await apiClearRow('words',idx+2);
+    data.words.splice(idx,1);saveCache();
+    toast('Слово удалено','ok');closeModal();
+    if(ui.view==='words')renderWords();if(ui.view==='home')renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+/* ===== BULK IMPORT ===== */
+async function bulkImport(){
+  const cat=document.getElementById('imp-cat').value;
+  const text=document.getElementById('imp-text').value.trim();
+  if(!cat||!text){toast('Выберите категорию и введите слова','err');return}
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!lines.length){toast('Нет строк для импорта','err');return}
+
+  const rows=[];
+  for(const line of lines){
+    const sep=line.includes('\t')?'\t':'|';
+    const parts=line.split(sep).map(p=>p.trim());
+    if(parts.length<2) continue;
+    rows.push([cat,ui.langFrom,parts[0],ui.langTo,parts[1],parts[2]||'']);
+  }
+  if(!rows.length){toast('Не удалось разобрать строки','err');return}
+
+  showLoader(true);
+  try{
+    await apiAppend('words!A:F',rows);
+    rows.forEach(r=>data.words.push({category:r[0],langFrom:r[1],wordFrom:r[2],langTo:r[3],wordTo:r[4],transcription:r[5]}));
+    saveCache();
+    document.getElementById('imp-text').value='';
+    toast(`Импортировано ${rows.length} слов`,'ok');
+    if(ui.view==='home') renderHome();
+  }catch(e){toast('Ошибка: '+e.message,'err')}
+  showLoader(false);
+}
+
+/* ===== JSON EXPORT / IMPORT ===== */
+function exportJSON(){
+  const lf=document.getElementById('exp-lf').value;
+  const lt=document.getElementById('exp-lt').value;
+  const cat=document.getElementById('exp-cat').value;
+  const words=data.words.filter(w=>w.langFrom===lf&&w.langTo===lt&&(!cat||w.category===cat));
+  if(!words.length){toast('Нет слов для экспорта','err');return}
+  const exportData={langFrom:lf,langTo:lt,category:cat||'all',exported:new Date().toISOString(),words:words.map(w=>({category:w.category,wordFrom:w.wordFrom,wordTo:w.wordTo,transcription:w.transcription||''}))};
+  const blob=new Blob([JSON.stringify(exportData,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`words_${lf}_${lt}${cat?'_'+cat:''}_${Date.now()}.json`;
+  a.click();URL.revokeObjectURL(a.href);
+  toast('Экспортировано '+words.length+' слов','ok');
+}
+
+function exportToClipboard(){
+  const lf=document.getElementById('exp-lf').value;
+  const lt=document.getElementById('exp-lt').value;
+  const cat=document.getElementById('exp-cat').value;
+  const words=data.words.filter(w=>w.langFrom===lf&&w.langTo===lt&&(!cat||w.category===cat));
+  if(!words.length){toast('Нет слов для экспорта','err');return}
+  const exportData={langFrom:lf,langTo:lt,category:cat||'all',words:words.map(w=>({category:w.category,wordFrom:w.wordFrom,wordTo:w.wordTo,transcription:w.transcription||''}))};
+  navigator.clipboard.writeText(JSON.stringify(exportData,null,2)).then(()=>toast('Скопировано в буфер обмена','ok')).catch(()=>toast('Не удалось скопировать','err'));
+}
+
+function onImportFile(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const result=parseImportRaw(e.target.result);
+    if(!result.ok){toast('❌ '+result.error.split('\n')[0],'err');return}
+    importJSON(result.json);
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+async function importJSON(json){
+  if(!json.words||!Array.isArray(json.words)){toast('Неверный формат JSON','err');return}
+  const lf=json.langFrom||ui.langFrom;
+  const lt=json.langTo||ui.langTo;
+  showLoader(true);
+  // Always fresh-read words from Sheets to avoid stale cache causing false duplicates
+  try{
+    const fresh=await apiRead('words!A2:F5000');
+    data.words=(fresh.values||[]).map(r=>({category:(r[0]||'').trim(),langFrom:(r[1]||'').trim(),wordFrom:(r[2]||'').trim(),langTo:(r[3]||'').trim(),wordTo:(r[4]||'').trim(),transcription:(r[5]||'').trim()})).filter(w=>w.wordFrom&&w.wordTo);
+  }catch(e){/* fallback to cache */}
+  let added=0,updated=0,skipped=0;
+  const newRows=[];
+  const updates=[];
+  for(const w of json.words){
+    if(!w.wordFrom||!w.wordTo){skipped++;continue}
+    const cat=w.category||json.category||'general';
+    const existing=data.words.findIndex(x=>x.langFrom===lf&&x.langTo===lt&&x.wordFrom.toLowerCase()===w.wordFrom.toLowerCase());
+    if(existing>=0){
+      const old=data.words[existing];
+      if(old.wordTo===w.wordTo&&old.transcription===(w.transcription||'')){skipped++;continue}
+      updates.push({range:'words!A'+(existing+2)+':F'+(existing+2),values:[[cat,lf,w.wordFrom,lt,w.wordTo,w.transcription||'']],idx:existing,obj:{category:cat,langFrom:lf,wordFrom:w.wordFrom,langTo:lt,wordTo:w.wordTo,transcription:w.transcription||''}});
+      updated++;
+    }else{
+      newRows.push([cat,lf,w.wordFrom,lt,w.wordTo,w.transcription||'']);
+      added++;
+    }
+  }
+  if(!added&&!updated){
+    toast(`Нечего импортировать: все ${skipped} слов уже в базе`,'ok');
+    showLoader(false);
+    return;
+  }
+  try{
+    if(newRows.length){
+      await apiAppend('words!A:F',newRows);
+      newRows.forEach(r=>data.words.push({category:r[0],langFrom:r[1],wordFrom:r[2],langTo:r[3],wordTo:r[4],transcription:r[5]}));
+    }
+    if(updates.length){
+      await apiBatchValueUpdate(updates.map(u=>({range:u.range,values:u.values})));
+      updates.forEach(u=>{data.words[u.idx]=u.obj});
+    }
+    saveCache();
+    const msg=`Импорт: +${added} новых, ↻${updated} обновлено, =${skipped} пропущено`;
+    toast(msg,'ok');
+    logToSheet('import',msg,'ok');
+    if(ui.view==='home')renderHome();
+  }catch(e){
+    const errMsg='Ошибка импорта: '+e.message;
+    toast(errMsg,'err');
+    logToSheet('import_error',errMsg,'err');
+  }
+  showLoader(false);
+}
+
+/* ===== RATING ===== */
+async function updateRating(){
+  if(!currentUser)return;
+  const login=currentUser.login;
+  const wordsLearned=Object.values(progress).filter(p=>p.known>=3).length;
+  const idx=data.ratings.findIndex(r=>r.login===login);
+  const now=new Date().toISOString().slice(0,10);
+  if(idx>=0){
+    data.ratings[idx].words_learned=wordsLearned;
+    data.ratings[idx].quizzes_done=(data.ratings[idx].quizzes_done||0)+1;
+    data.ratings[idx].quiz_score=Math.round(qz.score/qz.words.length*100);
+    data.ratings[idx].last_active=now;
+    try{await apiUpdate('ratings!A'+(idx+2)+':E'+(idx+2),[login,String(wordsLearned),String(data.ratings[idx].quizzes_done),String(data.ratings[idx].quiz_score),now])}catch(e){}
+  }else{
+    const entry={login,words_learned:wordsLearned,quizzes_done:1,quiz_score:Math.round(qz.score/qz.words.length*100),last_active:now};
+    data.ratings.push(entry);
+    try{await apiAppend('ratings!A:E',[[login,String(wordsLearned),'1',String(entry.quiz_score),now]])}catch(e){}
+  }
+  saveCache();
+}
+
+function renderRating(){
+  const list=document.getElementById('rating-list');
+  list.innerHTML='';
+  const sorted=[...data.ratings].sort((a,b)=>(b.words_learned||0)-(a.words_learned||0)||(b.quiz_score||0)-(a.quiz_score||0));
+  if(!sorted.length){list.innerHTML='<div class="empty"><div class="em-icon">🏆</div><p>Нет данных рейтинга.<br>Пройдите тест, чтобы появиться здесь.</p></div>';return}
+  sorted.forEach((r,i)=>{
+    const d=document.createElement('div');d.className='rating-item';
+    const posClass=i<3?'p'+(i+1):'';
+    d.innerHTML=`<div class="rating-pos ${posClass}">${i+1}</div>
+      <div class="rating-name">${esc(r.login)}<div class="rating-detail">Тестов: ${r.quizzes_done||0} · Последний: ${r.last_active||'—'}</div></div>
+      <div><div class="rating-score">${r.words_learned||0} слов</div><div class="rating-detail">${r.quiz_score||0}%</div></div>`;
+    list.appendChild(d);
+  });
+}
+
+/* ===== TTS ===== */
+function speak(text,langCode){
+  if(!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=LANG_CODES[langCode]||langCode;
+  u.rate=0.85;
+  speechSynthesis.speak(u);
+}
+
+/* ===== UTILS ===== */
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+
+function toast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className=type||'';
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function showLoader(on){document.getElementById('loader').classList.toggle('show',on)}
+
+function toggleHelp(){
+  const h=document.getElementById('help-box');
+  h.style.display=h.style.display==='none'?'block':'none';
+}
+
+/* ===== START ===== */
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
