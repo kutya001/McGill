@@ -254,12 +254,9 @@
                 <div class="auth-logo-sub">Первоначальная настройка</div>
             </div>
             <div class="inp-group">
-                <label class="inp-label">Google Spreadsheet ID</label>
-                <input type="text" id="setup-sid" class="inp-field" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
-            </div>
-            <div class="inp-group">
-                <label class="inp-label">Service Account JSON</label>
-                <textarea id="setup-sa" class="inp-field inp-ta" rows="5" placeholder='{"type":"service_account","client_email":"...","private_key":"-----BEGIN PRIVATE KEY-----\n..."}'></textarea>
+                <label class="inp-label">Google Apps Script URL</label>
+                <input type="text" id="setup-gas" class="inp-field" placeholder="https://script.google.com/macros/s/.../exec">
+                <div style="font-size:.65rem;color:var(--text-3);margin-top:4px">Вставьте URL развёрнутого GAS веб-приложения</div>
             </div>
             <div class="auth-err" id="setup-err"></div>
             <button class="btn-primary" id="btn-setup-save">Сохранить и проверить</button>
@@ -372,12 +369,8 @@
  * CONSTANTS
  * ═════════════════════════════════════════════════════════════════ */
 const LS_CFG  = 'mcg_config';
-const LS_SA   = 'wl_sa';
 const LS_USER = 'mcg_user';
 const LS_LAUNCHES = 'mcg_launches';
-const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
-const TOKEN_URI   = 'https://oauth2.googleapis.com/token';
-const SCOPE       = 'https://www.googleapis.com/auth/spreadsheets';
 
 /* ── DB Schema (sys_ prefix) ── */
 const DB_SYSTEM_SCHEMA = {
@@ -389,11 +382,8 @@ const DB_SYSTEM_SCHEMA = {
 /* ══════════════════════════════════════════════════════════════════
  * STATE
  * ═════════════════════════════════════════════════════════════════ */
-let cfg = { spreadsheetId: '' };
-let sa  = null;
+let cfg = { gasUrl: '' };
 let currentUser    = null;
-let accessToken    = null;
-let tokenExpiry    = 0;
 let appsData       = null;
 let searchQuery    = '';
 let currentSession = { appId: null, startTime: null };
@@ -465,8 +455,6 @@ function setLastLaunch(appId) {
  * ═════════════════════════════════════════════════════════════════ */
 function loadCfg()  { try { const s = localStorage.getItem(LS_CFG);  if (s) cfg = JSON.parse(s); } catch {} }
 function saveCfg()  { localStorage.setItem(LS_CFG, JSON.stringify(cfg)); }
-function loadSA()   { try { const s = localStorage.getItem(LS_SA);   if (s) sa  = JSON.parse(s); } catch {} }
-function saveSA()   { if (sa) localStorage.setItem(LS_SA, JSON.stringify(sa)); else localStorage.removeItem(LS_SA); }
 function loadUser() { try { const s = localStorage.getItem(LS_USER); if (s) currentUser = JSON.parse(s); } catch {} }
 function saveUser() { if (currentUser) localStorage.setItem(LS_USER, JSON.stringify(currentUser)); else localStorage.removeItem(LS_USER); }
 
@@ -480,89 +468,24 @@ function showView(name) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
- * JWT / SERVICE ACCOUNT AUTH
+ * GAS PROXY — все обращения к БД идут через Google Apps Script
  * ═════════════════════════════════════════════════════════════════ */
-function b64url(input) {
-    const str = input instanceof ArrayBuffer
-        ? String.fromCharCode(...new Uint8Array(input))
-        : typeof input === 'string' ? input : JSON.stringify(input);
-    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-function pemToArrayBuffer(pem) {
-    const b64 = pem.replace(/-----BEGIN PRIVATE KEY-----/, '').replace(/-----END PRIVATE KEY-----/, '').replace(/\s/g, '');
-    const bin = atob(b64);
-    const buf = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-    return buf.buffer;
-}
-async function importPrivateKey(pem) {
-    return crypto.subtle.importKey('pkcs8', pemToArrayBuffer(pem),
-        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-}
-async function createSignedJWT() {
-    if (!sa) throw new Error('Сервисный аккаунт не настроен');
-    const header = { alg: 'RS256', typ: 'JWT' };
-    const now    = Math.floor(Date.now() / 1000);
-    const claim  = { iss: sa.client_email, scope: SCOPE, aud: TOKEN_URI, iat: now, exp: now + 3600 };
-    const input  = b64url(JSON.stringify(header)) + '.' + b64url(JSON.stringify(claim));
-    const key    = await importPrivateKey(sa.private_key);
-    const sig    = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(input));
-    return input + '.' + b64url(sig);
-}
-async function ensureAuth() {
-    if (accessToken && Date.now() < tokenExpiry) return accessToken;
-    const jwt = await createSignedJWT();
-    const r = await fetch(TOKEN_URI, {
+async function gasCall(action, params = {}) {
+    if (!cfg.gasUrl) throw new Error('GAS URL не настроен');
+    const r = await fetch(cfg.gasUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + jwt
+        body: JSON.stringify({ action, params })
     });
-    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error_description || e.error || `HTTP ${r.status}`); }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
-    accessToken = d.access_token;
-    tokenExpiry = Date.now() + (d.expires_in - 60) * 1000;
-    return accessToken;
+    if (!d.ok) throw new Error(d.error || 'Ошибка GAS');
+    return d.data;
 }
 
-/* ══════════════════════════════════════════════════════════════════
- * GOOGLE SHEETS API
- * ═════════════════════════════════════════════════════════════════ */
-async function apiRead(range) {
-    const token = await ensureAuth();
-    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}`;
-    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `HTTP ${r.status}`); }
-    return r.json();
-}
-async function apiAppend(range, values) {
-    const token = await ensureAuth();
-    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
-    const r = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ values }) });
-    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `HTTP ${r.status}`); }
-    return r.json();
-}
-async function apiUpdate(range, values) {
-    const token = await ensureAuth();
-    const body  = Array.isArray(values) ? { values: [values] } : { values: [[values]] };
-    const url   = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
-    const r = await fetch(url, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!r.ok) throw new Error('Update failed');
-    return r.json();
-}
-async function apiBatchValues(data) {
-    const token = await ensureAuth();
-    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}/values:batchUpdate`;
-    const r = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data }) });
-    if (!r.ok) throw new Error('Batch values update failed');
-    return r.json();
-}
-async function apiBatchStructural(requests) {
-    const token = await ensureAuth();
-    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}:batchUpdate`;
-    const r = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ requests }) });
-    if (!r.ok) throw new Error('Structural batch update failed');
-    return r.json();
-}
+async function apiRead(range)          { return gasCall('read', { range }); }
+async function apiAppend(range, values) { return gasCall('append', { range, values }); }
+async function apiUpdate(range, values) { return gasCall('update', { range, values }); }
+async function apiBatchValues(data)     { return gasCall('batchValues', { data }); }
 
 /* ══════════════════════════════════════════════════════════════════
  * SHEET NAME VALIDATION & DB CACHE
@@ -577,13 +500,10 @@ function validateSheetRange(range) {
     validateSheetName(sheetName);
 }
 async function refreshDbCache() {
-    const token = await ensureAuth();
-    const url = `${SHEETS_BASE}/${encodeURIComponent(cfg.spreadsheetId)}?fields=sheets.properties`;
-    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!res.ok) throw new Error('Ошибка метаданных таблицы');
-    const sheets = (await res.json()).sheets || [];
-    _dbSheetCache = new Set(sheets.map(s => s.properties.title));
-    _dbSheetMeta = new Map(sheets.map(s => [s.properties.title, s.properties.sheetId]));
+    const result = await gasCall('meta');
+    const sheets = result.sheets || [];
+    _dbSheetCache = new Set(sheets.map(s => s.title));
+    _dbSheetMeta = new Map(sheets.map(s => [s.title, s.sheetId]));
     return _dbSheetCache;
 }
 
@@ -595,8 +515,7 @@ async function dbEnsureTables(tablesConfig) {
     if (!_dbSheetCache) await refreshDbCache();
     const missing = tablesConfig.filter(t => !_dbSheetCache.has(t.name));
     if (!missing.length) return;
-    const createReqs = missing.map(t => ({ addSheet: { properties: { title: t.name } } }));
-    await apiBatchStructural(createReqs);
+    await gasCall('addSheets', { titles: missing.map(t => t.name) });
     for (const t of missing) {
         try { await apiAppend(`${t.name}!A1`, [t.headers]); } catch {}
         _dbSheetCache.add(t.name);
@@ -652,14 +571,13 @@ window.PlatformAPI = {
             if (Array.isArray(data)) data.forEach(d => { if (d.range) validateSheetRange(d.range); });
             return apiBatchValues(data);
         },
-        batchStructural: async (requests) => apiBatchStructural(requests),
         ensureTables: async (tablesConfig) => {
             showLoader(true);
             try { await dbEnsureTables(tablesConfig); toast('✓ Таблицы готовы', 'ok'); }
             catch (e) { toast('Ошибка БД: ' + e.message, 'err'); throw e; }
             finally { showLoader(false); }
         },
-        getSpreadsheetId: () => cfg.spreadsheetId
+        getGasUrl: () => cfg.gasUrl
     },
     gameplay: {
         submitScore: async (appId, rawScore, xpEarned) => {
@@ -1070,9 +988,7 @@ async function deleteDataRow(sheet, sheetId, rowNum) {
     if (!confirm(`Удалить строку ${rowNum}?`)) return;
     showLoader(true);
     try {
-        await apiBatchStructural([{
-            deleteDimension: { range: { sheetId: sheetId, dimension: 'ROWS', startIndex: rowNum - 1, endIndex: rowNum } }
-        }]);
+        await gasCall('deleteRows', { sheetId, startIndex: rowNum - 1, endIndex: rowNum });
         toast('✓ Строка удалена', 'ok');
         await openDataSheet(sheet);
     } catch (e) { toast('Ошибка: ' + e.message, 'err'); }
@@ -1085,7 +1001,7 @@ async function createNewSheet() {
     try { validateSheetName(name); } catch (e) { toast(e.message, 'err'); return; }
     showLoader(true);
     try {
-        await apiBatchStructural([{ addSheet: { properties: { title: name } } }]);
+        await gasCall('addSheets', { titles: [name] });
         await refreshDbCache();
         toast('✓ Лист создан: ' + name, 'ok');
         renderDataTab();
@@ -1097,7 +1013,7 @@ async function deleteSheet(name, sheetId) {
     if (!confirm(`Удалить лист "${name}" полностью?`)) return;
     showLoader(true);
     try {
-        await apiBatchStructural([{ deleteSheet: { sheetId: sheetId } }]);
+        await gasCall('deleteSheet', { sheetId });
         await refreshDbCache();
         _dataViewSheet = null;
         toast('✓ Лист удалён', 'ok');
@@ -1142,8 +1058,6 @@ function renderSettContent() {
 /* ── Settings: General ── */
 function renderSettGeneral(c) {
     const isAdmin = currentUser?.role === 'admin';
-    const sid = cfg.spreadsheetId || '';
-    const saEmail = sa?.client_email || '';
 
     let html = `
         <div class="panel-sec">
@@ -1155,8 +1069,7 @@ function renderSettGeneral(c) {
         </div>
         <div class="panel-sec">
             <h3>🔌 Подключение</h3>
-            <div class="panel-row"><span>Spreadsheet ID</span><span class="panel-badge">${sid ? esc(sid.slice(0, 20)) + '…' : '—'}</span></div>
-            <div class="panel-row"><span>Сервисный аккаунт</span><span class="panel-badge">${saEmail ? esc(saEmail.split('@')[0]) : '—'}</span></div>
+            <div class="panel-row"><span>GAS Backend</span><span class="panel-badge">${cfg.gasUrl ? '✓ Подключено' : '—'}</span></div>
             ${isAdmin ? '<button class="panel-btn" onclick="showView(\'setup\')">✏️ Изменить подключение</button>' : ''}
         </div>
         <div class="panel-sec">
@@ -1347,7 +1260,7 @@ function createCacheKey() {
 }
 
 function clearAppCache() {
-    const keep = new Set([LS_CFG, LS_SA, LS_USER, LS_LAUNCHES]);
+    const keep = new Set([LS_CFG, LS_USER, LS_LAUNCHES]);
     for (const k of Object.keys(localStorage)) if (!keep.has(k)) localStorage.removeItem(k);
     if ('caches' in window) caches.keys().then(names => names.forEach(n => caches.delete(n)));
     toast('Кэш приложений очищен', 'ok');
@@ -1373,7 +1286,7 @@ function renderSettUpdate(c) {
         </div>
         <div class="panel-sec">
             <h3>ℹ️ Информация</h3>
-            <div class="panel-row"><span>Платформа</span><span class="panel-badge">KuApp v2.0</span></div>
+            <div class="panel-row"><span>Платформа</span><span class="panel-badge">KuApp v3.0</span></div>
             <div class="panel-row"><span>Режим</span><span class="panel-badge">PWA / Offline</span></div>
         </div>`;
     if ('serviceWorker' in navigator) {
@@ -1428,6 +1341,7 @@ function renderSettDevGuide(c) {
 Каждое приложение — это отдельный HTML-файл в папке \`apps/\`.
 Приложение загружается внутри \`<iframe>\` с sandbox="allow-scripts allow-same-origin".
 Платформа предоставляет API через \`window.parent.PlatformAPI\`.
+Все обращения к базе данных (Google Sheets) проходят через бэкенд на Google Apps Script.
 
 ## Доступ к PlatformAPI
 
@@ -1615,20 +1529,15 @@ function closePlatformSettings() {} // no-op now
  * SETUP HANDLER
  * ═════════════════════════════════════════════════════════════════ */
 $('btn-setup-save').addEventListener('click', async () => {
-    const sid   = $('setup-sid').value.trim();
-    const saRaw = $('setup-sa').value.trim();
-    const errEl = $('setup-err');
+    const gasUrl = $('setup-gas').value.trim();
+    const errEl  = $('setup-err');
     errEl.textContent = '';
-    if (!sid || !saRaw) { errEl.textContent = 'Заполните все поля'; return; }
-    let parsed;
-    try { parsed = JSON.parse(saRaw); } catch (e) { errEl.textContent = 'Некорректный JSON: ' + e.message; return; }
-    if (!parsed.client_email || !parsed.private_key) { errEl.textContent = 'SA JSON не содержит client_email или private_key'; return; }
-    cfg.spreadsheetId = sid;
-    sa = parsed;
-    saveCfg(); saveSA();
+    if (!gasUrl) { errEl.textContent = 'Введите URL GAS веб-приложения'; return; }
+    if (!gasUrl.startsWith('https://script.google.com/')) { errEl.textContent = 'URL должен начинаться с https://script.google.com/'; return; }
+    cfg.gasUrl = gasUrl;
+    saveCfg();
     showLoader(true);
     try {
-        await ensureAuth();
         _dbSheetCache = null;
         await dbInitAllSheets();
         showLoader(false);
@@ -1637,8 +1546,8 @@ $('btn-setup-save').addEventListener('click', async () => {
     } catch (e) {
         showLoader(false);
         errEl.textContent = 'Ошибка подключения: ' + e.message;
-        cfg.spreadsheetId = '';
-        sa = null;
+        cfg.gasUrl = '';
+        saveCfg();
     }
 });
 
@@ -1703,8 +1612,6 @@ function doLogout() {
     if (!confirm('Выйти из аккаунта?')) return;
     currentUser = null;
     saveUser();
-    accessToken = null;
-    tokenExpiry = 0;
     $('login-login').value = '';
     $('login-pass').value  = '';
     $('login-sub-text').textContent = 'Вход в систему';
@@ -1726,18 +1633,9 @@ function afterLogin() {
 }
 
 (function init() {
-    loadCfg(); loadSA(); loadUser();
+    loadCfg(); loadUser();
 
-    if (!cfg.spreadsheetId) {
-        try {
-            const old = JSON.parse(localStorage.getItem('wl_config') || 'null');
-            if (old?.spreadsheetId) { cfg.spreadsheetId = old.spreadsheetId; saveCfg(); }
-        } catch {}
-    }
-
-    if (!sa || !cfg.spreadsheetId) {
-        if (sa) $('setup-sa').value = JSON.stringify(sa, null, 2);
-        if (cfg.spreadsheetId) $('setup-sid').value = cfg.spreadsheetId;
+    if (!cfg.gasUrl) {
         showView('setup');
     } else if (!currentUser) {
         showView('login');
